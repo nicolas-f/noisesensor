@@ -1,0 +1,11 @@
+language: c
+sudo: false
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script:
+  - make all
+  - env CTEST_OUTPUT_ON_FAILURE=1 make test
