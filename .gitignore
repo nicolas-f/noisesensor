@@ -1,1 +1,18 @@
-build
+
+# Directories #
+###############
+build/
+dist/
+*.egg-info
+
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+noisepy/wrapped.c

@@ -58,11 +58,12 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data) {
 }
 
 bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data, float_t* laeq, float_t ref_pressure, bool a_filter) {
+    int i;
 	if(data->window_cursor + sample_len > AI_WINDOW_SIZE) {
 		fprintf( stderr, "Exceed window array size (%d on %d)\n", data->window_cursor + sample_len, AI_WINDOW_SIZE);
 		return false;
 	}
-	for(int i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
+	for(i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
 		data->window_data[i] = sample_data[i-data->window_cursor];
 	}
 	data->window_cursor+=sample_len;
@@ -73,24 +74,26 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 				float_t weightedSignal[AI_WINDOW_SIZE];
 				// Filter delays
 				float_t z[ORDER-1][AI_WINDOW_SIZE];
-				for (int idT = 0; idT < AI_WINDOW_SIZE; idT++){
-            // Avoid iteration idT=0 exception (z[0][idT-1]=0)
-            weightedSignal[idT] = (numerator_32khz[0]*data->window_data[idT] + (idT == 0 ? 0 : z[0][idT-1]));
-            // Avoid iteration idT=0 exception (z[1][idT-1]=0)
-            z[0][idT] = (numerator_32khz[1]*data->window_data[idT] + (idT == 0 ? 0 : z[1][idT-1]) - denominator_32khz[1]*data->window_data[idT]);
-            for (int k = 0; k<ORDER-2; k++){
-                // Avoid iteration idT=0 exception (z[k+1][idT-1]=0)
-                z[k][idT] = (numerator_32khz[k+1]*data->window_data[idT] + (idT ==0 ? 0 : z[k+1][idT-1]) - denominator_32khz[k+1]*weightedSignal[idT]);
-            }
-            z[ORDER-2][idT] = (numerator_32khz[ORDER-1]*data->window_data[idT] - denominator_32khz[ORDER-1] * weightedSignal[idT]);
-        }
-				for (int idT = 0; idT < AI_WINDOW_SIZE; idT++){
+                int idT;
+				for (idT = 0; idT < AI_WINDOW_SIZE; idT++){
+                    // Avoid iteration idT=0 exception (z[0][idT-1]=0)
+                    weightedSignal[idT] = (numerator_32khz[0]*data->window_data[idT] + (idT == 0 ? 0 : z[0][idT-1]));
+                    // Avoid iteration idT=0 exception (z[1][idT-1]=0)
+                    z[0][idT] = (numerator_32khz[1]*data->window_data[idT] + (idT == 0 ? 0 : z[1][idT-1]) - denominator_32khz[1]*data->window_data[idT]);
+                    int k;
+                    for (k = 0; k<ORDER-2; k++){
+                        // Avoid iteration idT=0 exception (z[k+1][idT-1]=0)
+                        z[k][idT] = (numerator_32khz[k+1]*data->window_data[idT] + (idT ==0 ? 0 : z[k+1][idT-1]) - denominator_32khz[k+1]*weightedSignal[idT]);
+                    }
+                    z[ORDER-2][idT] = (numerator_32khz[ORDER-1]*data->window_data[idT] - denominator_32khz[ORDER-1] * weightedSignal[idT]);
+                }
+				for (idT = 0; idT < AI_WINDOW_SIZE; idT++){
 					data->window_data[idT] = weightedSignal[idT];
 				}
 		}
 		// Compute RMS
 		float_t sampleSum = 0;
-		for(int i=0; i < AI_WINDOW_SIZE; i++) {
+		for(i=0; i < AI_WINDOW_SIZE; i++) {
 			sampleSum += (float_t)data->window_data[i] * (float_t)data->window_data[i];
 		}
 		// Push window sum in windows struct data
@@ -98,7 +101,7 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 		if(data->windows_count == AI_WINDOWS_SIZE) {
 				// compute energetic average
 				float_t sumWindows = 0;
-				for(int i=0; i<AI_WINDOWS_SIZE;i++) {
+				for(i=0; i<AI_WINDOWS_SIZE;i++) {
 					sumWindows+=data->windows[i];
 				}
 				// Convert into dB(A)
