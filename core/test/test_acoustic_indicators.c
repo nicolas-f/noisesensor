@@ -22,7 +22,7 @@ static char * test_leq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_NewAcousticIndicatorsData(&acousticIndicatorsData);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData);
 
 	int16_t shortBuffer[4096];
 
@@ -84,7 +84,7 @@ static char * test_laeq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_NewAcousticIndicatorsData(&acousticIndicatorsData);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData);
 
 	int16_t shortBuffer[4096];
 

@@ -51,9 +51,19 @@ typedef struct  {
 } AcousticIndicatorsData;
 
 /**
- * Create new struct for acoustic indicators
+ * Init struct for acoustic indicators
  */
-void ai_NewAcousticIndicatorsData(AcousticIndicatorsData* data);
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data);
+
+/**
+ * Free struct for acoustic indicators
+ */
+void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data);
+
+/**
+ * Create a new instance of acoustic indicators
+ */
+AcousticIndicatorsData* ai_NewAcousticIndicatorsData();
 
 /**
  * @param data instance of this struct, create an empty struct on first use

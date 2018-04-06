@@ -1,1 +1,1 @@
-from .wrapped import c_hello, factorial
+from .wrapped import noisepy

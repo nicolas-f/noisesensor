@@ -36,6 +36,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 
 
@@ -113,7 +114,16 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 	return false;
 }
 
-void ai_NewAcousticIndicatorsData(AcousticIndicatorsData* data)
+AcousticIndicatorsData* ai_NewAcousticIndicatorsData() {
+		AcousticIndicatorsData* p = malloc(sizeof(AcousticIndicatorsData));
+		return p;
+}
+
+void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
+		free(data);
+}
+
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data)
 {
 	data->windows_count = 0;
 	data->window_cursor = 0;

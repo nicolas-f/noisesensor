@@ -16,7 +16,7 @@ SRC_DIR = "noisepy"
 PACKAGES = [SRC_DIR]
 
 ext_1 = Extension(SRC_DIR + ".wrapped",
-                  ["core/src/acoustic_indicators.c", SRC_DIR + "/wrapped.pyx"],
+                  ["core/src/acoustic_indicators.c", SRC_DIR + "/noisepy.pyx"],
                   libraries=[],
                   include_dirs=["core/include"])
 
