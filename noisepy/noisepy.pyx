@@ -25,3 +25,6 @@ cdef class noisepy:
       cdef float laeq = 0.0
       if cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples , &laeq, self.ref_pressure, self.a_filter):
         return laeq
+
+    def max_samples_length(self):
+      return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
