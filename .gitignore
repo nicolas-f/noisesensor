@@ -4,7 +4,7 @@
 build/
 dist/
 *.egg-info
-
+.kdev4
 
 # Compiled source #
 ###################
@@ -16,3 +16,4 @@ dist/
 *.so
 *.pyc
 noisepy/noisepy.c
+*.kdev4
