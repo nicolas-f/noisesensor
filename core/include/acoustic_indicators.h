@@ -51,12 +51,16 @@
 
 typedef struct  {
     int32_t window_cursor;
-	float_t window_data[AI_WINDOW_SIZE];
+    float_t window_data[AI_WINDOW_SIZE];
+    float_t* window_fft_data; // FFt rms
     int32_t windows_count;
 	float_t windows[AI_WINDOWS_SIZE];
     float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
     bool a_filter;
     bool has_spectrum;
+    float_t ref_pressure;
+    float_t last_leq_slow;
+    float_t last_leq_fast;
 } AcousticIndicatorsData;
 
 enum AI_FEED {AI_WINDOW_OVERFLOW = -1, //Exceed window array size
@@ -70,7 +74,7 @@ enum AI_FEED {AI_WINDOW_OVERFLOW = -1, //Exceed window array size
  * @param a_filter Compute A weighting
  * @param Compute leq for each third octaves
  */
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum);
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure);
 
 /**
  * Free struct for acoustic indicators
@@ -95,7 +99,7 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data);
  * @param[out] laeq 1s laeq value if the return is true
  * @return Message code
  */
-int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data, float_t* laeq, float_t ref_pressure);
+int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data);
 
 /**
  * @brief ai_get_frequency Compute band frequencies
