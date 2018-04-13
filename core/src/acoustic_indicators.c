@@ -63,7 +63,7 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data) {
 int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data) {
     int i;
 	if(data->window_cursor + sample_len > AI_WINDOW_SIZE) {
-        return AI_WINDOW_OVERFLOW;
+        return AI_FEED_WINDOW_OVERFLOW;
 	}
 	for(i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
 		data->window_data[i] = sample_data[i-data->window_cursor];
@@ -112,6 +112,8 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
 
             kiss_fft(cfg, buffer, fft_out);
 
+            kiss_fft_free(cfg);
+
             // Compute RMS for each thin frequency bands
             const int band_limit = ai_f_band[AI_NB_BAND - 1][1];
             for(i=0; i< band_limit; i++) {
@@ -128,7 +130,6 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                 }
                 data->spectrum[data->windows_count][id_third_octave] = 10 * log10((2. / AI_WINDOW_SIZE * sqrt(sumRms)) / sqrt(2));
             }
-            kiss_fft_free(cfg);
         }
 		// Compute RMS
 		float_t sampleSum = 0;
@@ -177,8 +178,8 @@ void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, 
     data->last_leq_fast = 0;
     data->last_leq_slow = 0;
     if(spectrum) {
-        data->window_fft_data = malloc(sizeof(AI_WINDOW_FFT_SIZE) * sizeof(float_t));
-        memset(data->window_fft_data, 0, sizeof(AI_WINDOW_FFT_SIZE) * sizeof(float_t));
+        data->window_fft_data = malloc(AI_WINDOW_FFT_SIZE * sizeof(float_t));
+        memset(data->window_fft_data, 0, AI_WINDOW_FFT_SIZE * sizeof(float_t));
     } else {
         data->window_fft_data = NULL;
     }
@@ -189,11 +190,17 @@ float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
     if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
         int i;
         double sum = 0;
-        for(i=0; i < data->windows_count; i++) {
+        int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE : data->windows_count;
+        for(i=0; i < window_count; i++) {
             sum += pow(10, data->spectrum[i][band_id] / 10.);
         }
-        return 10 * log10(sum);
+        return 10 * log10(sum / window_count);
     } else {
         return 0.f;
     }
+}
+
+
+float ai_get_frequency(int band_id) {
+    return ai_frequencies[band_id];
 }

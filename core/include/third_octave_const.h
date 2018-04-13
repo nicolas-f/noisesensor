@@ -60,7 +60,7 @@ Description: Third oictave analysis constants
 #ifndef THIRD_OCTAVE_CONST_H
 #define THIRD_OCTAVE_CONST_H
 
-const uint16_t ai_frequencies[AI_NB_BAND] = {20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500};
+const float ai_frequencies[AI_NB_BAND] = {20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500};
 
 const uint16_t ai_f_band_1[2] = {3, 4};
 const float ai_H_band_1[2] = {0.25486, 0.32879};

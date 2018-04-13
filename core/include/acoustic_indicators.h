@@ -63,10 +63,10 @@ typedef struct  {
     float_t last_leq_fast;
 } AcousticIndicatorsData;
 
-enum AI_FEED {AI_WINDOW_OVERFLOW = -1, //Exceed window array size
+enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
               AI_FEED_IDLE = 0,
-              AI_FEED_COMPLETE = 1, //if a complete 1s LAeq has been computed, variable laeq can be read,
-              AI_FEED_FAST = 2, //if a 125ms LAeq has been computed, variable laeq can be read
+              AI_FEED_COMPLETE = 1, //if a complete 1s LAeq has been computed, variable last_leq_slow and last_leq_fast can be read,
+              AI_FEED_FAST = 2, //if a 125ms LAeq has been computed, variable last_leq_fast can be read
              };
 /**
  * Init struct for acoustic indicators
@@ -102,11 +102,17 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data);
 int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data);
 
 /**
- * @brief ai_get_frequency Compute band frequencies
+ * @brief ai_get_band_leq Compute band frequencies
  * @param data Acoustic indicators object
- * @param band_id Band identifier 0-NB_BAND
- * @return Frequency value in Hz
+ * @param band_id Band identifier 0-AI_NB_BAND
+ * @return Frequency value in dB, dB(A) if a_filter=true
  */
-float ai_get_frequency(AcousticIndicatorsData* data, int band_id);
+float ai_get_band_leq(AcousticIndicatorsData* data, int band_id);
+/**
+ * @brief ai_get_frequency Get frequency in hertz
+ * @param band_id Band identifier 0-AI_NB_BAND
+ * @return Frequency in hertz
+ */
+float ai_get_frequency(int band_id);
 
 #endif

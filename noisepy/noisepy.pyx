@@ -11,7 +11,6 @@ cdef class noisepy:
         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
         if self._c_noisepy is NULL:
             raise MemoryError()
-        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy)
 
     def __dealloc__(self):
         if self._c_noisepy is not NULL:
@@ -20,11 +19,10 @@ cdef class noisepy:
     def __init__(self, a_filter, ref_pressure):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
+        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.ref_pressure)
 
     def push(self, unsigned char* python_samples, int length):
-      cdef float laeq = 0.0
-      if cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples , &laeq, self.ref_pressure, self.a_filter):
-        return laeq
+      return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
 
     def max_samples_length(self):
       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
