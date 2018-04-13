@@ -125,10 +125,11 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                 double sumRms = 0;
                 const int startSampleIndex = ai_f_band[id_third_octave][0];
                 const int endSampleIndex = ai_f_band[id_third_octave][1];
-                for(i=startSampleIndex; i < endSampleIndex; i++) {
+                for(i=startSampleIndex; i <= endSampleIndex; i++) {
                     sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
                 }
-                data->spectrum[data->windows_count][id_third_octave] = 10 * log10((2. / AI_WINDOW_SIZE * sqrt(sumRms)) / sqrt(2));
+                const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
+                data->spectrum[data->windows_count][id_third_octave] = rms;
             }
         }
 		// Compute RMS
@@ -192,9 +193,9 @@ float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
         double sum = 0;
         int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE : data->windows_count;
         for(i=0; i < window_count; i++) {
-            sum += pow(10, data->spectrum[i][band_id] / 10.);
+            sum += data->spectrum[i][band_id];
         }
-        return 10 * log10(sum / window_count);
+        return 20 * log10((sum / AI_WINDOWS_SIZE) / data->ref_pressure);
     } else {
         return 0.f;
     }
