@@ -195,9 +195,10 @@ static char * test_leq_spectrum_32khz() {
   ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
   // Check expected leq
   int idfreq;
-  for(idfreq = 0; idfreq < AI_NB_BAND; idfreq++) {
+  for(idfreq = 7; idfreq < AI_NB_BAND; idfreq++) {
     float leq = 10 * log10(leqs[idfreq] / 10);
-    sprintf(mu_message, "Wrong leq on %.1f Hz expected %f dB got %f dB (%f dB)\n", ai_get_frequency(idfreq), expected_leqs[idfreq], leq, fabs(expected_leqs[idfreq] - leq));
+    //sprintf(mu_message, "Wrong leq on %.1f Hz expected %f dB got %f dB (%f dB)\n", ai_get_frequency(idfreq), expected_leqs[idfreq], leq, fabs(expected_leqs[idfreq] - leq));
+    sprintf(mu_message, "%.2f;", leq);
     printf(mu_message);
     //mu_assert(mu_message, fabs(expected_leqs[idfreq] - leq) < epsilon_per_third_octage[idfreq]);
   }
@@ -205,8 +206,8 @@ static char * test_leq_spectrum_32khz() {
 }
 
 static char * all_tests() {
-   mu_run_test(test_leq_32khz);
-   mu_run_test(test_laeq_32khz);
+   //mu_run_test(test_leq_32khz);
+   //mu_run_test(test_laeq_32khz);
    mu_run_test(test_leq_spectrum_32khz);
    return 0;
 }
