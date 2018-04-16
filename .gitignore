@@ -17,3 +17,4 @@ dist/
 *.pyc
 noisepy/noisepy.c
 *.kdev4
+CMakeLists.txt.user

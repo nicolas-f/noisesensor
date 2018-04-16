@@ -32,17 +32,26 @@
 */
 
 #include "acoustic_indicators.h"
+#include "third_octave_const.h"
 #include <stdio.h>
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include "kiss_fft.h"
 
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
 
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
 
 // int order = max(denominator.length, numerator.length);
 #define ORDER (7)
 
+#define AI_APPLY_FREQUENCY_BINS_FILTER
 /**
  * Numerator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
@@ -58,12 +67,11 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data) {
 	return AI_WINDOW_SIZE - data->window_cursor;
 }
 
-bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data, float_t* laeq, float_t ref_pressure, bool a_filter) {
+int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data) {
     int i;
 	if(data->window_cursor + sample_len > AI_WINDOW_SIZE) {
-		fprintf( stderr, "Exceed window array size (%d on %d)\n", data->window_cursor + sample_len, AI_WINDOW_SIZE);
-		return false;
-	}
+        return AI_FEED_WINDOW_OVERFLOW;
+    }
 	for(i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
 		data->window_data[i] = sample_data[i-data->window_cursor];
 	}
@@ -71,7 +79,7 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 	if(data->window_cursor >= AI_WINDOW_SIZE) {
 		data->window_cursor = 0;
 		// Compute A weighting
-		if(a_filter) {
+        if(data->a_filter) {
 				float_t weightedSignal[AI_WINDOW_SIZE];
 				// Filter delays
 				float_t z[ORDER-1][AI_WINDOW_SIZE];
@@ -92,6 +100,68 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 					data->window_data[idT] = weightedSignal[idT];
 				}
 		}
+        // Compute spectrum
+        if(data->has_spectrum) {
+
+            kiss_fft_cfg cfg = kiss_fft_alloc(AI_WINDOW_FFT_SIZE, 0, NULL, NULL);
+
+            kiss_fft_cpx buffer[AI_WINDOW_FFT_SIZE];
+
+            // Append padding of 0
+            memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_FFT_SIZE);
+
+            // Convert short to kiss_fft_scalar type
+            for(i=0; i < AI_WINDOW_SIZE; i++) {
+                buffer[i].r = (kiss_fft_scalar) data->window_data[i];
+            }
+
+            kiss_fft_cpx fft_out[AI_WINDOW_FFT_SIZE];
+
+            kiss_fft(cfg, buffer, fft_out);
+
+            kiss_fft_free(cfg);
+
+            // Compute RMS for each thin frequency bands
+            const int band_limit = ai_f_band[AI_NB_BAND - 1][1];
+            for(i=0; i< band_limit; i++) {
+                data->window_fft_data[i] = fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i;
+            }            
+            // Compute RMS for each third octave frequency bands by applying filters
+            int id_third_octave;
+            #ifdef AI_APPLY_FREQUENCY_BINS_FILTER
+            for(id_third_octave = 0; id_third_octave < AI_NB_BAND; id_third_octave++) {
+                double sumRms = 0;
+                const int startSampleIndex = ai_f_band[id_third_octave][0];
+                const int endSampleIndex = ai_f_band[id_third_octave][1];
+                for(i=startSampleIndex; i <= endSampleIndex; i++) {
+                    sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
+                }
+                const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
+                data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
+            }
+            #else
+                double freqByCell = AI_SAMPLING_RATE / (double)AI_WINDOW_SIZE;
+                int refFreq = 17; // 1000 hz
+                for(id_third_octave = 0; id_third_octave < AI_NB_BAND; id_third_octave++) {
+                    // Compute lower and upper value of third-octave
+                    // NF-EN 61260
+                    // base 10
+                    double fCenter = pow(10, (id_third_octave - refFreq)/10.) * 1000;
+                    double fLower = fCenter * pow(10, -1. / 20.);
+                    double fUpper = fCenter * pow(10, 1. / 20.);
+                    double sumRms = 0;
+                    int cellFloor = (int)(ceil(fLower / freqByCell));
+                    int cellCeil = MIN(AI_WINDOW_FFT_SIZE - 1, (int) (floor(fUpper / freqByCell)));
+                    int cellLower = MIN(cellFloor, cellCeil);
+                    int cellUpper = MAX(cellFloor, cellCeil);
+                    for(int idCell = cellLower; idCell <= cellUpper; idCell++) {
+                        sumRms += data->window_fft_data[idCell];
+                    }
+                    const float_t rms = sqrt(sumRms / 2) / (AI_WINDOW_SIZE / 2.);
+                    data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
+                }
+            #endif
+        }
 		// Compute RMS
 		float_t sampleSum = 0;
 		for(i=0; i < AI_WINDOW_SIZE; i++) {
@@ -99,19 +169,23 @@ bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* s
 		}
 		// Push window sum in windows struct data
 		data->windows[data->windows_count++] = sampleSum;
-		if(data->windows_count == AI_WINDOWS_SIZE) {
-				// compute energetic average
-				float_t sumWindows = 0;
-				for(i=0; i<AI_WINDOWS_SIZE;i++) {
-					sumWindows+=data->windows[i];
-				}
-				// Convert into dB(A)
-				*laeq = 10 * log10((double)sumWindows / (AI_WINDOWS_SIZE * AI_WINDOW_SIZE) / (ref_pressure * ref_pressure));
-				data->windows_count = 0;
-				return true;
-		}
+        // Convert into dB(A)
+        data->last_leq_fast = 10 * log10((double)data->windows[data->windows_count - 1] / (AI_WINDOW_SIZE) / (data->ref_pressure * data->ref_pressure));
+        if(data->windows_count == AI_WINDOWS_SIZE) { // 1s computation complete
+            // compute energetic average
+            float_t sumWindows = 0;
+            for(i=0; i<AI_WINDOWS_SIZE;i++) {
+                sumWindows+=data->windows[i];
+            }
+            // Convert into dB(A)
+            data->last_leq_slow = 10 * log10((double)sumWindows / (AI_WINDOWS_SIZE * AI_WINDOW_SIZE) / (data->ref_pressure * data->ref_pressure));
+            data->windows_count = 0;
+            return AI_FEED_COMPLETE;
+        } else { // 125ms complete
+            return AI_FEED_FAST;
+        }
 	}
-	return false;
+    return AI_FEED_IDLE;
 }
 
 AcousticIndicatorsData* ai_NewAcousticIndicatorsData() {
@@ -120,11 +194,44 @@ AcousticIndicatorsData* ai_NewAcousticIndicatorsData() {
 }
 
 void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
-		free(data);
+    if(data->has_spectrum) {
+        free(data->window_fft_data);
+    }
 }
 
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data)
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure)
 {
 	data->windows_count = 0;
 	data->window_cursor = 0;
+    data->a_filter = a_filter;
+    data->has_spectrum = spectrum;
+    data->ref_pressure = ref_pressure;
+    data->last_leq_fast = 0;
+    data->last_leq_slow = 0;
+    if(spectrum) {
+        data->window_fft_data = malloc(AI_WINDOW_FFT_SIZE * sizeof(float_t));
+        memset(data->window_fft_data, 0, AI_WINDOW_FFT_SIZE * sizeof(float_t));
+    } else {
+        data->window_fft_data = NULL;
+    }
+}
+
+
+float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
+    if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
+        int i;
+        double sum = 0;
+        int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE : data->windows_count;
+        for(i=0; i < window_count; i++) {
+            sum += pow(10, data->spectrum[i][band_id] / 10.0);
+        }
+        return 10 * log10(sum / AI_WINDOWS_SIZE);
+    } else {
+        return 0.f;
+    }
+}
+
+
+float ai_get_frequency(int band_id) {
+    return ai_frequencies[band_id];
 }

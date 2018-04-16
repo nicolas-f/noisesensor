@@ -31,29 +31,50 @@
 *
 */
 
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 
+
 #ifndef ACOUSTIC_INDICATORS_H_
 #define ACOUSTIC_INDICATORS_H_
 
+//number of third octave
+#define AI_NB_BAND             29
 // Note that only the sample rate 32khz is supported for (A) weigting.
 #define AI_SAMPLING_RATE (32000)
-#define AI_WINDOW_SIZE (1000)
+// Analyse using Fast rate (125 ms)
+#define AI_WINDOW_SIZE (4000)
+#define AI_WINDOW_FFT_SIZE (4096)
 #define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
 
 typedef struct  {
-	int window_cursor;
-	float_t window_data[AI_WINDOW_SIZE];
-	int windows_count;
+    int32_t window_cursor;
+    float_t window_data[AI_WINDOW_SIZE];
+    float_t* window_fft_data; // FFt rms
+    int32_t windows_count;
 	float_t windows[AI_WINDOWS_SIZE];
+    float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
+    bool a_filter;
+    bool has_spectrum;
+    float_t ref_pressure;
+    float_t last_leq_slow;
+    float_t last_leq_fast;
 } AcousticIndicatorsData;
 
+enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
+              AI_FEED_IDLE = 0,
+              AI_FEED_COMPLETE = 1, //if a complete 1s LAeq has been computed, variable last_leq_slow and last_leq_fast can be read,
+              AI_FEED_FAST = 2, //if a 125ms LAeq has been computed, variable last_leq_fast can be read
+             };
 /**
  * Init struct for acoustic indicators
+ * @param data Acoustic indicators object
+ * @param a_filter Compute A weighting
+ * @param Compute leq for each third octaves
  */
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data);
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure);
 
 /**
  * Free struct for acoustic indicators
@@ -76,7 +97,22 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data);
  * @param[in] sample_data sample content to add
  * @param[in] sample_len sample length of sample_data. Must be < than ai_get_maximal_sample_size
  * @param[out] laeq 1s laeq value if the return is true
- * @return True if a complete LAeq has been computed
+ * @return Message code
  */
-bool ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data, float_t* laeq, float_t ref_pressure, bool a_filter);
+int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data);
+
+/**
+ * @brief ai_get_band_leq Compute band frequencies
+ * @param data Acoustic indicators object
+ * @param band_id Band identifier 0-AI_NB_BAND
+ * @return Frequency value in dB, dB(A) if a_filter=true
+ */
+float ai_get_band_leq(AcousticIndicatorsData* data, int band_id);
+/**
+ * @brief ai_get_frequency Get frequency in hertz
+ * @param band_id Band identifier 0-AI_NB_BAND
+ * @return Frequency in hertz
+ */
+float ai_get_frequency(int band_id);
+
 #endif
