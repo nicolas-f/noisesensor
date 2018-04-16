@@ -204,8 +204,8 @@ static char * test_leq_spectrum_32khz() {
 }
 
 static char * all_tests() {
-   //mu_run_test(test_leq_32khz);
-   //mu_run_test(test_laeq_32khz);
+   mu_run_test(test_leq_32khz);
+   mu_run_test(test_laeq_32khz);
    mu_run_test(test_leq_spectrum_32khz);
    return 0;
 }

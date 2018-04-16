@@ -63,8 +63,6 @@ const float_t numerator_32khz[ORDER] = {0.34345834, -0.68691668, -0.34345834, 1.
  */
 const float_t denominator_32khz[ORDER] = {1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407};
 
-long addedSamples = 0;
-
 int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data) {
 	return AI_WINDOW_SIZE - data->window_cursor;
 }
@@ -73,8 +71,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
     int i;
 	if(data->window_cursor + sample_len > AI_WINDOW_SIZE) {
         return AI_FEED_WINDOW_OVERFLOW;
-	}
-    addedSamples+=sample_len;
+    }
 	for(i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
 		data->window_data[i] = sample_data[i-data->window_cursor];
 	}
