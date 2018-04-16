@@ -196,7 +196,7 @@ static char * test_leq_spectrum_32khz() {
     float leqdiff = 10 * log10(leqs[idfreq] / 10) - expected_leqs[idfreq];
     sumval+=leqdiff*leqdiff;
   }
-  double expected_mean_error = 2;
+  double expected_mean_error = 2.83;
   double mean_error = sqrt(sumval / AI_NB_BAND);
   sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
   mu_assert(mu_message, mean_error < expected_mean_error);
