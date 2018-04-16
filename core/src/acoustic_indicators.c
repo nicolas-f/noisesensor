@@ -162,9 +162,6 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     }
                     const float_t rms = sqrt(sumRms / 2) / (AI_WINDOW_SIZE / 2.);
                     data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
-                    if(id_third_octave == 25) {
-                        printf("%.3f 6300 Hz rms %.2f %.2f dB\n",addedSamples / (double)AI_SAMPLING_RATE,rms, 20 * log10(rms / data->ref_pressure));
-                    }
                 }
             #endif
         }

@@ -166,10 +166,6 @@ static char * test_leq_spectrum_32khz() {
                              -31.93,-37.28,-47.33,-35.33,-42.68,-42.91,-48.51,-49.1 ,-52.9 ,-52.15,-52.8 ,
                              -52.35,-52.31,-53.39,-52.53,-53.73,-53.56,-57.9};
 
-  float epsilon_per_third_octage[AI_NB_BAND] = {10., 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
-                                                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
-                                                0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01};
-
   int leqId = 0;
     int i;
     while(!feof(ptr)) {
@@ -195,13 +191,15 @@ static char * test_leq_spectrum_32khz() {
   ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
   // Check expected leq
   int idfreq;
-  for(idfreq = 7; idfreq < AI_NB_BAND; idfreq++) {
-    float leq = 10 * log10(leqs[idfreq] / 10);
-    //sprintf(mu_message, "Wrong leq on %.1f Hz expected %f dB got %f dB (%f dB)\n", ai_get_frequency(idfreq), expected_leqs[idfreq], leq, fabs(expected_leqs[idfreq] - leq));
-    sprintf(mu_message, "%.2f;", leq);
-    printf(mu_message);
-    //mu_assert(mu_message, fabs(expected_leqs[idfreq] - leq) < epsilon_per_third_octage[idfreq]);
+  double sumval =  0;
+  for(idfreq = 0; idfreq < AI_NB_BAND; idfreq++) {
+    float leqdiff = 10 * log10(leqs[idfreq] / 10) - expected_leqs[idfreq];
+    sumval+=leqdiff*leqdiff;
   }
+  double expected_mean_error = 2;
+  double mean_error = sqrt(sumval / AI_NB_BAND);
+  sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
+  mu_assert(mu_message, mean_error < expected_mean_error);
   return 0;
 }
 
