@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Ifsttar
+* Copyright (c) 2018, Ifsttar Wi6labs LS2N
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -114,5 +114,23 @@ float ai_get_band_leq(AcousticIndicatorsData* data, int band_id);
  * @return Frequency in hertz
  */
 float ai_get_frequency(int band_id);
+
+/**
+ * @brief ai_get_leq_slow Used when ai_AddSample return AI_FEED_COMPLETE
+ * @return value in dB, dB(A) if a_filter=true
+ */
+float ai_get_leq_slow(AcousticIndicatorsData* data);
+
+/**
+ * @brief ai_get_leq_slow Used when ai_AddSample return AI_FEED_COMPLETE or AI_FEED_FAST
+ * @return value in dB, dB(A) if a_filter=true
+ */
+float ai_get_leq_fast(AcousticIndicatorsData* data);
+/**
+ * @brief ai_get_leq_band_fast Used when ai_AddSample return AI_FEED_COMPLETE or AI_FEED_FAST
+ * @param band_id Band identifier 0-AI_NB_BAND
+ * @return value in dB, dB(A) if a_filter=true
+ */
+float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id);
 
 #endif
