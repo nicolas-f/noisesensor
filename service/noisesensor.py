@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 
 try:
-    from http.server import HTTPServer
+    from http.server import HTTPServer, BaseHTTPServer
     from http.server import BaseHTTPRequestHandler
     from http import HTTPStatus
 except ImportError:
@@ -54,13 +54,19 @@ import threading
 
 __version__ = "1.0.0-dev"
 
+class AcousticIndicatorsServer(HTTPServer):
+    def __init__(self, data, *args, **kwargs):
+         # Because HTTPServer is an old-style class, super() can't be used.
+         HTTPServer.__init__(self, *args, **kwargs)
+         self.data = data
+
 class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b'Hello, Python!')
+        self.wfile.write(b'Leq: %.2f' % self.server.data["leq"][-1])
         return
 
 class AcousticIndicatorsProcessor(threading.Thread):
@@ -80,9 +86,9 @@ class AcousticIndicatorsProcessor(threading.Thread):
 
 
 
-def run(server_class=HTTPServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
+def run(data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
     server_address = ('localhost', port)
-    httpd = server_class(server_address, handler_class)
+    httpd = server_class(data, server_address, handler_class)
     try:
         print("Server works on http://localhost:%d" % port)
         httpd.serve_forever()
@@ -102,9 +108,9 @@ def main():
     # parse command line options
     port = 0
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "p")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "p:o")[0]:
             if opt == "-p":
-                port = value
+                port = int(value)
     except getopt.error as msg:
         usage()
         exit(-1)
@@ -113,7 +119,7 @@ def main():
     processing_thread.start()
 
     if port > 0:
-        run(port=port)
+        run(data, port=port)
 
 if __name__ == "__main__":
     main()
