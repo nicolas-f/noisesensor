@@ -1,11 +1,9 @@
 language: c
 sudo: false
-python:
-  - "2.7"
 
 install:
-  pip install -q numpy cython
-  
+  pip install -q cython
+
 before_script:
   - mkdir build
   - cd build
