@@ -188,7 +188,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
     return AI_FEED_IDLE;
 }
 
-AcousticIndicatorsData* ai_NewAcousticIndicatorsData() {
+AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void) {
 		AcousticIndicatorsData* p = malloc(sizeof(AcousticIndicatorsData));
 		return p;
 }
