@@ -2,7 +2,7 @@ language: c
 sudo: false
 
 install:
-  pip install -q cython
+  pip install --user -q cython
 
 before_script:
   - mkdir build
