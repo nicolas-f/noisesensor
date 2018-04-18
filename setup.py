@@ -35,5 +35,6 @@ if __name__ == "__main__":
           url=URL,
           license=LICENSE,
           cmdclass={"build_ext": build_ext},
+          test_suite="tests",
           ext_modules=EXTENSIONS
           )
