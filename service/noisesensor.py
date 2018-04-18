@@ -46,11 +46,14 @@ import noisepy
 import getopt
 import sys
 import threading
+import struct
+import datetime
 
 ## Usage
 # This script expect signed 16 bits mono audio on stdin
 # arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
 
+leq_max_history = 20
 
 __version__ = "1.0.0-dev"
 
@@ -66,23 +69,33 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b'Leq: %.2f' % self.server.data["leq"][-1])
+        for line in list(self.server.data["leq"]):
+            self.wfile.write(b'%s, %.2f<br>' % tuple(line))
         return
 
 class AcousticIndicatorsProcessor(threading.Thread):
     def __init__(self, data):
         threading.Thread.__init__(self)
         self.data = data
+    def push_data(self, line):
+        self.data["leq"].insert(0, line)
+        self.data["leq"] = self.data["leq"][:leq_max_history]
 
     def run(self):
         np = noisepy.noisepy(False, False, 32767.)
+        short_size = struct.calcsize('h')
         while True:
-            audiosamples = sys.stdin.read(np.max_samples_length() * 2)
+            audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
             if not audiosamples:
+                self.server.data["running"] = False
+                print("End of audio samples")
                 break
-            if np.push(audiosamples, len(audiosamples) / 2) == noisepy.feed_complete:
-                self.data["leq"].append(np.get_leq_slow())
-                print("Leq %.2f" % np.get_leq_slow())
+            resp = np.push(audiosamples, len(audiosamples) / short_size)
+            if resp == noisepy.feed_complete:
+                self.push_data([datetime.datetime.now().isoformat(), np.get_leq_fast()])
+            elif resp == noisepy.feed_fast:
+                self.push_data([datetime.datetime.now().isoformat(), np.get_leq_fast()])
+
 
 
 
