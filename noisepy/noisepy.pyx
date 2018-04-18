@@ -71,3 +71,6 @@ cdef class noisepy:
 
     def max_samples_length(self):
       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+
+    def get_leq_band_slow(self, int band_id):
+      return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)

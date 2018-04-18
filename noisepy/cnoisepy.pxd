@@ -13,4 +13,5 @@ cdef extern from "acoustic_indicators.h":
     int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data)
     float ai_get_leq_slow(AcousticIndicatorsData* data)
     float ai_get_leq_fast(AcousticIndicatorsData* data)
+    float ai_get_band_leq(AcousticIndicatorsData* data, int band_id)
     float ai_get_leq_band_fast(AcousticIndicatorsData* data, int32_t band_id)
