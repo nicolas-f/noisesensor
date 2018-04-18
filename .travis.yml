@@ -1,6 +1,9 @@
 language: c
 sudo: false
 
+install:
+  pip install --user -q cython
+
 before_script:
   - mkdir build
   - cd build
@@ -9,3 +12,6 @@ before_script:
 script:
   - make all
   - env CTEST_OUTPUT_ON_FAILURE=1 make test
+  - cd ..
+  - python setup.py install --user 
+  - python setup.py test

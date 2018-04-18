@@ -1,7 +1,7 @@
 /*
 * BSD 3-Clause License
 *
-* Copyright (c) 2018, Ifsttar
+* Copyright (c) 2018, Ifsttar Wi6labs LS2N
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -125,7 +125,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
             const int band_limit = ai_f_band[AI_NB_BAND - 1][1];
             for(i=0; i< band_limit; i++) {
                 data->window_fft_data[i] = fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i;
-            }            
+            }
             // Compute RMS for each third octave frequency bands by applying filters
             int id_third_octave;
             #ifdef AI_APPLY_FREQUENCY_BINS_FILTER
@@ -234,4 +234,21 @@ float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
 
 float ai_get_frequency(int band_id) {
     return ai_frequencies[band_id];
+}
+
+float ai_get_leq_slow(AcousticIndicatorsData* data) {
+    return data->last_leq_slow;
+}
+
+float ai_get_leq_fast(AcousticIndicatorsData* data) {
+    return data->last_leq_fast;
+}
+
+float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id) {
+    if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
+        int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE : data->windows_count;
+        return data->spectrum[window_count][band_id];
+    } else {
+        return 0.;
+    }
 }
