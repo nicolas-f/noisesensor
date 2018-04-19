@@ -47,13 +47,14 @@ import getopt
 import sys
 import threading
 import struct
+import time
 import datetime
 
 ## Usage
 # This script expect signed 16 bits mono audio on stdin
 # arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
 
-leq_max_history = 20
+leq_max_history = 80
 
 __version__ = "1.0.0-dev"
 
@@ -67,10 +68,10 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
+        self.send_header('Content-type', 'text/plain;charset=UTF-8')
         self.end_headers()
         for line in list(self.server.data["leq"]):
-            self.wfile.write(b'%s, %.2f<br>' % tuple(line))
+            self.wfile.write(b'%d,%.2f,%.2f\n' % tuple(line))
         return
 
 class AcousticIndicatorsProcessor(threading.Thread):
@@ -83,18 +84,24 @@ class AcousticIndicatorsProcessor(threading.Thread):
 
     def run(self):
         np = noisepy.noisepy(False, False, 32767.)
+        npa = noisepy.noisepy(True, False, 32767.)
         short_size = struct.calcsize('h')
         while True:
             audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
             if not audiosamples:
-                self.server.data["running"] = False
-                print("End of audio samples")
+                print("%s End of audio samples" % datetime.datetime.now().isoformat())
                 break
-            resp = np.push(audiosamples, len(audiosamples) / short_size)
-            if resp == noisepy.feed_complete:
-                self.push_data([datetime.datetime.now().isoformat(), np.get_leq_fast()])
-            elif resp == noisepy.feed_fast:
-                self.push_data([datetime.datetime.now().isoformat(), np.get_leq_fast()])
+            else:
+                resp = np.push(audiosamples, len(audiosamples) / short_size)
+                leq = 0
+                laeq = 0
+                # time can be in iso format using datetime.datetime.now().isoformat()
+                if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
+                    leq = np.get_leq_fast()
+                resp = npa.push(audiosamples, len(audiosamples) / short_size)
+                if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
+                    laeq = npa.get_leq_fast()
+                self.push_data([int(time.time()*1000), leq, laeq])
 
 
 
