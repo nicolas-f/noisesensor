@@ -45,34 +45,27 @@ except ImportError:
 import noisepy
 import getopt
 import sys
+import os
 import threading
 import struct
 import time
 import datetime
+import StringIO
+import json
+import ftplib
+import uuid
+import collections
 
 ## Usage
 # This script expect signed 16 bits mono audio on stdin
 # arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
 
-leq_max_history = 80
+leq_max_history = 5*60*8
+# push data to FTP when this number of lines is cached
+leq_refresh_history = 5*8
+ftp_sleep = 0.02
 
 __version__ = "1.0.0-dev"
-
-class AcousticIndicatorsServer(HTTPServer):
-    def __init__(self, data, *args, **kwargs):
-         # Because HTTPServer is an old-style class, super() can't be used.
-         HTTPServer.__init__(self, *args, **kwargs)
-         self.data = data
-
-class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain;charset=UTF-8')
-        self.end_headers()
-        for line in list(self.server.data["leq"]):
-            self.wfile.write(b'%d,%.2f,%.2f\n' % tuple(line))
-        return
 
 class AcousticIndicatorsProcessor(threading.Thread):
     def __init__(self, data):
@@ -81,10 +74,13 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def push_data(self, line):
         self.data["leq"].insert(0, line)
         self.data["leq"] = self.data["leq"][:leq_max_history]
+        for fun in self.data["callback"]:
+            fun(line)
 
     def run(self):
-        np = noisepy.noisepy(False, False, 32767.)
-        npa = noisepy.noisepy(True, False, 32767.)
+        ref_sound_pressure = 1 / 10 ** (0 / 20.)
+        np = noisepy.noisepy(False, False, ref_sound_pressure)
+        npa = noisepy.noisepy(True, False, ref_sound_pressure)
         short_size = struct.calcsize('h')
         while True:
             audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
@@ -106,6 +102,61 @@ class AcousticIndicatorsProcessor(threading.Thread):
 
 
 
+class AcousticIndicatorsServer(HTTPServer):
+    def __init__(self, data, *args, **kwargs):
+         # Because HTTPServer is an old-style class, super() can't be used.
+         HTTPServer.__init__(self, *args, **kwargs)
+         self.data = data
+
+class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain;charset=UTF-8')
+        self.end_headers()
+        for line in list(self.server.data["leq"]):
+            self.wfile.write(b'%d,%.2f,%.2f\n' % tuple(line))
+        return
+
+# Push results to ftp folder
+class FtpPush(threading.Thread):
+    def __init__(self, data, config):
+        threading.Thread.__init__(self)
+        self.data = data
+        self.config = config
+        self.csv_cache = collections.deque()
+
+    def on_new_record(self, line):
+        self.csv_cache.append(line)
+
+    def generate_filename(self):
+        mac_adress = '-'.join(("%012X" % uuid.getnode())[i:i+2] for i in range(0, 12, 2))
+        date_iso = datetime.datetime.now().isoformat().replace(":","-")
+        return mac_adress+"_"+date_iso+".csv"
+        #config["host"], config["port"], config["user"], config["pass"], config["folder"]
+    def run(self):
+        ftp = ftplib.FTP(timeout=self.config["timeout"])
+        ftp.connect(self.config["host"], self.config["port"], self.config["timeout"])
+        ftp.login(self.config["user"], self.config["pass"])
+        self.data["callback"].append(self.on_new_record)
+        if len(self.config["folder"]) > 0:
+            ftp.cwd(self.config["folder"])
+        # main loop
+        while True:
+            filename = self.generate_filename()
+            pushed_lines = 0
+            pushed_bytes = 0
+            while pushed_lines < leq_max_history:
+                while len(self.csv_cache) < leq_refresh_history:
+                    time.sleep(ftp_sleep)
+                stringbuffer = StringIO.StringIO()
+                for i in range(leq_refresh_history):
+                    stringbuffer.write(b'%d,%.2f,%.2f\n' % tuple(self.csv_cache.popleft()))
+                pushed_lines += leq_refresh_history
+                stringbuffer.seek(0)
+                ftp.storbinary('STOR '+filename, stringbuffer, rest=pushed_bytes)
+                pushed_bytes += stringbuffer.tell()
+
 def run(data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
     server_address = ('localhost', port)
     httpd = server_class(data, server_address, handler_class)
@@ -122,15 +173,30 @@ def usage():
     print("Usage:")
     print(" -p:\t Serve as http on specified port (Optional)")
 
+##
+# FTP Configuration file example
+#{
+#    "protocol": "ftp",
+#    "host": "192.168.1.1",
+#    "folder" : "",
+#    "port": 21,
+#    "user": "user",
+#    "pass": "password",
+#    "timeout": 10000,
+#    "filePermissions":"0644"
+#}
 def main():
     # Shared data between process
-    data = {'leq' : []}
+    data = {'leq' : [], "callback" : []}
+    ftpconfig = ""
     # parse command line options
     port = 0
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "p:o")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "p:f:")[0]:
             if opt == "-p":
                 port = int(value)
+            elif opt == "-f":
+                ftpconfig = value
     except getopt.error as msg:
         usage()
         exit(-1)
@@ -140,6 +206,11 @@ def main():
 
     if port > 0:
         run(data, port=port)
+    if len(ftpconfig) > 0 and os.path.isfile(ftpconfig):
+        config = json.load(open(ftpconfig))
+        ftp_thread = FtpPush(data, config)
+        ftp_thread.start()
+
 
 if __name__ == "__main__":
     main()
