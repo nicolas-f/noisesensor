@@ -5,6 +5,7 @@ build/
 dist/
 *.egg-info
 .kdev4
+.idea
 
 # Compiled source #
 ###################
