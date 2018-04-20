@@ -145,7 +145,7 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
 # Push results to ftp folder
 class FtpPush(threading.Thread):
-    def __init__(self, data, config, prepend, leq_max_history, leq_refresh_history, write_format):
+    def __init__(self, data, config, prepend, leq_max_history, leq_refresh_history, write_format, header):
         threading.Thread.__init__(self)
         self.data = data
         self.config = config
@@ -154,6 +154,7 @@ class FtpPush(threading.Thread):
         self.leq_max_history = leq_max_history
         self.leq_refresh_history = leq_refresh_history
         self.write_format = write_format
+        self.header = header
 
     def on_new_record(self, line):
         self.csv_cache.append(line)
@@ -184,7 +185,7 @@ class FtpPush(threading.Thread):
                     time.sleep(ftp_sleep)
                 stringbuffer = StringIO.StringIO()
                 if pushed_lines == 0:
-                    stringbuffer.write("epoch,leq,laeq\n")
+                    stringbuffer.write(self.header+"\n")
                 for i in range(self.leq_refresh_history):
                     stringbuffer.write(self.write_format % tuple(self.csv_cache.popleft()))
                 pushed_lines += self.leq_refresh_history
@@ -266,11 +267,13 @@ def main():
         leq_max_history = 30 * 60
         # push data to FTP when this number of seconds is cached
         leq_refresh_history = 30
+        csv_header = "epoch,leq,laeq,"+",".join(map(lambda f: "%.1fHz" % f, freqs))
         ftp_thread_fast = FtpPush(data, config, "fast_", leq_max_history * 8, leq_refresh_history * 8, b'%d,%.2f,%.2f,'
-                                  + ",".join(["%.2f"]*len(freqs))+b'\n')
+                                  + ",".join(["%.2f"]*len(freqs))+b'\n', csv_header)
         data["callback_fast"].append(ftp_thread_fast.on_new_record)
         ftp_thread_fast.start()
-        ftp_thread_slow = FtpPush(data, config, "slow_", leq_max_history, leq_refresh_history, b'%d,%.2f,%.2f\n')
+        ftp_thread_slow = FtpPush(data, config, "slow_", leq_max_history, leq_refresh_history, b'%d,%.2f,%.2f\n',
+                                  "epoch,leq,laeq")
         data["callback_slow"].append(ftp_thread_slow.on_new_record)
         ftp_thread_slow.start()
 
