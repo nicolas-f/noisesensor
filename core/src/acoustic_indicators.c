@@ -246,7 +246,7 @@ float ai_get_leq_fast(AcousticIndicatorsData* data) {
 
 float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id) {
     if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
-        int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE - 1 : data->windows_count;
+        int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE - 1 : data->windows_count - 1;
         return data->spectrum[window_count][band_id];
     } else {
         return 0.;
