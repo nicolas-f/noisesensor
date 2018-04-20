@@ -1,0 +1,10 @@
+{
+    "protocol": "ftp",
+    "host": "192.168.1.1",
+    "port": 21,
+    "folder": "",
+    "user": "user",
+    "pass": "password",
+    "timeout": 10000,
+    "filePermissions":"0644"
+}

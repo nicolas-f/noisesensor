@@ -84,7 +84,7 @@ void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data);
 /**
  * Create a new instance of acoustic indicators
  */
-AcousticIndicatorsData* ai_NewAcousticIndicatorsData();
+AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void);
 
 /**
  * @param data instance of this struct, create an empty struct on first use

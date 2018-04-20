@@ -5,6 +5,7 @@ build/
 dist/
 *.egg-info
 .kdev4
+.idea
 
 # Compiled source #
 ###################
@@ -18,3 +19,4 @@ dist/
 noisepy/noisepy.c
 *.kdev4
 CMakeLists.txt.user
+ftpconfig.json
