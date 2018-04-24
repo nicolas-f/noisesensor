@@ -16,7 +16,6 @@ dist/
 *.o
 *.so
 *.pyc
-noisepy/noisepy.c
 *.kdev4
 CMakeLists.txt.user
 ftpconfig.json

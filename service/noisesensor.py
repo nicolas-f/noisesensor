@@ -255,12 +255,11 @@ def main():
     except getopt.error as msg:
         usage()
         exit(-1)
-    # run processing thread
+    # run audio processing thread
     processing_thread = AcousticIndicatorsProcessor(data)
     processing_thread.start()
 
-    if port > 0:
-        run(data, port=port)
+    # ftp push threads
     if len(ftpconfig) > 0 and os.path.isfile(ftpconfig):
         config = json.load(open(ftpconfig))
         # Create a new file when reaching this time length
@@ -276,6 +275,10 @@ def main():
                                   "epoch,leq,laeq")
         data["callback_slow"].append(ftp_thread_slow.on_new_record)
         ftp_thread_slow.start()
+
+    # Http server
+    if port > 0:
+        run(data, port=port)
 
 
 if __name__ == "__main__":
