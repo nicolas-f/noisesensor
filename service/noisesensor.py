@@ -80,7 +80,8 @@ class AcousticIndicatorsProcessor(threading.Thread):
             fun(line)
 
     def run(self):
-        ref_sound_pressure = 1 / 10 ** (0 / 20.)
+        db_delta = 0
+        ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure)
         npa = noisepy.noisepy(True, False, ref_sound_pressure)
         short_size = struct.calcsize('h')
@@ -123,6 +124,7 @@ class AcousticIndicatorsServer(HTTPServer):
     def __init__(self, data, *args, **kwargs):
         # Because HTTPServer is an old-style class, super() can't be used.
         HTTPServer.__init__(self, *args, **kwargs)
+        self.daemon = True
         self.data = data
         self.fast = []
         self.data["callback_fast"].append(self.push_data)
@@ -147,6 +149,7 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 class FtpPush(threading.Thread):
     def __init__(self, data, config, prepend, leq_max_history, leq_refresh_history, write_format, header):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.data = data
         self.config = config
         self.csv_cache = collections.deque()
@@ -193,6 +196,7 @@ class FtpPush(threading.Thread):
                     try:
                         stringbuffer.seek(0)
                         ftp.storbinary('STOR ' + filename, stringbuffer, rest=pushed_bytes)
+                        ftp_retries = 10
                         break
                     except ftplib.error_perm as err:
                         if ftp_retries > 0:
@@ -207,16 +211,21 @@ class FtpPush(threading.Thread):
                 pushed_bytes += stringbuffer.tell()
 
 
-def run(data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
-    server_address = ('localhost', port)
-    httpd = server_class(data, server_address, handler_class)
-    try:
-        print("Server works on http://localhost:%d" % port)
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("Stop the server on http://localhost:%d" % port)
-        httpd.socket.close()
+# Push results to ftp folder
+class HttpServer(threading.Thread):
+    def __init__(self, data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        server_address = ('localhost', port)
+        self.httpd = server_class(data, server_address, handler_class)
 
+    def run(self):
+        try:
+            print("Server works on http://localhost:%d" % port)
+            self.httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("Stop the server on http://localhost:%d" % port)
+            self.httpd.socket.close()
 
 def usage():
     print(
@@ -278,7 +287,11 @@ def main():
 
     # Http server
     if port > 0:
-        run(data, port=port)
+        httpserver = HttpServer(data, port=port)
+        httpserver.start()
+
+    # End program when audio processing end
+    processing_thread.join()
 
 
 if __name__ == "__main__":
