@@ -70,6 +70,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def __init__(self, data):
         threading.Thread.__init__(self)
         self.data = data
+        self.epoch = datetime.datetime.utcfromtimestamp(0)
 
     def push_data_fast(self, line):
         for fun in self.data["callback_fast"]:
@@ -78,6 +79,9 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def push_data_slow(self, line):
         for fun in self.data["callback_slow"]:
             fun(line)
+
+    def unix_time(self):
+        return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def run(self):
         db_delta = 0
@@ -115,9 +119,9 @@ class AcousticIndicatorsProcessor(threading.Thread):
                         laeq1s = npa.get_leq_slow()
                         push_slow = True
                 if push_fast:
-                    self.push_data_fast([int(time.time() * 1000), leq125ms, laeq125ms] + leqSpectrum)
+                    self.push_data_fast([self.unix_time(), leq125ms, laeq125ms] + leqSpectrum)
                 if push_slow:
-                    self.push_data_slow([int(time.time() * 1000), leq1s, laeq1s])
+                    self.push_data_slow([self.unix_time(), leq1s, laeq1s])
 
 
 class AcousticIndicatorsServer(HTTPServer):
@@ -126,13 +130,16 @@ class AcousticIndicatorsServer(HTTPServer):
         HTTPServer.__init__(self, *args, **kwargs)
         self.daemon = True
         self.data = data
-        self.fast = []
-        self.data["callback_fast"].append(self.push_data)
+        self.fast = collections.deque(maxlen=data['row_cache_fast'])
+        self.slow = collections.deque(maxlen=data['row_cache_slow'])
+        self.data["callback_fast"].append(self.push_data_fast)
+        self.data["callback_slow"].append(self.push_data_slow)
 
-    def push_data(self, line):
-        self.fast.insert(0, line)
-        self.fast = self.fast[:100]
+    def push_data_fast(self, line):
+        self.fast.append(line)
 
+    def push_data_slow(self, line):
+        self.slow.append(line)
 
 class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
@@ -140,8 +147,12 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain;charset=UTF-8')
         self.end_headers()
-        for line in list(self.server.fast):
-            self.wfile.write(b'%d,%.2f,%.2f\n' % tuple(line))
+        if self.path.startswith("/fast"):
+            while len(self.server.fast) > 0:
+                self.wfile.write(self.server.data["format_fast"] % tuple(self.server.fast.popleft()))
+        else:
+            while len(self.server.slow) > 0:
+                self.wfile.write(self.server.data["format_slow"] % tuple(self.server.slow.popleft()))
         return
 
 
@@ -251,7 +262,8 @@ def usage():
 # }
 def main():
     # Shared data between process
-    data = {'leq': [], "callback_fast": [], "callback_slow": []}
+    data = {'leq': [], "callback_fast": [], "callback_slow": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
+            "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n' }
     ftpconfig = ""
     # parse command line options
     port = 0
@@ -276,11 +288,10 @@ def main():
         # push data to FTP when this number of seconds is cached
         leq_refresh_history = 30
         csv_header = "epoch,leq,laeq,"+",".join(map(lambda f: "%.1fHz" % f, freqs))
-        ftp_thread_fast = FtpPush(data, config, "fast_", leq_max_history * 8, leq_refresh_history * 8, b'%d,%.2f,%.2f,'
-                                  + ",".join(["%.2f"]*len(freqs))+b'\n', csv_header)
+        ftp_thread_fast = FtpPush(data, config, "fast_", leq_max_history * 8, leq_refresh_history * 8, data["format_fast"], csv_header)
         data["callback_fast"].append(ftp_thread_fast.on_new_record)
         ftp_thread_fast.start()
-        ftp_thread_slow = FtpPush(data, config, "slow_", leq_max_history, leq_refresh_history, b'%d,%.2f,%.2f\n',
+        ftp_thread_slow = FtpPush(data, config, "slow_", leq_max_history, leq_refresh_history, data["format_slow"],
                                   "epoch,leq,laeq")
         data["callback_slow"].append(ftp_thread_slow.on_new_record)
         ftp_thread_slow.start()
