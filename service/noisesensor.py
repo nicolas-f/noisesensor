@@ -58,7 +58,7 @@ import collections
 
 ## Usage
 # This script expect signed 16 bits mono audio on stdin
-# arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
+# arecord -D hw:1 -r 32000 -f S32_LE -c2 -t raw | /usr/bin/sox -c 2 -t raw -r 32000 -L -b 32 -e signed-integer - -b 16 -e signed-integer -L -t raw -c 1 - | python -u noisesensor.py -p 8090
 ftp_sleep = 0.02
 
 __version__ = "1.0.0-dev"
@@ -226,16 +226,17 @@ class FtpPush(threading.Thread):
 class HttpServer(threading.Thread):
     def __init__(self, data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
         threading.Thread.__init__(self)
+        self.port = port
         self.daemon = True
         server_address = ('localhost', port)
         self.httpd = server_class(data, server_address, handler_class)
 
     def run(self):
         try:
-            print("Server works on http://localhost:%d" % port)
+            print("Server works on http://localhost:%d" % self.port)
             self.httpd.serve_forever()
         except KeyboardInterrupt:
-            print("Stop the server on http://localhost:%d" % port)
+            print("Stop the server on http://localhost:%d" % self.port)
             self.httpd.socket.close()
 
 def usage():
