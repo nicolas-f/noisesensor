@@ -53,6 +53,10 @@
 #define AI_WINDOW_SUM_HANN_COUNT 4
 #define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
 
+#ifndef AI_PI
+#define AI_PI 3.141592653589793238462643383279502884197169399375105820974944
+#endif
+
 typedef struct  {
     int64_t sample_index;   // sample index
     int16_t window_data[AI_WINDOW_SIZE];
@@ -65,6 +69,7 @@ typedef struct  {
     bool a_filter;
     bool hann_window;
     bool has_spectrum;
+    bool do_reset_fft_accumulator;
     float_t ref_pressure;
     float_t last_leq_slow;
     float_t last_leq_fast;
