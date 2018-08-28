@@ -19,3 +19,4 @@ dist/
 *.kdev4
 CMakeLists.txt.user
 ftpconfig.json
+.atom-dbg.cson

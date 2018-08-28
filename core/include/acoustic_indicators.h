@@ -47,16 +47,23 @@
 // Analyse using Fast rate (125 ms)
 #define AI_WINDOW_SIZE (4000)
 #define AI_WINDOW_FFT_SIZE (4096)
+// Overlapping of Hamming windows (~ 68%) Will compute a new FFT each AI_WINDOW_OVERLAPING_SIZE samples
+#define AI_WINDOW_OVERLAPING_SIZE 1280
+// A 125 ms result is the sum of X Hamming windows
+#define AI_WINDOW_SUM_HAMMING_COUNT 4
 #define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
 
 typedef struct  {
-    int32_t window_cursor;
-    float_t window_data[AI_WINDOW_SIZE];
+    int64_t sample_index;   // sample index
+    int16_t window_data[AI_WINDOW_SIZE];
     float_t* window_fft_data; // FFt rms
     int32_t windows_count;
-	float_t windows[AI_WINDOWS_SIZE];
+    float_t windows[AI_WINDOWS_SIZE];
+    int32_t hamming_results_cursor;
+    float_t hamming_results[AI_WINDOW_SUM_HAMMING_COUNT];
     float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
     bool a_filter;
+    bool hamming_window;
     bool has_spectrum;
     float_t ref_pressure;
     float_t last_leq_slow;
@@ -72,9 +79,11 @@ enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
  * Init struct for acoustic indicators
  * @param data Acoustic indicators object
  * @param a_filter Compute A weighting
- * @param Compute leq for each third octaves
+ * @param spectrum Compute leq for each third octaves
+ * @param ref_pressure Reference pressure to compture conversion between rms and dB
+ * @param hamming_window If true a hamming window with overlaping is computed, use rectangular window otherwise
  */
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure);
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool hamming_window);
 
 /**
  * Free struct for acoustic indicators

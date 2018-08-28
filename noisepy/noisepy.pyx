@@ -51,11 +51,12 @@ cdef class noisepy:
         if self._c_noisepy is not NULL:
             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
 
-    def __init__(self, a_filter, third_octave, ref_pressure):
+    def __init__(self, a_filter, third_octave, ref_pressure, hamming):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
         self.third_octave = third_octave
-        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure)
+        self.hamming = hamming
+        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.hamming)
 
     def push(self, unsigned char* python_samples, int length):
       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)

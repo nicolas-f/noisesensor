@@ -56,9 +56,9 @@ static char * test_leq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, false,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, false,REF_SOUND_PRESSURE, false);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
 	// open file
 	ptr = fopen(filename, "rb");
@@ -117,9 +117,9 @@ static char * test_laeq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, true, false,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, true, false,REF_SOUND_PRESSURE, false);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
 	// open file
 	ptr = fopen(filename, "rb");
@@ -179,9 +179,9 @@ static char * test_leq_spectrum_32khz() {
     const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
     FILE *ptr;
     AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, false);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
     // open file
     ptr = fopen(filename, "rb");
