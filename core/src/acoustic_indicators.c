@@ -64,7 +64,7 @@ const float_t numerator_32khz[ORDER] = {0.34345834, -0.68691668, -0.34345834, 1.
 const float_t denominator_32khz[ORDER] = {1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407};
 
 int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data) {
-    if(!data->hamming_window) {
+    if(!data->hann_window) {
         return AI_WINDOW_SIZE - (data->sample_index + AI_WINDOW_SIZE) % AI_WINDOW_SIZE;
     } else {
         return AI_WINDOW_OVERLAPING_SIZE - (data->sample_index + AI_WINDOW_OVERLAPING_SIZE) % AI_WINDOW_OVERLAPING_SIZE;
@@ -92,24 +92,30 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
         memcpy(&data->window_data, &sample_data[window_cursor], window_copy_to * sizeof(int16_t));
     }
     data->sample_index += sample_len;
-    if((data->hamming_window && data->sample_index % AI_WINDOW_OVERLAPING_SIZE == 0) || (!data->hamming_window && data->sample_index % AI_WINDOW_SIZE == 0)) {
+    if((data->hann_window && data->sample_index % AI_WINDOW_OVERLAPING_SIZE == 0) || (!data->hann_window && data->sample_index % AI_WINDOW_SIZE == 0)) {
         // Window is filled
         // Store a time contiuous window
         float_t continuous_window[AI_WINDOW_SIZE];
         // Copy begining part of data
-        for(int i = window_copy_to; i < AI_WINDOW_SIZE; i++) {
+        for(i = window_copy_to; i < AI_WINDOW_SIZE; i++) {
             continuous_window[i - window_copy_to] = data->window_data[i];
         }
         // Copy end part of data
-        for(int i = 0; i < window_copy_to; i++) {
+        for(i = 0; i < window_copy_to; i++) {
             continuous_window[i + window_copy_to] = data->window_data[i];
         }
-		// Compute A weighting
+        if(data->hann_window) {
+          // Apply hann window Filter to signal
+          for(i=0; i<AI_WINDOW_SIZE; i++) {
+            continuous_window[i] *= (float_t)((1.0-cos(2.0*M_PI*(i+1)/(AI_WINDOW_SIZE+1)))*0.5);
+          }
+        }
+		    // Compute A weighting
         if(data->a_filter) {
 				float_t weightedSignal[AI_WINDOW_SIZE];
 				// Filter delays
 				float_t z[ORDER-1][AI_WINDOW_SIZE];
-                int idT;
+        int idT;
 				for (idT = 0; idT < AI_WINDOW_SIZE; idT++){
                     // Avoid iteration idT=0 exception (z[0][idT-1]=0)
                     weightedSignal[idT] = (numerator_32khz[0]*continuous_window[idT] + (idT == 0 ? 0 : z[0][idT-1]));
@@ -193,24 +199,24 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
 		for(i=0; i < AI_WINDOW_SIZE; i++) {
             sampleSum += continuous_window[i] * continuous_window[i];
 		}
-        if(data->hamming_window) {
-            data->hamming_results[data->hamming_results_cursor++] = sampleSum;
+        if(data->hann_window) {
+            data->hann_results[data->hann_results_cursor++] = sampleSum;
         }
-        // If not using hamming window or the last hamming window contains FAST result
-        if(!data->hamming_window || data->hamming_results_cursor == AI_WINDOW_SUM_HAMMING_COUNT) {
-            if(data->hamming_window) {
-                // Compute sum of hamming RMS
+        // If not using hann window or the last hann window contains FAST result
+        if(!data->hann_window || data->hann_results_cursor == AI_WINDOW_SUM_HANN_COUNT) {
+            if(data->hann_window) {
+                // Compute sum of hann RMS
                 sampleSum = 0;
-                for(int i=0; i< AI_WINDOW_SUM_HAMMING_COUNT; i++) {
-                    sampleSum += data->hamming_results[i];
+                for(int i=0; i< AI_WINDOW_SUM_HANN_COUNT; i++) {
+                    sampleSum += data->hann_results[i];
                 }
 
-                // The last hamming result may contain a piece of next fast result
+                // The last hann result may contain a piece of next fast result
                 if(data->sample_index % AI_WINDOW_SIZE == 0) {
-                    data->hamming_results_cursor = 0;
+                    data->hann_results_cursor = 0;
                 } else {
-                    data->hamming_results[0] = data->hamming_results[AI_WINDOW_SUM_HAMMING_COUNT - 1];
-                    data->hamming_results_cursor = 1;
+                    data->hann_results[0] = data->hann_results[AI_WINDOW_SUM_HANN_COUNT - 1];
+                    data->hann_results_cursor = 1;
                 }
             }
             // Return a result to the user
@@ -247,7 +253,7 @@ void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
     }
 }
 
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool hamming_window)
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool hann_window)
 {
 	data->windows_count = 0;
     data->sample_index = 0;
@@ -256,7 +262,7 @@ void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, 
     data->ref_pressure = ref_pressure;
     data->last_leq_fast = 0;
     data->last_leq_slow = 0;
-    data->hamming_window = hamming_window;
+    data->hann_window = hann_window;
     memset(data->window_data, 0, AI_WINDOW_SIZE * sizeof(int16_t));
     if(spectrum) {
         data->window_fft_data = malloc(AI_WINDOW_FFT_SIZE * sizeof(float_t));
