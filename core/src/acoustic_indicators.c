@@ -110,7 +110,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
         if(data->hann_window) {
           // Apply hann window Filter to signal
           for(i=0; i<AI_WINDOW_SIZE; i++) {
-            continuous_window[i] *= (float_t)((1.0-cos(2.0*AI_PI*(i+1)/(AI_WINDOW_SIZE+1)))*0.5);
+            continuous_window[i] *= ((float_t)((1.0-cos(2.0*AI_PI*(i+1)/(AI_WINDOW_SIZE+1)))*0.5));
           }
         }
 		    // Compute A weighting
@@ -180,8 +180,9 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                 for(i=startSampleIndex; i <= endSampleIndex; i++) {
                     sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
                 }
-                const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
-                data->spectrum[data->windows_count][id_third_octave] += rms / data->ref_pressure;
+                //const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
+                //data->spectrum[data->windows_count][id_third_octave] += rms / data->ref_pressure;
+                data->spectrum[data->windows_count][id_third_octave] += sumRms;
             }
             #else
                 double freqByCell = AI_SAMPLING_RATE / (double)AI_WINDOW_SIZE;
@@ -289,7 +290,8 @@ float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
         for(i=0; i < window_count; i++) {
           sum += data->spectrum[i][band_id];
         }
-        return 20 * log10(sum / AI_WINDOWS_SIZE);
+        const double rms = (2. / AI_WINDOW_SIZE * sqrt(sum / 2));
+        return 20 * log10(rms / data->ref_pressure / AI_WINDOWS_SIZE);
     } else {
         return 0.f;
     }
@@ -311,7 +313,9 @@ float ai_get_leq_fast(AcousticIndicatorsData* data) {
 float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id) {
     if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
         int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE - 1 : data->windows_count - 1;
-        return 20 * log10(data->spectrum[window_count][band_id]);
+
+        const double rms = (2. / AI_WINDOW_SIZE * sqrt(data->spectrum[window_count][band_id] / 2));
+        return 20 * log10(rms / data->ref_pressure);
     } else {
         return 0.;
     }

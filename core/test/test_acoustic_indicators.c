@@ -359,13 +359,14 @@ static char * test_1khz_hann_lobs() {
 	  ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
 		return 0;
 }
+
+
 static char * all_tests() {
    //mu_run_test(test_leq_32khz);
    //mu_run_test(test_laeq_32khz);
    //mu_run_test(test_leq_spectrum_32khz);
 	 mu_run_test(test_1khz_rectangular_lobs);
 	 mu_run_test(test_1khz_hann_lobs);
-
    return 0;
 }
 
