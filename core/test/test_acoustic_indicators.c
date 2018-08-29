@@ -273,18 +273,18 @@ static char * test_1khz_rectangular_lobs() {
 					// Average spectrum levels
 					int iband;
 					printf("Frequency");
-					printf(",leq");
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						printf(",%.1f", ai_get_frequency(iband));
 					}
+					printf(",leq");
 					printf("\n");
 					printf("Rectangular");
-					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
 						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
 						printf(",%.1f", level);
 					}
+					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
 					printf("\n");
 			}
 		}
@@ -326,17 +326,17 @@ static char * test_1khz_hann_lobs() {
 	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
 				buffer[s-start_s] = (int16_t)pwr;
 			}
-			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
+			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_FAST && start_s > 3 * AI_WINDOW_SIZE) {
 					// Average spectrum levels
 					int iband;
 					printf("Hann");
-					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
 					int band_id;
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
-						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
+						float_t level = ai_get_leq_band_fast(&acousticIndicatorsData, iband);
 						printf(",%.1f", level);
 					}
+					printf(",%.1f", ai_get_leq_fast(&acousticIndicatorsData));
 					/*
 					for(band_id=0;band_id<AI_NB_BAND;band_id++) {
 						processed_bands++;
@@ -352,6 +352,7 @@ static char * test_1khz_hann_lobs() {
 					}
 					*/
 					printf("\n");
+					break;
 			}
 		}
 		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);

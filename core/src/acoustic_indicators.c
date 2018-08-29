@@ -213,9 +213,11 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
     		}
         if(data->hann_window) {
             data->hann_results[data->hann_results_cursor++] = sampleSum;
+            if(data->hann_results_cursor >= AI_WINDOW_SUM_HANN_COUNT) {
+              data->hann_results_cursor = 0;
+            }
         }
-        // If not using hann window or the last hann window contains FAST result
-        if(!data->hann_window || data->hann_results_cursor == AI_WINDOW_SUM_HANN_COUNT) {
+        if(!data->hann_window || data->sample_index % (AI_WINDOW_OVERLAPING_SIZE * AI_WINDOW_SUM_HANN_COUNT) == 0) {
             if(data->hann_window) {
                 // Compute sum of hann RMS
                 sampleSum = 0;
@@ -223,13 +225,6 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     sampleSum += data->hann_results[i];
                 }
                 data->do_reset_fft_accumulator = true;
-                // The last hann result may contain a piece of next fast result
-                if(data->sample_index % AI_WINDOW_SIZE == 0) {
-                    data->hann_results_cursor = 0;
-                } else {
-                    data->hann_results[0] = data->hann_results[AI_WINDOW_SUM_HANN_COUNT - 1];
-                    data->hann_results_cursor = 1;
-                }
             }
             // Return a result to the user
             // Push window sum in windows struct data

@@ -50,7 +50,7 @@
 // Overlapping of hann windows (~ 68%) Will compute a new FFT each AI_WINDOW_OVERLAPING_SIZE samples
 #define AI_WINDOW_OVERLAPING_SIZE 1280
 // A 125 ms result is the sum of X hann windows
-#define AI_WINDOW_SUM_HANN_COUNT 4
+#define AI_WINDOW_SUM_HANN_COUNT 3
 #define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
 
 #ifndef AI_PI
