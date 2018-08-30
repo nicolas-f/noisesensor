@@ -178,7 +178,8 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     int cellCeil = MIN(AI_WINDOW_FFT_SIZE - 1, (int) (floor(fUpper / freqByCell)));
                     int cellLower = MIN(cellFloor, cellCeil);
                     int cellUpper = MAX(cellFloor, cellCeil);
-                    for(int idCell = cellLower; idCell <= cellUpper; idCell++) {
+										int idCell;
+                    for(idCell = cellLower; idCell <= cellUpper; idCell++) {
                         sumRms += data->window_fft_data[idCell];
                     }
                     const float_t rms = sqrt(sumRms / 2) / (sample_fft_count / 2.);

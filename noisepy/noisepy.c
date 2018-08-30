@@ -1112,12 +1112,13 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
 static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, PyObject *__pyx_v_a_filter, PyObject *__pyx_v_third_octave, PyObject *__pyx_v_ref_pressure, PyObject *__pyx_v_window); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, unsigned char *__pyx_v_python_samples, int __pyx_v_length); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16get_leq_band_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, float __pyx_v_tukey_alpha); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_tp_new_7noisepy_7wrapped_noisepy(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__2;
@@ -1579,7 +1580,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
  *     def get_leq_slow(self):
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)             # <<<<<<<<<<<<<<
  * 
- *     def get_leq_fast(self):
+ *     def set_tukey_alpha(self, float tukey_alpha):
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_slow(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
@@ -1610,31 +1611,91 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
 /* "noisepy/noisepy.pyx":68
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
  * 
- *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
- *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
+ *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
+ *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11get_leq_fast(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11get_leq_fast(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11set_tukey_alpha(PyObject *__pyx_v_self, PyObject *__pyx_arg_tukey_alpha); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11set_tukey_alpha(PyObject *__pyx_v_self, PyObject *__pyx_arg_tukey_alpha) {
+  float __pyx_v_tukey_alpha;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("get_leq_fast (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+  __Pyx_RefNannySetupContext("set_tukey_alpha (wrapper)", 0);
+  assert(__pyx_arg_tukey_alpha); {
+    __pyx_v_tukey_alpha = __pyx_PyFloat_AsFloat(__pyx_arg_tukey_alpha); if (unlikely((__pyx_v_tukey_alpha == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 68, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("noisepy.wrapped.noisepy.set_tukey_alpha", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((float)__pyx_v_tukey_alpha));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, float __pyx_v_tukey_alpha) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_tukey_alpha", 0);
+
+  /* "noisepy/noisepy.pyx":69
+ * 
+ *     def set_tukey_alpha(self, float tukey_alpha):
+ *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)             # <<<<<<<<<<<<<<
+ * 
+ *     def get_leq_fast(self):
+ */
+  ai_SetTukeyAlpha(__pyx_v_self->_c_noisepy, __pyx_v_tukey_alpha);
+
+  /* "noisepy/noisepy.pyx":68
+ *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
+ * 
+ *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
+ *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "noisepy/noisepy.pyx":71
+ *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
+ * 
+ *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
+ *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_fast(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_fast(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("get_leq_fast (wrapper)", 0);
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_fast", 0);
 
-  /* "noisepy/noisepy.pyx":69
+  /* "noisepy/noisepy.pyx":72
  * 
  *     def get_leq_fast(self):
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1642,14 +1703,14 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(struct __pyx
  *     def get_leq_band_fast(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":68
- *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
+  /* "noisepy/noisepy.pyx":71
+ *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
@@ -1667,7 +1728,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(struct __pyx
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":71
+/* "noisepy/noisepy.pyx":74
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1676,14 +1737,14 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10get_leq_fast(struct __pyx
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_band_fast(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_band_fast(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id) {
   int __pyx_v_band_id;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_fast (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 71, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1691,20 +1752,20 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_band_fast(PyObjec
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((int)__pyx_v_band_id));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((int)__pyx_v_band_id));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_fast", 0);
 
-  /* "noisepy/noisepy.pyx":72
+  /* "noisepy/noisepy.pyx":75
  * 
  *     def get_leq_band_fast(self, int band_id):
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
@@ -1712,13 +1773,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(struct 
  *     def max_samples_length(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":71
+  /* "noisepy/noisepy.pyx":74
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1737,7 +1798,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(struct 
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":74
+/* "noisepy/noisepy.pyx":77
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
@@ -1746,25 +1807,25 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_band_fast(struct 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15max_samples_length(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15max_samples_length(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_17max_samples_length(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_17max_samples_length(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("max_samples_length (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("max_samples_length", 0);
 
-  /* "noisepy/noisepy.pyx":75
+  /* "noisepy/noisepy.pyx":78
  * 
  *     def max_samples_length(self):
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1772,13 +1833,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(struct
  *     def get_leq_band_slow(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(ai_GetMaximalSampleSize(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(ai_GetMaximalSampleSize(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":74
+  /* "noisepy/noisepy.pyx":77
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
@@ -1797,7 +1858,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(struct
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":77
+/* "noisepy/noisepy.pyx":80
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1805,14 +1866,14 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14max_samples_length(struct
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_17get_leq_band_slow(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_17get_leq_band_slow(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow(PyObject *__pyx_v_self, PyObject *__pyx_arg_band_id) {
   int __pyx_v_band_id;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_slow (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 80, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1820,32 +1881,32 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_17get_leq_band_slow(PyObjec
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_16get_leq_band_slow(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((int)__pyx_v_band_id));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((int)__pyx_v_band_id));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16get_leq_band_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_slow", 0);
 
-  /* "noisepy/noisepy.pyx":78
+  /* "noisepy/noisepy.pyx":81
  * 
  *     def get_leq_band_slow(self, int band_id):
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":77
+  /* "noisepy/noisepy.pyx":80
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1870,19 +1931,19 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16get_leq_band_slow(struct 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__reduce_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_18__reduce_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -1924,19 +1985,19 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18__reduce_cython__(CYTHON_
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__setstate_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_20__setstate_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((PyObject *)__pyx_v___pyx_state));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((PyObject *)__pyx_v___pyx_state));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -2005,12 +2066,13 @@ static void __pyx_tp_dealloc_7noisepy_7wrapped_noisepy(PyObject *o) {
 static PyMethodDef __pyx_methods_7noisepy_7wrapped_noisepy[] = {
   {"push", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_7push, METH_VARARGS|METH_KEYWORDS, 0},
   {"get_leq_slow", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_9get_leq_slow, METH_NOARGS, 0},
-  {"get_leq_fast", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_11get_leq_fast, METH_NOARGS, 0},
-  {"get_leq_band_fast", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_band_fast, METH_O, 0},
-  {"max_samples_length", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_15max_samples_length, METH_NOARGS, 0},
-  {"get_leq_band_slow", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_17get_leq_band_slow, METH_O, 0},
-  {"__reduce_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_19__reduce_cython__, METH_NOARGS, 0},
-  {"__setstate_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_21__setstate_cython__, METH_O, 0},
+  {"set_tukey_alpha", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_11set_tukey_alpha, METH_O, 0},
+  {"get_leq_fast", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_13get_leq_fast, METH_NOARGS, 0},
+  {"get_leq_band_fast", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast, METH_O, 0},
+  {"max_samples_length", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_17max_samples_length, METH_NOARGS, 0},
+  {"get_leq_band_slow", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow, METH_O, 0},
+  {"__reduce_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__, METH_NOARGS, 0},
+  {"__setstate_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__, METH_O, 0},
   {0, 0, 0, 0}
 };
 
