@@ -15,3 +15,4 @@ cdef extern from "acoustic_indicators.h":
     float ai_get_leq_fast(AcousticIndicatorsData* data)
     float ai_get_band_leq(AcousticIndicatorsData* data, int band_id)
     float ai_get_leq_band_fast(AcousticIndicatorsData* data, int32_t band_id)
+    void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float tukey_alpha)

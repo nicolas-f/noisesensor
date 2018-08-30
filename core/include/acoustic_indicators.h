@@ -86,6 +86,11 @@ void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, 
 void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data);
 
 /**
+ * Change tukey alpha. Must be between 0 and 1
+ */
+void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float_t tukey_alpha);
+
+/**
  * Create a new instance of acoustic indicators
  */
 AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void);

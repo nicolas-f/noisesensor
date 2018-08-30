@@ -65,6 +65,9 @@ cdef class noisepy:
     def get_leq_slow(self):
       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
 
+    def set_tukey_alpha(self, float tukey_alpha):
+      cnoisepy.ai_SetTukeyAlpha(AcousticIndicatorsData* data, tukey_alpha)
+
     def get_leq_fast(self):
       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
 

@@ -51,7 +51,7 @@
 // int order = max(denominator.length, numerator.length);
 #define ORDER (7)
 
-#define AI_APPLY_FREQUENCY_BINS_FILTER
+// #define AI_APPLY_FREQUENCY_BINS_FILTER
 /**
  * Numerator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
@@ -161,7 +161,6 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
                 }
                 const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
-								//const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
                 data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
             }
             #else
@@ -216,6 +215,10 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
 AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void) {
 		AcousticIndicatorsData* p = malloc(sizeof(AcousticIndicatorsData));
 		return p;
+}
+
+void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float_t tukey_alpha) {
+	data->tukey_alpha = tukey_alpha;
 }
 
 void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {

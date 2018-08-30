@@ -179,7 +179,7 @@ static char * test_leq_spectrum_32khz() {
     const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
     FILE *ptr;
     AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, false);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
 
     int16_t shortBuffer[AI_WINDOW_SIZE];
 
@@ -233,6 +233,7 @@ static char * test_leq_spectrum_32khz() {
   double mean_error = sqrt(sumval / AI_NB_BAND);
   sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
   mu_assert(mu_message, mean_error < expected_mean_error);
+	printf("mean error expected %f got %f\n", expected_mean_error, mean_error);
   return 0;
 }
 
@@ -248,7 +249,7 @@ static char * test_1khz_rectangular_lobs() {
 		const int sampleRate = 32000;
 		const int signal_samples = 32000;
 		double powerRMS = RMS_REFERENCE_94DB;
-		float signalFrequency = 1000;
+		float signalFrequency = 4000;
 		double powerPeak = powerRMS * sqrt(2);
 
 	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
@@ -265,7 +266,7 @@ static char * test_1khz_rectangular_lobs() {
 			int start_s = s;
 			int maxLen = ai_GetMaximalSampleSize(&acousticIndicatorsData);
 			for(; s < signal_samples && s-start_s < maxLen;s++) {
-				double t = s * (1 / (double)sampleRate) + (AI_PI * 1.3);
+				double t = s * (1 / (double)sampleRate);
 	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
 				buffer[s-start_s] = (int16_t)pwr;
 			}
@@ -304,7 +305,7 @@ static char * test_1khz_rectangular_lobs() {
 		const int sampleRate = 32000;
 		const int signal_samples = 32000;
 		double powerRMS = RMS_REFERENCE_94DB;
-		float signalFrequency = 1000;
+		float signalFrequency = 4000;
 		double powerPeak = powerRMS * sqrt(2);
 
 	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
@@ -322,7 +323,7 @@ static char * test_1khz_rectangular_lobs() {
 			int start_s = s;
 			int maxLen = ai_GetMaximalSampleSize(&acousticIndicatorsData);
 			for(; s < signal_samples && s-start_s < maxLen;s++) {
-				double t = s * (1 / (double)sampleRate) + (AI_PI * 1.3);
+				double t = s * (1 / (double)sampleRate);
 	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
 				buffer[s-start_s] = (int16_t)pwr;
 			}
@@ -363,9 +364,9 @@ static char * test_1khz_hann_lobs_01() {
 }
 
 static char * all_tests() {
-   //mu_run_test(test_leq_32khz);
-   //mu_run_test(test_laeq_32khz);
-   //mu_run_test(test_leq_spectrum_32khz);
+   mu_run_test(test_leq_32khz);
+   mu_run_test(test_laeq_32khz);
+   mu_run_test(test_leq_spectrum_32khz);
 	 mu_run_test(test_1khz_rectangular_lobs);
 	 mu_run_test(test_1khz_hann_lobs_075);
 	 mu_run_test(test_1khz_hann_lobs_05);
