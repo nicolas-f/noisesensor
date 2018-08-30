@@ -42,6 +42,7 @@ cdef class noisepy:
     cdef bool a_filter
     cdef bool third_octave
     cdef float ref_pressure
+    cdef bool window
     def __cinit__(self):
         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
         if self._c_noisepy is NULL:
@@ -51,11 +52,12 @@ cdef class noisepy:
         if self._c_noisepy is not NULL:
             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
 
-    def __init__(self, a_filter, third_octave, ref_pressure):
+    def __init__(self, a_filter, third_octave, ref_pressure, window):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
         self.third_octave = third_octave
-        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure)
+        self.window = window
+        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
 
     def push(self, unsigned char* python_samples, int length):
       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)

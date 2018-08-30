@@ -49,16 +49,20 @@
 #define AI_WINDOW_FFT_SIZE (4096)
 #define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
 
+#define AI_PI 3.141592653589793238462643383279502884197169399375105820974944
+
 typedef struct  {
     int32_t window_cursor;
     float_t window_data[AI_WINDOW_SIZE];
     float_t* window_fft_data; // FFt rms
     int32_t windows_count;
-	float_t windows[AI_WINDOWS_SIZE];
+    float_t windows[AI_WINDOWS_SIZE];
     float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
     bool a_filter;
     bool has_spectrum;
+    bool window;
     float_t ref_pressure;
+    float_t tukey_alpha;
     float_t last_leq_slow;
     float_t last_leq_fast;
 } AcousticIndicatorsData;
@@ -74,7 +78,7 @@ enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
  * @param a_filter Compute A weighting
  * @param Compute leq for each third octaves
  */
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure);
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window);
 
 /**
  * Free struct for acoustic indicators
