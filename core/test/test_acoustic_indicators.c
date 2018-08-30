@@ -316,6 +316,7 @@ static char * test_1khz_hann_lobs() {
 
 		AcousticIndicatorsData acousticIndicatorsData;
 		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
+		acousticIndicatorsData.tukey_alpha = 0.15;
 		int s;
 		int processed_bands = 0;
 		for (s = 0; s < signal_samples;) {
