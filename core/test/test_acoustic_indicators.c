@@ -214,6 +214,7 @@ static char * test_leq_spectrum_32khz() {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 for(i = 0; i < AI_NB_BAND; i++) {
                     double db_1s = ai_get_band_leq(&acousticIndicatorsData, i);
+										printf(",%.1f\n", db_1s);
                     leqs[i] += pow(10, db_1s / 10.);
                 }
             }
@@ -233,7 +234,6 @@ static char * test_leq_spectrum_32khz() {
   double mean_error = sqrt(sumval / AI_NB_BAND);
   sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
   mu_assert(mu_message, mean_error < expected_mean_error);
-	printf("mean error expected %f got %f\n", expected_mean_error, mean_error);
   return 0;
 }
 
