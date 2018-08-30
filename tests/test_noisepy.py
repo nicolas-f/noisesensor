@@ -50,7 +50,7 @@ class TestAcousticIndicators(unittest.TestCase):
     def test_leq(self):
         expected_leqs = [-26.21,-27.94,-29.12,-28.92,-40.39,-24.93,-31.55,-29.04,-31.08,-30.65]
         results = []
-        np = noisepy.noisepy(False, False, 32767.)
+        np = noisepy.noisepy(False, False, 32767., False)
         f = open("core/test/speak_32000Hz_16bitsPCM_10s.raw", "rw")
         while not f is None:
             data = f.read(np.max_samples_length() * 2)
@@ -67,7 +67,7 @@ class TestAcousticIndicators(unittest.TestCase):
     def test_laeq(self):
         expected_leqs = [-31.37, -33.74, -33.05, -33.61, -43.68, -29.96, -35.53, -34.12, -37.06, -37.19]
         results = []
-        np = noisepy.noisepy(True, False, 32767.)
+        np = noisepy.noisepy(True, False, 32767., False)
         f = open("core/test/speak_32000Hz_16bitsPCM_10s.raw", "rw")
         while not f is None:
             data = f.read(np.max_samples_length() * 2)
@@ -86,7 +86,7 @@ class TestAcousticIndicators(unittest.TestCase):
                              -31.93,-37.28,-47.33,-35.33,-42.68,-42.91,-48.51,-49.1 ,-52.9 ,-52.15,-52.8 ,
                              -52.35,-52.31,-53.39,-52.53,-53.73,-53.56,-57.9]
         results = []
-        np = noisepy.noisepy(False, True, 32767.)
+        np = noisepy.noisepy(False, True, 32767., False)
         f = open("core/test/speak_32000Hz_16bitsPCM_10s.raw", "rw")
         while not f is None:
             data = f.read(np.max_samples_length() * 2)
