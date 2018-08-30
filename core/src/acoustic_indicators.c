@@ -51,7 +51,7 @@
 // int order = max(denominator.length, numerator.length);
 #define ORDER (7)
 
-#define AI_APPLY_FREQUENCY_BINS_FILTER
+// #define AI_APPLY_FREQUENCY_BINS_FILTER
 /**
  * Numerator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
@@ -103,16 +103,40 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
         // Compute spectrum
         if(data->has_spectrum) {
 
-            kiss_fft_cfg cfg = kiss_fft_alloc(AI_WINDOW_FFT_SIZE, 0, NULL, NULL);
+            kiss_fft_cfg cfg = kiss_fft_alloc(AI_WINDOW_SIZE, 0, NULL, NULL);
 
-            kiss_fft_cpx buffer[AI_WINDOW_FFT_SIZE];
+            kiss_fft_cpx buffer[AI_WINDOW_SIZE];
 
             // Append padding of 0
-            memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_FFT_SIZE);
+            memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_SIZE);
 
-            // Convert short to kiss_fft_scalar type
-            for(i=0; i < AI_WINDOW_SIZE; i++) {
+            // Convert short to kiss_fft_scalar type and apply windowing
+						double sample_fft_count = 0;
+            if(!data->window) {
+							sample_fft_count = AI_WINDOW_SIZE;
+              for(i=0; i < AI_WINDOW_SIZE; i++) {
+                  buffer[i].r = (kiss_fft_scalar) data->window_data[i];
+              }
+            } else {
+              int index_begin_flat = (data->tukey_alpha / 2) * AI_WINDOW_SIZE;
+              int index_end_flat = AI_WINDOW_SIZE - index_begin_flat;
+							double window_value = 0;
+              for(i=0; i < index_begin_flat; i++) {
+								window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)AI_WINDOW_SIZE) - data->tukey_alpha / 2))));
+								sample_fft_count += window_value;
+                buffer[i].r = (kiss_fft_scalar) data->window_data[i] * window_value;
+              }
+              // Flat part
+							sample_fft_count += index_end_flat - index_begin_flat;
+              for(i=index_begin_flat; i < index_end_flat; i++) {
                 buffer[i].r = (kiss_fft_scalar) data->window_data[i];
+              }
+              // End Hann part
+              for(i=index_end_flat; i < AI_WINDOW_SIZE; i++) {
+								window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)AI_WINDOW_SIZE) - 1 + data->tukey_alpha / 2))));
+								sample_fft_count += window_value;
+                buffer[i].r = (kiss_fft_scalar) data->window_data[i] * window_value;
+              }
             }
 
             kiss_fft_cpx fft_out[AI_WINDOW_FFT_SIZE];
@@ -154,10 +178,11 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     int cellCeil = MIN(AI_WINDOW_FFT_SIZE - 1, (int) (floor(fUpper / freqByCell)));
                     int cellLower = MIN(cellFloor, cellCeil);
                     int cellUpper = MAX(cellFloor, cellCeil);
-                    for(int idCell = cellLower; idCell <= cellUpper; idCell++) {
+										int idCell;
+                    for(idCell = cellLower; idCell <= cellUpper; idCell++) {
                         sumRms += data->window_fft_data[idCell];
                     }
-                    const float_t rms = sqrt(sumRms / 2) / (AI_WINDOW_SIZE / 2.);
+                    const float_t rms = sqrt(sumRms / 2) / (sample_fft_count / 2.);
                     data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
                 }
             #endif
@@ -193,21 +218,27 @@ AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void) {
 		return p;
 }
 
+void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float_t tukey_alpha) {
+	data->tukey_alpha = tukey_alpha;
+}
+
 void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
     if(data->has_spectrum) {
         free(data->window_fft_data);
     }
 }
 
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure)
+void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window)
 {
 	data->windows_count = 0;
 	data->window_cursor = 0;
+  data->window = window;
     data->a_filter = a_filter;
     data->has_spectrum = spectrum;
     data->ref_pressure = ref_pressure;
     data->last_leq_fast = 0;
     data->last_leq_slow = 0;
+    data->tukey_alpha = 0.5;
     if(spectrum) {
         data->window_fft_data = malloc(AI_WINDOW_FFT_SIZE * sizeof(float_t));
         memset(data->window_fft_data, 0, AI_WINDOW_FFT_SIZE * sizeof(float_t));

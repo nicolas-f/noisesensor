@@ -56,9 +56,9 @@ static char * test_leq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, false,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, false,REF_SOUND_PRESSURE, false);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
 	// open file
 	ptr = fopen(filename, "rb");
@@ -117,9 +117,9 @@ static char * test_laeq_32khz() {
 	const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
 	FILE *ptr;
 	AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, true, false,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, true, false,REF_SOUND_PRESSURE, false);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
 	// open file
 	ptr = fopen(filename, "rb");
@@ -179,9 +179,9 @@ static char * test_leq_spectrum_32khz() {
     const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
     FILE *ptr;
     AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE);
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
 
-    int16_t shortBuffer[AI_WINDOWS_SIZE];
+    int16_t shortBuffer[AI_WINDOW_SIZE];
 
     // open file
     ptr = fopen(filename, "rb");
@@ -214,6 +214,7 @@ static char * test_leq_spectrum_32khz() {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 for(i = 0; i < AI_NB_BAND; i++) {
                     double db_1s = ai_get_band_leq(&acousticIndicatorsData, i);
+										printf(",%.1f\n", db_1s);
                     leqs[i] += pow(10, db_1s / 10.);
                 }
             }
@@ -236,10 +237,142 @@ static char * test_leq_spectrum_32khz() {
   return 0;
 }
 
+
+/**
+ * Test 1khz Rectangular FFT
+ */
+static char * test_1khz_rectangular_lobs() {
+		double RMS_REFERENCE_94DB = 2500;
+		double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_94DB)) + 94;
+		double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
+
+		const int sampleRate = 32000;
+		const int signal_samples = 32000;
+		double powerRMS = RMS_REFERENCE_94DB;
+		float signalFrequency = 4000;
+		double powerPeak = powerRMS * sqrt(2);
+
+	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
+			-67.2,-64.9,-62.8,-61.4,-60.9,-62.8,-71.0,-59.5,-54.4,-58.6,-45.3,-22.3,
+			-48.2,-57.0,-62.0,-67.4,-70.2,-73.8,-76.4,-79.2,-81.6,-83.6,-84.8};
+
+		int16_t buffer[AI_WINDOW_SIZE];
+
+		AcousticIndicatorsData acousticIndicatorsData;
+		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, false);
+		int s;
+		int processed_bands = 0;
+		for (s = 0; s < signal_samples;) {
+			int start_s = s;
+			int maxLen = ai_GetMaximalSampleSize(&acousticIndicatorsData);
+			for(; s < signal_samples && s-start_s < maxLen;s++) {
+				double t = s * (1 / (double)sampleRate);
+	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
+				buffer[s-start_s] = (int16_t)pwr;
+			}
+			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
+					// Average spectrum levels
+					int iband;
+					printf("Frequency");
+					for(iband=0;iband<AI_NB_BAND;iband++) {
+						printf(",%.1f", ai_get_frequency(iband));
+					}
+					printf(",leq");
+					printf("\n");
+					printf("Rectangular");
+					for(iband=0;iband<AI_NB_BAND;iband++) {
+						processed_bands++;
+						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
+						printf(",%.1f", level);
+					}
+					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
+					printf("\n");
+			}
+		}
+		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
+	  ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
+		return 0;
+}
+
+/**
+ * Test 1khz overlapped Hann FFT
+ */
+ static char * test_1khz_hann_lobs(float alpha) {
+		double RMS_REFERENCE_94DB = 2500;
+		double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_94DB)) + 94;
+		double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
+
+		const int sampleRate = 32000;
+		const int signal_samples = 32000;
+		double powerRMS = RMS_REFERENCE_94DB;
+		float signalFrequency = 4000;
+		double powerPeak = powerRMS * sqrt(2);
+
+	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
+			-67.2,-64.9,-62.8,-61.4,-60.9,-62.8,-71.0,-59.5,-54.4,-58.6,-45.3,-22.3,
+			-48.2,-57.0,-62.0,-67.4,-70.2,-73.8,-76.4,-79.2,-81.6,-83.6,-84.8};
+
+		int16_t buffer[AI_WINDOW_SIZE];
+
+		AcousticIndicatorsData acousticIndicatorsData;
+		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
+		acousticIndicatorsData.tukey_alpha = alpha;
+		int s;
+		int processed_bands = 0;
+		for (s = 0; s < signal_samples;) {
+			int start_s = s;
+			int maxLen = ai_GetMaximalSampleSize(&acousticIndicatorsData);
+			for(; s < signal_samples && s-start_s < maxLen;s++) {
+				double t = s * (1 / (double)sampleRate);
+	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
+				buffer[s-start_s] = (int16_t)pwr;
+			}
+			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
+					// Average spectrum levels
+					int iband;
+					printf("Tukey_%.2f", acousticIndicatorsData.tukey_alpha);
+					int band_id;
+					for(iband=0;iband<AI_NB_BAND;iband++) {
+						processed_bands++;
+						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
+						printf(",%.1f", level);
+					}
+					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
+					printf("\n");
+			}
+		}
+		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
+	  ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
+		return 0;
+}
+
+static char * test_1khz_hann_lobs_075() {
+	test_1khz_hann_lobs(0.75);
+}
+
+static char * test_1khz_hann_lobs_05() {
+	test_1khz_hann_lobs(0.5);
+}
+static char * test_1khz_hann_lobs_025() {
+	test_1khz_hann_lobs(0.25);
+}
+static char * test_1khz_hann_lobs_015() {
+	test_1khz_hann_lobs(0.15);
+}
+static char * test_1khz_hann_lobs_01() {
+	test_1khz_hann_lobs(0.1);
+}
+
 static char * all_tests() {
    mu_run_test(test_leq_32khz);
    mu_run_test(test_laeq_32khz);
    mu_run_test(test_leq_spectrum_32khz);
+	 mu_run_test(test_1khz_rectangular_lobs);
+	 mu_run_test(test_1khz_hann_lobs_075);
+	 mu_run_test(test_1khz_hann_lobs_05);
+	 mu_run_test(test_1khz_hann_lobs_025);
+	 mu_run_test(test_1khz_hann_lobs_015);
+	 mu_run_test(test_1khz_hann_lobs_01);
    return 0;
 }
 
