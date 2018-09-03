@@ -274,12 +274,8 @@ static char * test_1khz_rectangular_lobs() {
 		const int sampleRate = 32000;
 		const int signal_samples = 32000;
 		double powerRMS = RMS_REFERENCE_94DB;
-		float signalFrequency = 4000;
+		float signalFrequency = 1000;
 		double powerPeak = powerRMS * sqrt(2);
-
-	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
-			-67.2,-64.9,-62.8,-61.4,-60.9,-62.8,-71.0,-59.5,-54.4,-58.6,-45.3,-22.3,
-			-48.2,-57.0,-62.0,-67.4,-70.2,-73.8,-76.4,-79.2,-81.6,-83.6,-84.8};
 
 		int16_t buffer[AI_WINDOW_SIZE];
 
@@ -310,6 +306,10 @@ static char * test_1khz_rectangular_lobs() {
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
 						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
+						if(ai_get_frequency(iband) == signalFrequency) {
+						  sprintf(mu_message, "Wrong mean error expected %f got %f\n", 94.f, level);
+						  mu_assert(mu_message, abs(94-level) < 0.1);
+						}
 						if(ai_unit_test_print) {
 							printf(",%.1f", level);
 						}
@@ -336,12 +336,8 @@ static char * test_1khz_rectangular_lobs() {
 		const int sampleRate = 32000;
 		const int signal_samples = 32000;
 		double powerRMS = RMS_REFERENCE_94DB;
-		float signalFrequency = 4000;
+		float signalFrequency = 1000;
 		double powerPeak = powerRMS * sqrt(2);
-
-	  float expected_leqs[AI_NB_BAND] = {-82.2,-80.1,-77.4,-74.8,-72.2,-69.7,
-			-67.2,-64.9,-62.8,-61.4,-60.9,-62.8,-71.0,-59.5,-54.4,-58.6,-45.3,-22.3,
-			-48.2,-57.0,-62.0,-67.4,-70.2,-73.8,-76.4,-79.2,-81.6,-83.6,-84.8};
 
 		int16_t buffer[AI_WINDOW_SIZE];
 
@@ -368,6 +364,10 @@ static char * test_1khz_rectangular_lobs() {
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
 						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
+						if(ai_get_frequency(iband) == signalFrequency) {
+						  sprintf(mu_message, "Wrong mean error expected %f got %f\n", 94.f, level);
+						  mu_assert(mu_message, abs(94-level) < 0.1);
+						}
 						if(ai_unit_test_print) {
 							printf(",%.1f", level);
 						}
@@ -381,6 +381,10 @@ static char * test_1khz_rectangular_lobs() {
 		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
 	  ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
 		return 0;
+}
+
+static char * test_1khz_hann_lobs_1() {
+	test_1khz_hann_lobs(1.);
 }
 
 static char * test_1khz_hann_lobs_075() {
@@ -405,6 +409,7 @@ static char * all_tests() {
    mu_run_test(test_laeq_32khz);
    mu_run_test(test_leq_spectrum_32khz);
 	 mu_run_test(test_1khz_rectangular_lobs);
+	 mu_run_test(test_1khz_hann_lobs_1);
 	 mu_run_test(test_1khz_hann_lobs_075);
 	 mu_run_test(test_1khz_hann_lobs_05);
 	 mu_run_test(test_1khz_hann_lobs_025);
