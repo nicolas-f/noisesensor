@@ -103,12 +103,12 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
         // Compute spectrum
         if(data->has_spectrum) {
 
-            kiss_fft_cfg cfg = kiss_fft_alloc(AI_WINDOW_SIZE, 0, NULL, NULL);
+            kiss_fft_cfg cfg = kiss_fft_alloc(AI_WINDOW_FFT_SIZE, 0, NULL, NULL);
 
-            kiss_fft_cpx buffer[AI_WINDOW_SIZE];
+            kiss_fft_cpx buffer[AI_WINDOW_FFT_SIZE];
 
             // Append padding of 0
-            memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_SIZE);
+            memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_FFT_SIZE);
 
             // Convert short to kiss_fft_scalar type and apply windowing
 						double sample_fft_count = 0;
@@ -160,7 +160,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                 for(i=startSampleIndex; i <= endSampleIndex; i++) {
                     sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
                 }
-                const double rms = (2. / AI_WINDOW_SIZE * sqrt(sumRms / 2));
+                const double rms = (2. / sample_fft_count * sqrt(sumRms / 2));
                 data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
             }
             #else

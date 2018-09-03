@@ -39,6 +39,11 @@
 #include "string.h"
 
 int tests_run = 0;
+
+#ifndef ai_unit_test_print
+#define ai_unit_test_print 0
+#endif
+
 //char *message = (char*)malloc(256 * sizeof(char));
 char mu_message[256];
 
@@ -179,8 +184,7 @@ static char * test_leq_spectrum_32khz() {
     const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
     FILE *ptr;
     AcousticIndicatorsData acousticIndicatorsData;
-    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
-
+    ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, false);
     int16_t shortBuffer[AI_WINDOW_SIZE];
 
     // open file
@@ -199,6 +203,18 @@ static char * test_leq_spectrum_32khz() {
                              -31.93,-37.28,-47.33,-35.33,-42.68,-42.91,-48.51,-49.1 ,-52.9 ,-52.15,-52.8 ,
                              -52.35,-52.31,-53.39,-52.53,-53.73,-53.56,-57.9};
 
+	if(ai_unit_test_print) {
+		printf("Frequency");
+		int iband;
+		for(iband=0;iband<AI_NB_BAND;iband++) {
+			printf(",%.1f", ai_get_frequency(iband));
+		}
+		printf("\nRef");
+		for(iband=0;iband<AI_NB_BAND;iband++) {
+			printf(",%.1f", expected_leqs[iband]);
+		}
+		printf("\n");
+	}
   int leqId = 0;
     int i;
     while(!feof(ptr)) {
@@ -214,7 +230,6 @@ static char * test_leq_spectrum_32khz() {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 for(i = 0; i < AI_NB_BAND; i++) {
                     double db_1s = ai_get_band_leq(&acousticIndicatorsData, i);
-										printf(",%.1f\n", db_1s);
                     leqs[i] += pow(10, db_1s / 10.);
                 }
             }
@@ -226,11 +241,21 @@ static char * test_leq_spectrum_32khz() {
   // Check expected leq
   int idfreq;
   double sumval =  0;
+	if(ai_unit_test_print) {
+		printf("STFFT");
+	}
   for(idfreq = 0; idfreq < AI_NB_BAND; idfreq++) {
-    float leqdiff = 10 * log10(leqs[idfreq] / 10) - expected_leqs[idfreq];
+		float leqstfft = 10 * log10(leqs[idfreq] / 10);
+    float leqdiff = leqstfft - expected_leqs[idfreq];
+		if(ai_unit_test_print) {
+			printf(",%.1f", leqstfft);
+		}
     sumval+=leqdiff*leqdiff;
   }
-  double expected_mean_error = 2.83;
+	if(ai_unit_test_print) {
+		printf("\n");
+	}
+  double expected_mean_error = 2.64;
   double mean_error = sqrt(sumval / AI_NB_BAND);
   sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
   mu_assert(mu_message, mean_error < expected_mean_error);
@@ -273,20 +298,26 @@ static char * test_1khz_rectangular_lobs() {
 			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
 					// Average spectrum levels
 					int iband;
-					printf("Frequency");
-					for(iband=0;iband<AI_NB_BAND;iband++) {
-						printf(",%.1f", ai_get_frequency(iband));
+					if(ai_unit_test_print) {
+						printf("Frequency");
+						for(iband=0;iband<AI_NB_BAND;iband++) {
+							printf(",%.1f", ai_get_frequency(iband));
+						}
+						printf(",leq");
+						printf("\n");
+						printf("Rectangular");
 					}
-					printf(",leq");
-					printf("\n");
-					printf("Rectangular");
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
 						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
-						printf(",%.1f", level);
+						if(ai_unit_test_print) {
+							printf(",%.1f", level);
+						}
 					}
-					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
-					printf("\n");
+					if(ai_unit_test_print) {
+						printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
+						printf("\n");
+					}
 			}
 		}
 		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
@@ -330,15 +361,21 @@ static char * test_1khz_rectangular_lobs() {
 			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
 					// Average spectrum levels
 					int iband;
-					printf("Tukey_%.2f", acousticIndicatorsData.tukey_alpha);
+					if(ai_unit_test_print) {
+						printf("Tukey_%.2f", acousticIndicatorsData.tukey_alpha);
+					}
 					int band_id;
 					for(iband=0;iband<AI_NB_BAND;iband++) {
 						processed_bands++;
 						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
-						printf(",%.1f", level);
+						if(ai_unit_test_print) {
+							printf(",%.1f", level);
+						}
 					}
-					printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
-					printf("\n");
+					if(ai_unit_test_print) {
+						printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
+						printf("\n");
+					}
 			}
 		}
 		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
