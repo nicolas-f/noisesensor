@@ -41,7 +41,7 @@
 int tests_run = 0;
 
 #ifndef ai_unit_test_print
-#define ai_unit_test_print 0
+#define ai_unit_test_print 1
 #endif
 
 //char *message = (char*)malloc(256 * sizeof(char));
@@ -262,69 +262,6 @@ static char * test_leq_spectrum_32khz() {
   return 0;
 }
 
-
-/**
- * Test 1khz Rectangular FFT
- */
-static char * test_1khz_rectangular_lobs() {
-		double RMS_REFERENCE_94DB = 2500;
-		double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_94DB)) + 94;
-		double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
-
-		const int sampleRate = 32000;
-		const int signal_samples = 32000;
-		double powerRMS = RMS_REFERENCE_94DB;
-		float signalFrequency = 1000;
-		double powerPeak = powerRMS * sqrt(2);
-
-		int16_t buffer[AI_WINDOW_SIZE];
-
-		AcousticIndicatorsData acousticIndicatorsData;
-		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, false);
-		int s;
-		int processed_bands = 0;
-		for (s = 0; s < signal_samples;) {
-			int start_s = s;
-			int maxLen = ai_GetMaximalSampleSize(&acousticIndicatorsData);
-			for(; s < signal_samples && s-start_s < maxLen;s++) {
-				double t = s * (1 / (double)sampleRate);
-	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
-				buffer[s-start_s] = (int16_t)pwr;
-			}
-			if(ai_AddSample(&acousticIndicatorsData, maxLen, buffer) == AI_FEED_COMPLETE) {
-					// Average spectrum levels
-					int iband;
-					if(ai_unit_test_print) {
-						printf("Frequency");
-						for(iband=0;iband<AI_NB_BAND;iband++) {
-							printf(",%.1f", ai_get_frequency(iband));
-						}
-						printf(",leq");
-						printf("\n");
-						printf("Rectangular");
-					}
-					for(iband=0;iband<AI_NB_BAND;iband++) {
-						processed_bands++;
-						float_t level = ai_get_band_leq(&acousticIndicatorsData, iband);
-						if(ai_get_frequency(iband) == signalFrequency) {
-						  sprintf(mu_message, "Wrong mean error expected %f got %f\n", 94.f, level);
-						  mu_assert(mu_message, abs(94-level) < 0.1);
-						}
-						if(ai_unit_test_print) {
-							printf(",%.1f", level);
-						}
-					}
-					if(ai_unit_test_print) {
-						printf(",%.1f", ai_get_leq_slow(&acousticIndicatorsData));
-						printf("\n");
-					}
-			}
-		}
-		mu_assert("Spectrum not obtained" ,processed_bands == AI_NB_BAND);
-	  ai_FreeAcousticIndicatorsData(&acousticIndicatorsData);
-		return 0;
-}
-
 /**
  * Test 1khz overlapped Hann FFT
  */
@@ -342,8 +279,10 @@ static char * test_1khz_rectangular_lobs() {
 		int16_t buffer[AI_WINDOW_SIZE];
 
 		AcousticIndicatorsData acousticIndicatorsData;
-		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, true);
-		acousticIndicatorsData.tukey_alpha = alpha;
+		ai_InitAcousticIndicatorsData(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, alpha > 0);
+		if(alpha > 0) {
+			acousticIndicatorsData.tukey_alpha = alpha;
+		}
 		int s;
 		int processed_bands = 0;
 		for (s = 0; s < signal_samples;) {
@@ -404,17 +343,20 @@ static char * test_1khz_hann_lobs_01() {
 	test_1khz_hann_lobs(0.1);
 }
 
+static char * test_1khz_hann_lobs_0() {
+	test_1khz_hann_lobs(0);
+}
 static char * all_tests() {
    mu_run_test(test_leq_32khz);
    mu_run_test(test_laeq_32khz);
    mu_run_test(test_leq_spectrum_32khz);
-	 mu_run_test(test_1khz_rectangular_lobs);
 	 mu_run_test(test_1khz_hann_lobs_1);
 	 mu_run_test(test_1khz_hann_lobs_075);
 	 mu_run_test(test_1khz_hann_lobs_05);
 	 mu_run_test(test_1khz_hann_lobs_025);
 	 mu_run_test(test_1khz_hann_lobs_015);
 	 mu_run_test(test_1khz_hann_lobs_01);
+	 mu_run_test(test_1khz_hann_lobs_0);
    return 0;
 }
 
