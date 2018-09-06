@@ -796,8 +796,8 @@ static const char *__pyx_f[] = {
 /*--- Type declarations ---*/
 struct __pyx_obj_7noisepy_7wrapped_noisepy;
 
-/* "noisepy/noisepy.pyx":40
- * 
+/* "noisepy/noisepy.pyx":38
+ * from libcpp cimport bool
  * 
  * cdef class noisepy:             # <<<<<<<<<<<<<<
  *     cdef cnoisepy.AcousticIndicatorsData* _c_noisepy
@@ -902,6 +902,26 @@ static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[],\
     PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args,\
     const char* function_name);
 
+/* None.proto */
+static CYTHON_INLINE long __Pyx_div_long(long, long);
+
+/* ListCompAppend.proto */
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE int __Pyx_ListComp_Append(PyObject* list, PyObject* x) {
+    PyListObject* L = (PyListObject*) list;
+    Py_ssize_t len = Py_SIZE(list);
+    if (likely(L->allocated > len)) {
+        Py_INCREF(x);
+        PyList_SET_ITEM(list, len, x);
+        Py_SIZE(list) = len+1;
+        return 0;
+    }
+    return PyList_Append(list, x);
+}
+#else
+#define __Pyx_ListComp_Append(L,x) PyList_Append(L,x)
+#endif
+
 /* PyObjectCall.proto */
 #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
@@ -994,11 +1014,11 @@ static void __Pyx_AddTraceback(const char *funcname, int c_line,
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
 
-/* CIntFromPy.proto */
-static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
-
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
+
+/* CIntFromPy.proto */
+static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
 /* CIntFromPy.proto */
 static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
@@ -1067,10 +1087,12 @@ int __pyx_module_is_main_noisepy__wrapped = 0;
 
 /* Implementation of 'noisepy.wrapped' */
 static PyObject *__pyx_builtin_MemoryError;
+static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_TypeError;
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_name[] = "__name__";
 static const char __pyx_k_test[] = "__test__";
+static const char __pyx_k_range[] = "range";
 static const char __pyx_k_length[] = "length";
 static const char __pyx_k_reduce[] = "__reduce__";
 static const char __pyx_k_window[] = "window";
@@ -1098,6 +1120,7 @@ static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
 static PyObject *__pyx_n_s_python_samples;
+static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_reduce;
 static PyObject *__pyx_n_s_reduce_cython;
 static PyObject *__pyx_n_s_reduce_ex;
@@ -1117,14 +1140,15 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int __pyx_v_band_id); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20get_rms_spectrum(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_24__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_tp_new_7noisepy_7wrapped_noisepy(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__2;
 /* Late includes */
 
-/* "noisepy/noisepy.pyx":46
+/* "noisepy/noisepy.pyx":44
  *     cdef float ref_pressure
  *     cdef bool window
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1154,7 +1178,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "noisepy/noisepy.pyx":47
+  /* "noisepy/noisepy.pyx":45
  *     cdef bool window
  *     def __cinit__(self):
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()             # <<<<<<<<<<<<<<
@@ -1163,7 +1187,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
  */
   __pyx_v_self->_c_noisepy = ai_NewAcousticIndicatorsData();
 
-  /* "noisepy/noisepy.pyx":48
+  /* "noisepy/noisepy.pyx":46
  *     def __cinit__(self):
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:             # <<<<<<<<<<<<<<
@@ -1173,16 +1197,16 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   __pyx_t_1 = ((__pyx_v_self->_c_noisepy == NULL) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "noisepy/noisepy.pyx":49
+    /* "noisepy/noisepy.pyx":47
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:
  *             raise MemoryError()             # <<<<<<<<<<<<<<
  * 
  *     def __dealloc__(self):
  */
-    PyErr_NoMemory(); __PYX_ERR(0, 49, __pyx_L1_error)
+    PyErr_NoMemory(); __PYX_ERR(0, 47, __pyx_L1_error)
 
-    /* "noisepy/noisepy.pyx":48
+    /* "noisepy/noisepy.pyx":46
  *     def __cinit__(self):
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:             # <<<<<<<<<<<<<<
@@ -1191,7 +1215,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
  */
   }
 
-  /* "noisepy/noisepy.pyx":46
+  /* "noisepy/noisepy.pyx":44
  *     cdef float ref_pressure
  *     cdef bool window
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1210,7 +1234,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":51
+/* "noisepy/noisepy.pyx":49
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -1234,7 +1258,7 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "noisepy/noisepy.pyx":52
+  /* "noisepy/noisepy.pyx":50
  * 
  *     def __dealloc__(self):
  *         if self._c_noisepy is not NULL:             # <<<<<<<<<<<<<<
@@ -1244,7 +1268,7 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
   __pyx_t_1 = ((__pyx_v_self->_c_noisepy != NULL) != 0);
   if (__pyx_t_1) {
 
-    /* "noisepy/noisepy.pyx":53
+    /* "noisepy/noisepy.pyx":51
  *     def __dealloc__(self):
  *         if self._c_noisepy is not NULL:
  *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1253,7 +1277,7 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
  */
     ai_FreeAcousticIndicatorsData(__pyx_v_self->_c_noisepy);
 
-    /* "noisepy/noisepy.pyx":52
+    /* "noisepy/noisepy.pyx":50
  * 
  *     def __dealloc__(self):
  *         if self._c_noisepy is not NULL:             # <<<<<<<<<<<<<<
@@ -1262,7 +1286,7 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
  */
   }
 
-  /* "noisepy/noisepy.pyx":51
+  /* "noisepy/noisepy.pyx":49
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -1274,7 +1298,7 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
   __Pyx_RefNannyFinishContext();
 }
 
-/* "noisepy/noisepy.pyx":55
+/* "noisepy/noisepy.pyx":53
  *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
  * 
  *     def __init__(self, a_filter, third_octave, ref_pressure, window):             # <<<<<<<<<<<<<<
@@ -1319,23 +1343,23 @@ static int __pyx_pw_7noisepy_7wrapped_7noisepy_5__init__(PyObject *__pyx_v_self,
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_third_octave)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 1); __PYX_ERR(0, 55, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 1); __PYX_ERR(0, 53, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_ref_pressure)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 2); __PYX_ERR(0, 55, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 2); __PYX_ERR(0, 53, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_window)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 3); __PYX_ERR(0, 55, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 3); __PYX_ERR(0, 53, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 55, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 53, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -1352,7 +1376,7 @@ static int __pyx_pw_7noisepy_7wrapped_7noisepy_5__init__(PyObject *__pyx_v_self,
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 55, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 53, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1372,47 +1396,47 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noise
   float __pyx_t_2;
   __Pyx_RefNannySetupContext("__init__", 0);
 
-  /* "noisepy/noisepy.pyx":56
+  /* "noisepy/noisepy.pyx":54
  * 
  *     def __init__(self, a_filter, third_octave, ref_pressure, window):
  *         self.a_filter = a_filter             # <<<<<<<<<<<<<<
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_a_filter); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_a_filter); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 54, __pyx_L1_error)
   __pyx_v_self->a_filter = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":57
+  /* "noisepy/noisepy.pyx":55
  *     def __init__(self, a_filter, third_octave, ref_pressure, window):
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure             # <<<<<<<<<<<<<<
  *         self.third_octave = third_octave
  *         self.window = window
  */
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_ref_pressure); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_ref_pressure); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 55, __pyx_L1_error)
   __pyx_v_self->ref_pressure = __pyx_t_2;
 
-  /* "noisepy/noisepy.pyx":58
+  /* "noisepy/noisepy.pyx":56
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave             # <<<<<<<<<<<<<<
  *         self.window = window
  *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_third_octave); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 58, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_third_octave); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
   __pyx_v_self->third_octave = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":59
+  /* "noisepy/noisepy.pyx":57
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave
  *         self.window = window             # <<<<<<<<<<<<<<
  *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_window); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_window); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
   __pyx_v_self->window = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":60
+  /* "noisepy/noisepy.pyx":58
  *         self.third_octave = third_octave
  *         self.window = window
  *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)             # <<<<<<<<<<<<<<
@@ -1421,7 +1445,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noise
  */
   ai_InitAcousticIndicatorsData(__pyx_v_self->_c_noisepy, __pyx_v_self->a_filter, __pyx_v_self->third_octave, __pyx_v_self->ref_pressure, __pyx_v_self->window);
 
-  /* "noisepy/noisepy.pyx":55
+  /* "noisepy/noisepy.pyx":53
  *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
  * 
  *     def __init__(self, a_filter, third_octave, ref_pressure, window):             # <<<<<<<<<<<<<<
@@ -1440,7 +1464,7 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noise
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":62
+/* "noisepy/noisepy.pyx":60
  *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
  * 
  *     def push(self, unsigned char* python_samples, int length):             # <<<<<<<<<<<<<<
@@ -1479,11 +1503,11 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_sel
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_length)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, 1); __PYX_ERR(0, 62, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, 1); __PYX_ERR(0, 60, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "push") < 0)) __PYX_ERR(0, 62, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "push") < 0)) __PYX_ERR(0, 60, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1491,12 +1515,12 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_sel
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
     }
-    __pyx_v_python_samples = __Pyx_PyObject_AsWritableUString(values[0]); if (unlikely((!__pyx_v_python_samples) && PyErr_Occurred())) __PYX_ERR(0, 62, __pyx_L3_error)
-    __pyx_v_length = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_length == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 62, __pyx_L3_error)
+    __pyx_v_python_samples = __Pyx_PyObject_AsWritableUString(values[0]); if (unlikely((!__pyx_v_python_samples) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L3_error)
+    __pyx_v_length = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_length == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 62, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 60, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.push", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1515,7 +1539,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noi
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("push", 0);
 
-  /* "noisepy/noisepy.pyx":63
+  /* "noisepy/noisepy.pyx":61
  * 
  *     def push(self, unsigned char* python_samples, int length):
  *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)             # <<<<<<<<<<<<<<
@@ -1523,13 +1547,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noi
  *     def get_leq_slow(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(ai_AddSample(__pyx_v_self->_c_noisepy, __pyx_v_length, ((int16_t *)__pyx_v_python_samples))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(ai_AddSample(__pyx_v_self->_c_noisepy, __pyx_v_length, ((int16_t *)__pyx_v_python_samples))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":62
+  /* "noisepy/noisepy.pyx":60
  *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
  * 
  *     def push(self, unsigned char* python_samples, int length):             # <<<<<<<<<<<<<<
@@ -1548,7 +1572,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noi
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":65
+/* "noisepy/noisepy.pyx":63
  *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
  * 
  *     def get_leq_slow(self):             # <<<<<<<<<<<<<<
@@ -1575,7 +1599,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_slow", 0);
 
-  /* "noisepy/noisepy.pyx":66
+  /* "noisepy/noisepy.pyx":64
  * 
  *     def get_leq_slow(self):
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1583,13 +1607,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
  *     def set_tukey_alpha(self, float tukey_alpha):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_slow(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_slow(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":65
+  /* "noisepy/noisepy.pyx":63
  *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
  * 
  *     def get_leq_slow(self):             # <<<<<<<<<<<<<<
@@ -1608,7 +1632,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":68
+/* "noisepy/noisepy.pyx":66
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
@@ -1624,7 +1648,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11set_tukey_alpha(PyObject 
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_tukey_alpha (wrapper)", 0);
   assert(__pyx_arg_tukey_alpha); {
-    __pyx_v_tukey_alpha = __pyx_PyFloat_AsFloat(__pyx_arg_tukey_alpha); if (unlikely((__pyx_v_tukey_alpha == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 68, __pyx_L3_error)
+    __pyx_v_tukey_alpha = __pyx_PyFloat_AsFloat(__pyx_arg_tukey_alpha); if (unlikely((__pyx_v_tukey_alpha == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 66, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1644,7 +1668,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_tukey_alpha", 0);
 
-  /* "noisepy/noisepy.pyx":69
+  /* "noisepy/noisepy.pyx":67
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)             # <<<<<<<<<<<<<<
@@ -1653,7 +1677,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
  */
   ai_SetTukeyAlpha(__pyx_v_self->_c_noisepy, __pyx_v_tukey_alpha);
 
-  /* "noisepy/noisepy.pyx":68
+  /* "noisepy/noisepy.pyx":66
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
@@ -1668,7 +1692,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":71
+/* "noisepy/noisepy.pyx":69
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
@@ -1695,7 +1719,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_fast", 0);
 
-  /* "noisepy/noisepy.pyx":72
+  /* "noisepy/noisepy.pyx":70
  * 
  *     def get_leq_fast(self):
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1703,13 +1727,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
  *     def get_leq_band_fast(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 70, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":71
+  /* "noisepy/noisepy.pyx":69
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
@@ -1728,7 +1752,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":74
+/* "noisepy/noisepy.pyx":72
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1744,7 +1768,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast(PyObjec
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_fast (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 74, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 72, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1765,7 +1789,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_fast", 0);
 
-  /* "noisepy/noisepy.pyx":75
+  /* "noisepy/noisepy.pyx":73
  * 
  *     def get_leq_band_fast(self, int band_id):
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
@@ -1773,13 +1797,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
  *     def max_samples_length(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":74
+  /* "noisepy/noisepy.pyx":72
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1798,7 +1822,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":77
+/* "noisepy/noisepy.pyx":75
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
@@ -1825,7 +1849,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("max_samples_length", 0);
 
-  /* "noisepy/noisepy.pyx":78
+  /* "noisepy/noisepy.pyx":76
  * 
  *     def max_samples_length(self):
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1833,13 +1857,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct
  *     def get_leq_band_slow(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(ai_GetMaximalSampleSize(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(ai_GetMaximalSampleSize(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":77
+  /* "noisepy/noisepy.pyx":75
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
@@ -1858,11 +1882,12 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":80
+/* "noisepy/noisepy.pyx":78
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
+ * 
  */
 
 /* Python wrapper */
@@ -1873,7 +1898,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow(PyObjec
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_slow (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 80, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 78, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1894,29 +1919,103 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_slow", 0);
 
-  /* "noisepy/noisepy.pyx":81
+  /* "noisepy/noisepy.pyx":79
  * 
  *     def get_leq_band_slow(self, int band_id):
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
+ * 
+ *     def get_rms_spectrum(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":80
+  /* "noisepy/noisepy.pyx":78
  *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
+ * 
  */
 
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.get_leq_band_slow", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "noisepy/noisepy.pyx":81
+ *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
+ * 
+ *     def get_rms_spectrum(self):             # <<<<<<<<<<<<<<
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE / 2)]
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21get_rms_spectrum(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21get_rms_spectrum(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("get_rms_spectrum (wrapper)", 0);
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_20get_rms_spectrum(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20get_rms_spectrum(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
+  long __pyx_v_i;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  long __pyx_t_2;
+  long __pyx_t_3;
+  long __pyx_t_4;
+  PyObject *__pyx_t_5 = NULL;
+  __Pyx_RefNannySetupContext("get_rms_spectrum", 0);
+
+  /* "noisepy/noisepy.pyx":82
+ * 
+ *     def get_rms_spectrum(self):
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE / 2)]             # <<<<<<<<<<<<<<
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_div_long(AI_WINDOW_FFT_SIZE, 2);
+  __pyx_t_3 = __pyx_t_2;
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
+    __pyx_t_5 = PyFloat_FromDouble(ai_GetThinBandRMS(__pyx_v_self->_c_noisepy, __pyx_v_i)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_5))) __PYX_ERR(0, 82, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  }
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "noisepy/noisepy.pyx":81
+ *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
+ * 
+ *     def get_rms_spectrum(self):             # <<<<<<<<<<<<<<
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE / 2)]
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_AddTraceback("noisepy.wrapped.noisepy.get_rms_spectrum", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -1931,19 +2030,19 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__reduce_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_22__reduce_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -1985,19 +2084,19 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20__reduce_cython__(CYTHON_
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state); /*proto*/
-static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state) {
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_25__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state); /*proto*/
+static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_25__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__setstate_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((PyObject *)__pyx_v___pyx_state));
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_24__setstate_cython__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), ((PyObject *)__pyx_v___pyx_state));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_24__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -2071,8 +2170,9 @@ static PyMethodDef __pyx_methods_7noisepy_7wrapped_noisepy[] = {
   {"get_leq_band_fast", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast, METH_O, 0},
   {"max_samples_length", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_17max_samples_length, METH_NOARGS, 0},
   {"get_leq_band_slow", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow, METH_O, 0},
-  {"__reduce_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_21__reduce_cython__, METH_NOARGS, 0},
-  {"__setstate_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_23__setstate_cython__, METH_O, 0},
+  {"get_rms_spectrum", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_21get_rms_spectrum, METH_NOARGS, 0},
+  {"__reduce_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_23__reduce_cython__, METH_NOARGS, 0},
+  {"__setstate_cython__", (PyCFunction)__pyx_pw_7noisepy_7wrapped_7noisepy_25__setstate_cython__, METH_O, 0},
   {0, 0, 0, 0}
 };
 
@@ -2181,6 +2281,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_kp_s_no_default___reduce___due_to_non, __pyx_k_no_default___reduce___due_to_non, sizeof(__pyx_k_no_default___reduce___due_to_non), 0, 0, 1, 0},
   {&__pyx_n_s_python_samples, __pyx_k_python_samples, sizeof(__pyx_k_python_samples), 0, 0, 1, 1},
+  {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_reduce, __pyx_k_reduce, sizeof(__pyx_k_reduce), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_cython, __pyx_k_reduce_cython, sizeof(__pyx_k_reduce_cython), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_ex, __pyx_k_reduce_ex, sizeof(__pyx_k_reduce_ex), 0, 0, 1, 1},
@@ -2193,7 +2294,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 82, __pyx_L1_error)
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(1, 2, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
@@ -2272,13 +2374,13 @@ static int __Pyx_modinit_type_init_code(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_init_code", 0);
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 38, __pyx_L1_error)
   __pyx_type_7noisepy_7wrapped_noisepy.tp_print = 0;
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_7noisepy_7wrapped_noisepy.tp_dictoffset && __pyx_type_7noisepy_7wrapped_noisepy.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_7noisepy_7wrapped_noisepy.tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
-  if (PyObject_SetAttrString(__pyx_m, "noisepy", (PyObject *)&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 40, __pyx_L1_error)
+  if (PyObject_SetAttrString(__pyx_m, "noisepy", (PyObject *)&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 38, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_7noisepy_7wrapped_noisepy) < 0) __PYX_ERR(0, 38, __pyx_L1_error)
   __pyx_ptype_7noisepy_7wrapped_noisepy = &__pyx_type_7noisepy_7wrapped_noisepy;
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -2754,6 +2856,14 @@ invalid_keyword:
     #endif
 bad:
     return -1;
+}
+
+/* None */
+static CYTHON_INLINE long __Pyx_div_long(long a, long b) {
+    long q = a / b;
+    long r = a - q*b;
+    q -= ((r != 0) & ((r ^ b) < 0));
+    return q;
 }
 
 /* PyObjectCall */
@@ -3340,6 +3450,37 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     }
 }
 
+/* CIntToPy */
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
+    const long neg_one = (long) -1, const_zero = (long) 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(long) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(long) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+#endif
+        }
+    } else {
+        if (sizeof(long) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+#endif
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(long),
+                                     little, !is_unsigned);
+    }
+}
+
 /* CIntFromPy */
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {
     const int neg_one = (int) -1, const_zero = (int) 0;
@@ -3527,37 +3668,6 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to int");
     return (int) -1;
-}
-
-/* CIntToPy */
-static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
-    const long neg_one = (long) -1, const_zero = (long) 0;
-    const int is_unsigned = neg_one > const_zero;
-    if (is_unsigned) {
-        if (sizeof(long) < sizeof(long)) {
-            return PyInt_FromLong((long) value);
-        } else if (sizeof(long) <= sizeof(unsigned long)) {
-            return PyLong_FromUnsignedLong((unsigned long) value);
-#ifdef HAVE_LONG_LONG
-        } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
-            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
-#endif
-        }
-    } else {
-        if (sizeof(long) <= sizeof(long)) {
-            return PyInt_FromLong((long) value);
-#ifdef HAVE_LONG_LONG
-        } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
-            return PyLong_FromLongLong((PY_LONG_LONG) value);
-#endif
-        }
-    }
-    {
-        int one = 1; int little = (int)*(unsigned char *)&one;
-        unsigned char *bytes = (unsigned char *)&value;
-        return _PyLong_FromByteArray(bytes, sizeof(long),
-                                     little, !is_unsigned);
-    }
 }
 
 /* CIntFromPy */

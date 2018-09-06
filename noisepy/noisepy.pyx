@@ -35,8 +35,6 @@ from libc.stdint cimport int16_t, int32_t
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from libcpp cimport bool
 
-
-
 cdef class noisepy:
     cdef cnoisepy.AcousticIndicatorsData* _c_noisepy
     cdef bool a_filter
@@ -79,3 +77,6 @@ cdef class noisepy:
 
     def get_leq_band_slow(self, int band_id):
       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
+
+    def get_rms_spectrum(self):
+      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE / 2)]
