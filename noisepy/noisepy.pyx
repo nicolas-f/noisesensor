@@ -79,4 +79,4 @@ cdef class noisepy:
       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
 
     def get_rms_spectrum(self):
-      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE / 2)]
+      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]
