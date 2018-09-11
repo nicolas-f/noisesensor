@@ -230,7 +230,7 @@ void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
 
 float_t ai_GetThinBandRMS(AcousticIndicatorsData* data, int32_t band) {
 	if(data->has_spectrum) {
-		return (sqrt(data->window_fft_data[band] / 2) / (AI_WINDOW_SIZE / 2.)) * data->energy_correction;
+		return data->window_fft_data[band];
 	} else {
 		return 0;
 	}

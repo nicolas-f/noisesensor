@@ -38,7 +38,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def getrms(self, rmsvalues):
-        return sum(rmsvalues)  # / len(rmsvalues)
+        return math.sqrt(sum(rmsvalues) / len(rmsvalues))
 
     def run(self):
         db_delta = 0
@@ -56,15 +56,16 @@ class AcousticIndicatorsProcessor(threading.Thread):
                 # time can be in iso format using datetime.datetime.now().isoformat()
                 if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
                     leqSpectrum = map(np.get_leq_band_fast, range(len(freqs)))
-                    # fast_spectrum = np.get_rms_spectrum()
-                    #rms_tot = self.getrms(fast_spectrum)
-                    #fast_spectrum[self.cellLower:self.cellUpper] = [0 for i in range(self.cellUpper-self.cellLower)]
-                    #rms_noise = self.getrms(fast_spectrum)
-                    #print("%.2f/%.2f %.2f%% %.1f dB@1khz %.1f dB" % (rms_noise, rms_tot, rms_noise/rms_tot * 100, leqSpectrum[freqs.index(self.data["frequency"])], np.get_leq_fast()))
-                    rms_tot = sum([10**(v/10) for v in leqSpectrum])
-                    rms_noise = rms_tot - 10**(leqSpectrum[self.third_octave_index]/10)
-                    thdn = (rms_noise/rms_tot)*100
-                    print("THD-N %.2f%% (%.2f/%.2f)" % (thdn, rms_noise, rms_tot))
+                    fast_spectrum = np.get_rms_spectrum()
+                    # print("\n".join(["%.2f"] * len(fast_spectrum)) % tuple(fast_spectrum))
+                    rms_tot = self.getrms(fast_spectrum)
+                    fast_spectrum[self.cellLower:self.cellUpper] = [0 for i in range(self.cellUpper-self.cellLower)]
+                    rms_noise = self.getrms(fast_spectrum)
+                    print("%.2f/%.2f %.2f%% %.1f dB@1khz %.1f dB" % (rms_noise, rms_tot, rms_noise/rms_tot * 100, leqSpectrum[freqs.index(self.data["frequency"])], np.get_leq_fast()))
+                    #rms_tot = sum([10**(v/10) for v in leqSpectrum])
+                    #rms_noise = rms_tot - 10**(leqSpectrum[self.third_octave_index]/10)
+                    #thdn = (rms_noise/rms_tot)*100
+                    #print("THD-N %.2f%% (%.2f/%.2f)" % (thdn, rms_noise, rms_tot))
 
 
 
