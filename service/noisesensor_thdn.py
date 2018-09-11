@@ -31,8 +31,6 @@ class AcousticIndicatorsProcessor(threading.Thread):
         cell_ceil = min(4000 - 1, int(math.floor(f_upper / freq_by_cell)))
         self.cellLower = min(cell_floor, cell_ceil)
         self.cellUpper = max(cell_floor, cell_ceil)
-        distFreq = [abs(f - self.data["frequency"]) for f in freqs]
-        self.third_octave_index = distFreq.index(min(distFreq))
 
     def unix_time(self):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
@@ -41,13 +39,15 @@ class AcousticIndicatorsProcessor(threading.Thread):
         return math.sqrt(sum(rmsvalues) / len(rmsvalues))
 
     def run(self):
-        db_delta = 0
+        db_delta = 94-56.2
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True)
         np.set_tukey_alpha(0.2)
         short_size = struct.calcsize('h')
+        read = 0
         while True:
             audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
+            read += len(audiosamples) / short_size
             if not audiosamples:
                 print("%s End of audio samples" % datetime.datetime.now().isoformat())
                 break
@@ -61,11 +61,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
                     rms_tot = self.getrms(fast_spectrum)
                     fast_spectrum[self.cellLower:self.cellUpper] = [0 for i in range(self.cellUpper-self.cellLower)]
                     rms_noise = self.getrms(fast_spectrum)
-                    print("%.2f/%.2f %.2f%% %.1f dB@1khz %.1f dB" % (rms_noise, rms_tot, rms_noise/rms_tot * 100, leqSpectrum[freqs.index(self.data["frequency"])], np.get_leq_fast()))
-                    #rms_tot = sum([10**(v/10) for v in leqSpectrum])
-                    #rms_noise = rms_tot - 10**(leqSpectrum[self.third_octave_index]/10)
-                    #thdn = (rms_noise/rms_tot)*100
-                    #print("THD-N %.2f%% (%.2f/%.2f)" % (thdn, rms_noise, rms_tot))
+                    print("%.3f s\tTHD-N: %.2f%%\t%.1f dB@1khz\t%.1f dB leq" % (read / 32000., rms_noise/rms_tot * 100, leqSpectrum[freqs.index(self.data["frequency"])], np.get_leq_fast()))
 
 
 
