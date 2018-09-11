@@ -65,6 +65,7 @@ typedef struct  {
     float_t tukey_alpha;
     float_t last_leq_slow;
     float_t last_leq_fast;
+    double_t energy_correction; // FFT window energy correction
 } AcousticIndicatorsData;
 
 enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
@@ -126,20 +127,30 @@ float ai_get_frequency(int band_id);
 
 /**
  * @brief ai_get_leq_slow Used when ai_AddSample return AI_FEED_COMPLETE
+ * @param data Acoustic indicators object
  * @return value in dB, dB(A) if a_filter=true
  */
 float ai_get_leq_slow(AcousticIndicatorsData* data);
 
 /**
  * @brief ai_get_leq_slow Used when ai_AddSample return AI_FEED_COMPLETE or AI_FEED_FAST
+ * @param data Acoustic indicators object
  * @return value in dB, dB(A) if a_filter=true
  */
 float ai_get_leq_fast(AcousticIndicatorsData* data);
 /**
  * @brief ai_get_leq_band_fast Used when ai_AddSample return AI_FEED_COMPLETE or AI_FEED_FAST
+ * @param data Acoustic indicators object
  * @param band_id Band identifier 0-AI_NB_BAND
  * @return value in dB, dB(A) if a_filter=true
  */
 float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id);
 
+/**
+ * @brief
+ * @param data Acoustic indicators object
+ * @param band Thin band [0-AI_WINDOW_FFT_SIZE / 2]
+ * @return RMS value
+ */
+float ai_GetThinBandRMS(AcousticIndicatorsData* data, int band);
 #endif

@@ -111,9 +111,9 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
             memset(buffer, 0 , sizeof(kiss_fft_cpx) * AI_WINDOW_FFT_SIZE);
 
             // Convert short to kiss_fft_scalar type and apply windowing
-						double energy_correction = 0;
+						data->energy_correction = 0;
             if(!data->window) {
-							energy_correction = AI_WINDOW_SIZE;
+							data->energy_correction = AI_WINDOW_SIZE;
               for(i=0; i < AI_WINDOW_SIZE; i++) {
                   buffer[i].r = (kiss_fft_scalar) data->window_data[i];
               }
@@ -123,22 +123,22 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
 							double window_value = 0;
               for(i=0; i < index_begin_flat; i++) {
 								window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)AI_WINDOW_SIZE) - data->tukey_alpha / 2))));
-								energy_correction += window_value * window_value;
+								data->energy_correction += window_value * window_value;
                 buffer[i].r = (kiss_fft_scalar) data->window_data[i] * window_value;
               }
               // Flat part
-							energy_correction += index_end_flat - index_begin_flat;
+							data->energy_correction += index_end_flat - index_begin_flat;
               for(i=index_begin_flat; i < index_end_flat; i++) {
                 buffer[i].r = (kiss_fft_scalar) data->window_data[i];
               }
               // End Hann part
               for(i=index_end_flat; i < AI_WINDOW_SIZE; i++) {
 								window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)AI_WINDOW_SIZE) - 1 + data->tukey_alpha / 2))));
-								energy_correction += window_value * window_value;
+								data->energy_correction += window_value * window_value;
                 buffer[i].r = (kiss_fft_scalar) data->window_data[i] * window_value;
               }
             }
-						energy_correction = 1.0 / sqrt(energy_correction / AI_WINDOW_SIZE);
+						data->energy_correction = 1.0 / sqrt(data->energy_correction / AI_WINDOW_SIZE);
             kiss_fft_cpx fft_out[AI_WINDOW_FFT_SIZE];
 
             kiss_fft(cfg, buffer, fft_out);
@@ -160,7 +160,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                 for(i=startSampleIndex; i <= endSampleIndex; i++) {
                     sumRms += ai_H_band[id_third_octave][i - startSampleIndex] * data->window_fft_data[i];
                 }
-                const double rms = ((2. / AI_WINDOW_SIZE * sqrt(sumRms / 2))) * energy_correction;
+                const double rms = ((2. / AI_WINDOW_SIZE * sqrt(sumRms / 2))) * data->energy_correction;
                 data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
             }
             #else
@@ -182,7 +182,7 @@ int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sa
                     for(idCell = cellLower; idCell <= cellUpper; idCell++) {
                         sumRms += data->window_fft_data[idCell];
                     }
-                    const float_t rms = (sqrt(sumRms / 2) / (AI_WINDOW_SIZE / 2.)) * energy_correction;
+                    const float_t rms = (sqrt(sumRms / 2) / (AI_WINDOW_SIZE / 2.)) * data->energy_correction;
                     data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
                 }
             #endif
@@ -226,6 +226,14 @@ void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data) {
     if(data->has_spectrum) {
         free(data->window_fft_data);
     }
+}
+
+float_t ai_GetThinBandRMS(AcousticIndicatorsData* data, int32_t band) {
+	if(data->has_spectrum) {
+		return data->window_fft_data[band];
+	} else {
+		return 0;
+	}
 }
 
 void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window)
