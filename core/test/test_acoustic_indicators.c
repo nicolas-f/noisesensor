@@ -179,7 +179,7 @@ static char * test_leq_spectrum_32khz() {
   //double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_90DB)) + 90;
   //double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
 
-    float_t REF_SOUND_PRESSURE = 32767.;
+    float_t REF_SOUND_PRESSURE = 1.;
 
     const char *filename = "speak_32000Hz_16bitsPCM_10s.raw";
     FILE *ptr;
@@ -266,7 +266,7 @@ static char * test_leq_spectrum_32khz() {
  * Test 1khz overlapped Hann FFT
  */
  static char * test_1khz_hann_lobs(float alpha) {
-		double RMS_REFERENCE_94DB = 2500;
+		double RMS_REFERENCE_94DB = 2500.0;
 		double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_94DB)) + 94;
 		double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
 
@@ -279,7 +279,7 @@ static char * test_leq_spectrum_32khz() {
 		int16_t buffer[32000 / AI_WINDOWS_SIZE];
 
 		AcousticIndicatorsData acousticIndicatorsData;
-		ai_init_acoustic_indicators_data(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE, alpha > 0, AI_SAMPLE_RATE_32000, ai_formats[AI_FORMAT_S16_LE], true);
+		ai_init_acoustic_indicators_data(&acousticIndicatorsData, false, true,REF_SOUND_PRESSURE / SHRT_MAX, alpha > 0, AI_SAMPLE_RATE_32000, ai_formats[AI_FORMAT_S16_LE], true);
 		if(alpha > 0) {
 			acousticIndicatorsData.tukey_alpha = alpha;
 		}
@@ -349,14 +349,14 @@ static char * test_1khz_hann_lobs_0() {
 static char * all_tests() {
    mu_run_test(test_leq_32khz);
    mu_run_test(test_laeq_32khz);
-   //mu_run_test(test_leq_spectrum_32khz);
-   //mu_run_test(test_1khz_hann_lobs_1);
-   //mu_run_test(test_1khz_hann_lobs_075);
-   //mu_run_test(test_1khz_hann_lobs_05);
-   //mu_run_test(test_1khz_hann_lobs_025);
-   //mu_run_test(test_1khz_hann_lobs_015);
-   //mu_run_test(test_1khz_hann_lobs_01);
-   //mu_run_test(test_1khz_hann_lobs_0);
+   mu_run_test(test_leq_spectrum_32khz);
+   mu_run_test(test_1khz_hann_lobs_1);
+   mu_run_test(test_1khz_hann_lobs_075);
+   mu_run_test(test_1khz_hann_lobs_05);
+   mu_run_test(test_1khz_hann_lobs_025);
+   mu_run_test(test_1khz_hann_lobs_015);
+   mu_run_test(test_1khz_hann_lobs_01);
+   mu_run_test(test_1khz_hann_lobs_0);
    return 0;
 }
 

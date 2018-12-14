@@ -120,7 +120,7 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         // Compute spectrum
         if(data->has_spectrum) {
 
-            kiss_fft_cfg cfg = kiss_fft_alloc(data->window_fft_data_size, 0, NULL, NULL);
+            kiss_fft_cfg cfg = kiss_fftr_alloc(data->window_fft_data_size, 0, NULL, NULL);
             
             // Convert short to kiss_fft_scalar type and apply windowing
 			data->energy_correction = 0;
