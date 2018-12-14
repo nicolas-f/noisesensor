@@ -12,6 +12,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Dkiss_fft_scalar=float")
 
 set(SOURCE_FILES src/acoustic_indicators.c
                  src/kiss_fft.c
+				 src/kiss_fftr.c
    )
 
 add_library(coresensor ${SOURCE_FILES})
