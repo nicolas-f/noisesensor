@@ -68,6 +68,8 @@ const float_t a_filter_numerator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {{0.343
 const float_t a_filter_denominator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {{1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407},
 { 0.23430179, -0.46860358, -0.23430179,  0.93720717, -0.23430179, -0.46860358,  0.23430179 }};
 
+
+
 int ai_get_maximal_sample_size(const AcousticIndicatorsData* data) {
 	return (data->window_data_size - data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2);
 }
@@ -93,33 +95,27 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
 		data->window_cursor = 0;
 		// Compute A weighting
         if(data->a_filter) {
-				float_t* weightedSignal = malloc(sizeof(float_t) * data->window_data_size);
-                memset(weightedSignal, 0, sizeof(float_t) * data->window_data_size);
-				// Filter delays
-				//float_t z[ORDER-1][data->window_data_size];
-                float_t* z = malloc(sizeof(float_t) * data->window_data_size * (ORDER - 1));
-                memset(z, 0, sizeof(float_t) * data->window_data_size * (ORDER - 1));
-                int idT;
-				for (idT = 0; idT < data->window_data_size; idT++){
-                    // Avoid iteration idT=0 exception (z[0][idT-1]=0)
-                    weightedSignal[idT] = (a_filter_denominator[data->sample_rate_index][0]*data->window_data[idT] + (idT == 0 ? 0 : z[idT-1]));
-                    // Avoid iteration idT=0 exception (z[1][idT-1]=0)
-                    z[idT] = (a_filter_numerator[data->sample_rate_index][1]*data->window_data[idT] +
-                        (idT == 0 ? 0 : z[data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][1]*data->window_data[idT]);
-                    int k;
-                    for (k = 0; k<ORDER-2; k++){
-                        // Avoid iteration idT=0 exception (z[k+1][idT-1]=0)
-                        z[k*data->window_data_size+idT] = (a_filter_numerator[data->sample_rate_index][k+1]*data->window_data[idT] +
-                            (idT ==0 ? 0 : z[(k+1)*data->window_data_size+idT-1]) - a_filter_denominator[data->sample_rate_index][k+1]*weightedSignal[idT]);
-                    }
-                    z[data->window_data_size * (ORDER-2) + idT] = (a_filter_numerator[data->sample_rate_index][ORDER-1]*data->window_data[idT]
-                        - a_filter_denominator[data->sample_rate_index][ORDER-1] * weightedSignal[idT]);
+            float_t* weightedSignal = malloc(sizeof(float_t) * data->window_data_size);
+            // Filter delays
+            float_t* z = malloc(sizeof(float_t) * data->window_data_size * (ORDER - 1));
+            int idT;
+            for (idT = 0; idT < 4000; idT++) {
+                // Avoid iteration idT=0 exception (z[0][idT-1]=0)
+                weightedSignal[idT] = (a_filter_numerator[data->sample_rate_index][0] * data->window_data[idT] + (idT == 0 ? 0 : z[idT - 1]));
+                // Avoid iteration idT=0 exception (z[1][idT-1]=0)
+                z[idT] = (a_filter_numerator[data->sample_rate_index][1] * data->window_data[idT] + (idT == 0 ? 0 : z[data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][1] * data->window_data[idT]);
+                int k;
+                for (k = 0; k<ORDER - 2; k++) {
+                    // Avoid iteration idT=0 exception (z[k+1][idT-1]=0)
+                    z[k*data->window_data_size + idT] = (a_filter_numerator[data->sample_rate_index][k + 1] * data->window_data[idT] + (idT == 0 ? 0 : z[(k + 1)*data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][k + 1] * weightedSignal[idT]);
                 }
-                free(z);
-				for (idT = 0; idT < data->window_data_size; idT++){
-					data->window_data[idT] = weightedSignal[idT];
-				}
-                free(weightedSignal);
+                z[data->window_data_size * (ORDER - 2) + idT] = (a_filter_numerator[data->sample_rate_index][ORDER - 1] * data->window_data[idT] - a_filter_denominator[data->sample_rate_index][ORDER - 1] * weightedSignal[idT]);
+            }
+            free(z);
+            for (idT = 0; idT < 4000; idT++) {
+                data->window_data[idT] = weightedSignal[idT];
+            }
+            free(weightedSignal);
 		}
         // Compute spectrum
         if(data->has_spectrum) {
@@ -258,6 +254,7 @@ int ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter
     if(data->format == -1) {
         return AI_INIT_WRONG_FORMAT;
     }
+    data->sample_rate_index = sample_rate_index;
     data->mono = mono;
     data->window_data_size = (size_t)(ai_supported_samples_rates[sample_rate_index] / AI_WINDOWS_SIZE);
     data->window_data = malloc(data->window_data_size * sizeof(float_t));
