@@ -78,11 +78,11 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         return AI_FEED_WINDOW_OVERFLOW;
     }
     if(AI_FORMAT_S16_LE == data->format) {
-	    for(i=data->window_cursor; i < sample_len + data->window_cursor; i++) {
+	    for(i=data->window_cursor; i < sample_len / ai_formats_bytes[data->format] + data->window_cursor; i++) {
 		    data->window_data[i] = (int16_t)(sample_data[(i-data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2)]) / (float_t)SHRT_MAX;
 	    }
     } else {
-        for (i = data->window_cursor; i < sample_len + data->window_cursor; i++) {
+        for (i = data->window_cursor; i < sample_len / ai_formats_bytes[data->format] + data->window_cursor; i++) {
             data->window_data[i] = (int32_t)(sample_data[(i - data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2)]) / (float_t)INT_MAX;
         }    
     }

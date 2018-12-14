@@ -52,16 +52,15 @@
 #define AI_SAMPLE_RATE_32000 0
 #define AI_SAMPLE_RATE_48000 1
 
-const float_t ai_supported_samples_rates[AI_NB_SUPPORTED_SAMPLES_RATES] = { 32000, 48000 };
-
 #define AI_FORMAT_S16_LE 0
 #define AI_FORMAT_S32_LE 1
 
 
 #define AI_FORMATS_SIZE 2
 
-const char* ai_formats[AI_FORMATS_SIZE] = { "S16_LE", "S32_LE" };
-const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
+static const float_t ai_supported_samples_rates[AI_NB_SUPPORTED_SAMPLES_RATES] = { 32000, 48000 };
+static const char* ai_formats[AI_FORMATS_SIZE] = { "S16_LE", "S32_LE" };
+static const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
 
 typedef struct  {
     int32_t window_cursor;
