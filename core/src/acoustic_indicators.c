@@ -78,23 +78,27 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         return AI_FEED_WINDOW_OVERFLOW;
     }
     if(AI_FORMAT_S16_LE == data->format) {
+        int16_t* ptr = sample_data;
 	    for(i=data->window_cursor; i < sample_len / ai_formats_bytes[data->format] + data->window_cursor; i++) {
-		    data->window_data[i] = (int16_t)(sample_data[(i-data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2)]) / (float_t)SHRT_MAX;
+		    data->window_data[i] = (ptr[(i-data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)SHRT_MAX;
 	    }
     } else {
+        int32_t* ptr = sample_data;
         for (i = data->window_cursor; i < sample_len / ai_formats_bytes[data->format] + data->window_cursor; i++) {
-            data->window_data[i] = (int32_t)(sample_data[(i - data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2)]) / (float_t)INT_MAX;
+            data->window_data[i] = (ptr[(i - data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)INT_MAX;
         }    
     }
-	data->window_cursor+=sample_len;
+	data->window_cursor+= sample_len / ai_formats_bytes[data->format];
 	if(data->window_cursor >= data->window_data_size) {
 		data->window_cursor = 0;
 		// Compute A weighting
         if(data->a_filter) {
 				float_t* weightedSignal = malloc(sizeof(float_t) * data->window_data_size);
+                memset(weightedSignal, 0, sizeof(float_t) * data->window_data_size);
 				// Filter delays
 				//float_t z[ORDER-1][data->window_data_size];
                 float_t* z = malloc(sizeof(float_t) * data->window_data_size * (ORDER - 1));
+                memset(z, 0, sizeof(float_t) * data->window_data_size * (ORDER - 1));
                 int idT;
 				for (idT = 0; idT < data->window_data_size; idT++){
                     // Avoid iteration idT=0 exception (z[0][idT-1]=0)
