@@ -152,7 +152,8 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
               }
             }
 			data->energy_correction = 1.0 / sqrt(data->energy_correction / data->window_data_size);
-            kiss_fft_cpx* fft_out = malloc(sizeof(kiss_fft_cpx) * data->window_fft_data_size);
+            size_t fft_out_size = data->window_fft_data_size / 2 + 1;
+            kiss_fft_cpx* fft_out = malloc(sizeof(kiss_fft_cpx) * fft_out_size);
 
             kiss_fftr(cfg, data->window_fft_data, fft_out);
 
@@ -160,7 +161,7 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
 
             // Compute RMS for each thin frequency bands
             int fft_offset = data->window_fft_data_size - data->window_data_size;
-            for(i=fft_offset; i < data->window_fft_data_size; i++) {
+            for(i=fft_offset; i < fft_out_size; i++) {
                 data->window_fft_data[i-fft_offset] = fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i;
             }
             free(fft_out);

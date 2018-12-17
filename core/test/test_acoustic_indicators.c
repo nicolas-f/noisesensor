@@ -41,7 +41,7 @@
 int tests_run = 0;
 
 #ifndef ai_unit_test_print
-#define ai_unit_test_print 1
+#define ai_unit_test_print 0
 #endif
 
 //char *message = (char*)malloc(256 * sizeof(char));
@@ -262,6 +262,44 @@ static char * test_leq_spectrum_32khz() {
   return 0;
 }
 
+static char * test_32khz_32bits() {
+    double RMS_REFERENCE_94DB = 163840000.0;
+    double DB_FS_REFERENCE = -(20 * log10(RMS_REFERENCE_94DB)) + 94;
+    double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
+
+    const int sampleRate = 32000;
+    const int signal_samples = 32000;
+    double powerRMS = RMS_REFERENCE_94DB;
+    float signalFrequency = 1000;
+    double powerPeak = powerRMS * sqrt(2);
+
+    int32_t buffer[32000 / AI_WINDOWS_SIZE];
+
+    AcousticIndicatorsData acousticIndicatorsData;
+
+    ai_init_acoustic_indicators_data(&acousticIndicatorsData, false, true, REF_SOUND_PRESSURE / INT_MAX, false, AI_SAMPLE_RATE_32000, ai_formats[AI_FORMAT_S32_LE], true);
+
+    int s;
+    for (s = 0; s < signal_samples;) {
+        int start_s = s;
+        int maxLen = ai_get_maximal_sample_size(&acousticIndicatorsData) / sizeof(int32_t);
+        for (; s < signal_samples && s - start_s < maxLen; s++) {
+            double t = s * (1 / (double)sampleRate);
+            double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
+            buffer[s - start_s] = (int32_t)pwr;
+        }
+        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), buffer) == AI_FEED_COMPLETE) {
+            // Average spectrum levels
+            int iband;
+            float_t level = ai_get_band_leq(&acousticIndicatorsData, 17);
+            sprintf(mu_message, "Wrong mean error expected %f got %f\n", 94.f, level);
+            mu_assert(mu_message, abs(94 - level) < 0.1);
+        }
+    }
+    return 0;
+}
+
+
 /**
  * Test 1khz overlapped Hann FFT
  */
@@ -357,6 +395,7 @@ static char * all_tests() {
    mu_run_test(test_1khz_hann_lobs_015);
    mu_run_test(test_1khz_hann_lobs_01);
    mu_run_test(test_1khz_hann_lobs_0);
+   mu_run_test(test_32khz_32bits);
    return 0;
 }
 
