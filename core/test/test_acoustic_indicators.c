@@ -384,7 +384,7 @@ static char * test_48khz_32bits_stereo() {
 /**
  * Test 1khz overlapped Hann FFT
  */
- static char * test_1khz_hann_lobs(float alpha) {
+ static char * test_1khz_hann_lobs(double alpha) {
 		double RMS_REFERENCE_94DB = 2500.0;
 		double DB_FS_REFERENCE = - (20 * log10(RMS_REFERENCE_94DB)) + 94;
 		double REF_SOUND_PRESSURE = 1 / pow(10, DB_FS_REFERENCE / 20);
@@ -442,28 +442,28 @@ static char * test_48khz_32bits_stereo() {
 }
 
 static char * test_1khz_hann_lobs_1() {
-	test_1khz_hann_lobs(1.);
+    return test_1khz_hann_lobs(1.);
 }
 
 static char * test_1khz_hann_lobs_075() {
-	test_1khz_hann_lobs(0.75);
+    return test_1khz_hann_lobs(0.75);
 }
 
 static char * test_1khz_hann_lobs_05() {
-	test_1khz_hann_lobs(0.5);
+    return test_1khz_hann_lobs(0.5);
 }
 static char * test_1khz_hann_lobs_025() {
-	test_1khz_hann_lobs(0.25);
+    return test_1khz_hann_lobs(0.25);
 }
 static char * test_1khz_hann_lobs_015() {
-	test_1khz_hann_lobs(0.15);
+    return test_1khz_hann_lobs(0.15);
 }
 static char * test_1khz_hann_lobs_01() {
-	test_1khz_hann_lobs(0.1);
+	return test_1khz_hann_lobs(0.1);
 }
 
 static char * test_1khz_hann_lobs_0() {
-	test_1khz_hann_lobs(0);
+    return test_1khz_hann_lobs(0);
 }
 static char * all_tests() {
    mu_run_test(test_leq_32khz);
