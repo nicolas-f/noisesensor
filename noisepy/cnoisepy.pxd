@@ -6,7 +6,7 @@ cdef extern from "acoustic_indicators.h":
     ctypedef struct AcousticIndicatorsData:
       pass
     # Imports definitions from a c header file
-    void ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float ref_pressure, bool window,int8_t sample_rate_index, const char* format, bool mono)
+    int32_t ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float ref_pressure, bool window,int8_t sample_rate_index, const char* format, bool mono)
     void ai_free_acoustic_indicators_data(AcousticIndicatorsData* data)
     AcousticIndicatorsData* ai_NewAcousticIndicatorsData()
     int ai_get_maximal_sample_size(const AcousticIndicatorsData* data)

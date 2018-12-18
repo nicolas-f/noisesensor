@@ -70,10 +70,10 @@ class TestAcousticIndicators(unittest.TestCase):
         np = noisepy.noisepy(True, False, 1., False, noisepy.ai_sample_rate_32000, noisepy.ai_formats[noisepy.ai_format_s16_le], True)
         f = open("core/test/speak_32000Hz_16bitsPCM_10s.raw", "rw")
         while not f is None:
-            data = f.read(np.max_samples_length() * 2)
+            data = f.read(np.max_samples_length())
             if not data:
                 break
-            if np.push(data, len(data) / 2) == noisepy.feed_complete:
+            if np.push(data, len(data)) == noisepy.feed_complete:
                 results.append(np.get_leq_slow())
         f.close()
         for i in range(len(expected_leqs)):
@@ -89,10 +89,10 @@ class TestAcousticIndicators(unittest.TestCase):
         np = noisepy.noisepy(False, True, 1., False, noisepy.ai_sample_rate_32000, noisepy.ai_formats[noisepy.ai_format_s16_le], True)
         f = open("core/test/speak_32000Hz_16bitsPCM_10s.raw", "rw")
         while not f is None:
-            data = f.read(np.max_samples_length() * 2)
+            data = f.read(np.max_samples_length())
             if not data:
                 break
-            if np.push(data, len(data) / 2) == noisepy.feed_complete:
+            if np.push(data, len(data)) == noisepy.feed_complete:
                 results.append(map(lambda x : 10. ** (np.get_leq_band_slow(x) / 10.), range(29)))
         f.close()
 

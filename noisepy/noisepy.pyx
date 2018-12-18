@@ -41,26 +41,26 @@ cdef class noisepy:
     cdef bool third_octave
     cdef float ref_pressure
     cdef bool window
+    cdef bool init
     def __cinit__(self):
+        self.init = False
         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
         if self._c_noisepy is NULL:
             raise MemoryError()
 
     def __dealloc__(self):
-        if self._c_noisepy is not NULL:
+        if self.init:
             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
 
-    def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, format, mono):
+    def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
         self.third_octave = third_octave
         self.window = window
-        self.sample_rate_index = sample_rate_index
-        self.format = format
-        self.mono = mono
-        res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, self.sample_rate_index, self.format, self.mono)
+        res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
         if res != 0:
-            raise Exception("Init error")
+            raise Exception("Init error %d" % res)
+        self.init = True
 
     def push(self, const int8_t* python_samples, int length):
       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
