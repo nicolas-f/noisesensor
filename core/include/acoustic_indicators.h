@@ -65,10 +65,10 @@ static const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
 typedef struct  {
     int32_t window_cursor;
     float_t* window_data;
-    size_t window_data_size;
+    int32_t window_data_size;
     int8_t sample_rate_index; // Sample rate in ai_supported_samples_rates (0 or 1)
     float_t* window_fft_data; // FFt rms
-    size_t window_fft_data_size;
+    int32_t window_fft_data_size;
     int32_t windows_count;
     float_t windows[AI_WINDOWS_SIZE];
     float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
@@ -175,8 +175,14 @@ float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id);
 /**
  * @brief
  * @param data Acoustic indicators object
- * @param band Thin band [0-AI_WINDOW_FFT_SIZE / 2]
+ * @param band Thin band [0-ai_get_leq_band_fast_size]
  * @return RMS value
  */
 float ai_GetThinBandRMS(AcousticIndicatorsData* data, int band);
+
+/**
+ * @brief get size of thin frequency array
+ */
+int32_t ai_get_leq_band_fast_size(AcousticIndicatorsData* data);
+
 #endif

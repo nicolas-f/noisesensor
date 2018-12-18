@@ -37,6 +37,7 @@
 #include <math.h>
 #include "minunit.h"
 #include "string.h"
+#include <limits.h>
 
 int tests_run = 0;
 
@@ -89,7 +90,7 @@ static char * test_leq_32khz() {
 		do {
 			int maxLen = ai_get_maximal_sample_size(&acousticIndicatorsData) / sizeof(int16_t);
             int sampleLen = (read - sampleCursor) < maxLen ? (read - sampleCursor) : maxLen;
-            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
+            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), (int8_t *)shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 leqs[leqId++] = acousticIndicatorsData.last_leq_slow;
 			}
@@ -150,7 +151,7 @@ static char * test_laeq_32khz() {
 		do {
 			int maxLen = ai_get_maximal_sample_size(&acousticIndicatorsData) / sizeof(int16_t);
             int sampleLen = (read - sampleCursor) < maxLen ? (read - sampleCursor) : maxLen;
-            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
+            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), (int8_t *)shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 leqs[leqId++] = ai_get_leq_slow(&acousticIndicatorsData);
 			}
@@ -226,7 +227,7 @@ static char * test_leq_spectrum_32khz() {
         do {
             int maxLen = ai_get_maximal_sample_size(&acousticIndicatorsData) / sizeof(int16_t);
             int sampleLen = (read - sampleCursor) < maxLen ? (read - sampleCursor) : maxLen;
-            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
+            if(ai_add_sample(&acousticIndicatorsData, sampleLen * sizeof(int16_t), (int8_t *)shortBuffer + sampleCursor) == AI_FEED_COMPLETE) {
                 mu_assert("Too much iteration, more than 10s in file or wrong sampling rate", leqId < 10);
                 for(i = 0; i < AI_NB_BAND; i++) {
                     double db_1s = ai_get_band_leq(&acousticIndicatorsData, i);
@@ -288,7 +289,7 @@ static char * test_32khz_32bits() {
             double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
             buffer[s - start_s] = (int32_t)pwr;
         }
-        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), buffer) == AI_FEED_COMPLETE) {
+        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), (int8_t *)buffer) == AI_FEED_COMPLETE) {
             // Average spectrum levels
             int iband;
             float_t level = ai_get_band_leq(&acousticIndicatorsData, 17);
@@ -328,7 +329,7 @@ static char * test_32khz_32bits_stereo() {
             buffer[(s - start_s) * 2] = (int32_t)pwr;
             buffer[(s - start_s) * 2 + 1] = (int32_t)0;
         }
-        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), buffer) == AI_FEED_COMPLETE) {
+        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), (int8_t *)buffer) == AI_FEED_COMPLETE) {
             // Average spectrum levels
             int iband;
             float_t level = ai_get_band_leq(&acousticIndicatorsData, 17);
@@ -370,7 +371,7 @@ static char * test_48khz_32bits_stereo() {
             buffer[(s - start_s) * 2] = (int32_t)pwr;
             buffer[(s - start_s) * 2 + 1] = (int32_t)0;
         }
-        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), buffer) == AI_FEED_COMPLETE) {
+        if (ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int32_t), (int8_t *)buffer) == AI_FEED_COMPLETE) {
             // Average spectrum levels
             int iband;
             float_t level = ai_get_band_leq(&acousticIndicatorsData, 17);
@@ -412,7 +413,7 @@ static char * test_48khz_32bits_stereo() {
 	      double pwr = (sin(2 * AI_PI * signalFrequency * t) * (powerPeak));
 				buffer[s-start_s] = (int16_t)pwr;
 			}
-			if(ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int16_t), buffer) == AI_FEED_COMPLETE) {
+			if(ai_add_sample(&acousticIndicatorsData, maxLen * sizeof(int16_t), (int8_t *)buffer) == AI_FEED_COMPLETE) {
 					// Average spectrum levels
 					int iband;
 					if(ai_unit_test_print) {

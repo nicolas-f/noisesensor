@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 cimport cnoisepy
-from libc.stdint cimport int16_t, int32_t
+from libc.stdint cimport int8_t, int16_t, int32_t
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from libcpp cimport bool
 
@@ -62,8 +62,8 @@ cdef class noisepy:
         if res != 0:
             raise Exception("Init error")
 
-    def push(self, unsigned char* python_samples, int length):
-      return cnoisepy.ai_AddSample(self._c_noisepy, length, python_samples)
+    def push(self, const int8_t* python_samples, int length):
+      return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
 
     def get_leq_slow(self):
       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
@@ -78,10 +78,10 @@ cdef class noisepy:
       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
 
     def max_samples_length(self):
-      return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+      return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
 
     def get_leq_band_slow(self, int band_id):
       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
 
     def get_rms_spectrum(self):
-      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]
+      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.ai_get_leq_band_fast_size(self._c_noisepy))]

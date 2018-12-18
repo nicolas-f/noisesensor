@@ -81,15 +81,15 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
     }
     const size_t max_i = sample_len / (data->mono ? 1 : 2) / ai_formats_bytes[data->format] + data->window_cursor;
     if(AI_FORMAT_S16_LE == data->format) {
-        int16_t* ptr = sample_data;
+        int16_t* ptr = (int16_t*) sample_data;
 	    for(i=data->window_cursor; i < max_i; i++) {
 		    data->window_data[i] = (ptr[(i-data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)SHRT_MAX;
 	    }
     } else {
-        int32_t* ptr = sample_data;
+        int32_t* ptr = (int32_t*) sample_data;
         for (i = data->window_cursor; i < max_i; i++) {
             data->window_data[i] = (ptr[(i - data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)INT_MAX;
-        }    
+        }
     }
 	data->window_cursor+= sample_len / ai_formats_bytes[data->format];
 	if(data->window_cursor >= data->window_data_size) {
@@ -121,8 +121,8 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         // Compute spectrum
         if(data->has_spectrum) {
 
-            kiss_fft_cfg cfg = kiss_fftr_alloc(data->window_fft_data_size, 0, NULL, NULL);
-            
+            kiss_fftr_cfg cfg = kiss_fftr_alloc(data->window_fft_data_size, 0, NULL, NULL);
+
             // Convert short to kiss_fft_scalar type and apply windowing
 			data->energy_correction = 0;
             if(!data->window) {
@@ -226,10 +226,12 @@ void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float_t tukey_alpha) {
 }
 
 void ai_free_acoustic_indicators_data(AcousticIndicatorsData* data) {
+  if(data->window_data) {
     free(data->window_data);
-    if(data->has_spectrum) {
-        free(data->window_fft_data);
-    }
+  }
+  if(data->has_spectrum) {
+      free(data->window_fft_data);
+  }
 }
 
 float_t ai_GetThinBandRMS(AcousticIndicatorsData* data, int32_t band) {
@@ -314,4 +316,8 @@ float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id) {
     } else {
         return 0.;
     }
+}
+
+int32_t ai_get_leq_band_fast_size(AcousticIndicatorsData* data) {
+    return data->window_fft_data_size / 2 + 1 - (data->window_fft_data_size - data->window_data_size);
 }
