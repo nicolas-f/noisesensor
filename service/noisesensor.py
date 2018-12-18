@@ -61,7 +61,7 @@ import collections
 # arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
 ftp_sleep = 0.02
 
-__version__ = "1.0.0-dev"
+__version__ = "1.1.0-dev"
 
 freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500]
 
@@ -86,18 +86,17 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def run(self):
         db_delta = 94-51.96
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
-        np = noisepy.noisepy(False, True, ref_sound_pressure, True)
-        npa = noisepy.noisepy(True, False, ref_sound_pressure, True)
+        np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
+        npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
-        short_size = struct.calcsize('h')
         while True:
-            audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
+            audiosamples = sys.stdin.read(np.max_samples_length())
             if not audiosamples:
                 print("%s End of audio samples" % datetime.datetime.now().isoformat())
                 break
             else:
-                resp = np.push(audiosamples, len(audiosamples) / short_size)
+                resp = np.push(audiosamples, len(audiosamples))
                 leq125ms = 0
                 laeq125ms = 0
                 leq1s = 0
@@ -157,73 +156,6 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
                 self.wfile.write(self.server.data["format_slow"] % tuple(self.server.slow.popleft()))
         return
 
-
-# Push results to ftp folder
-class FtpPush(threading.Thread):
-    def __init__(self, data, config, prepend, leq_max_history, leq_refresh_history, write_format, header):
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self.data = data
-        self.config = config
-        self.csv_cache = collections.deque()
-        self.prepend = prepend
-        self.leq_max_history = leq_max_history
-        self.leq_refresh_history = leq_refresh_history
-        self.write_format = write_format
-        self.header = header
-
-    def on_new_record(self, line):
-        self.csv_cache.append(line)
-
-    def generate_filename(self):
-        mac_adress = '-'.join(("%012X" % uuid.getnode())[i:i + 2] for i in range(0, 12, 2))
-        date_iso = datetime.datetime.now().isoformat().replace(":", "-")
-        return self.prepend + mac_adress + "_" + date_iso + ".csv"
-
-    def connect_ftp(self):
-        ftp = ftplib.FTP(timeout=self.config["timeout"])
-        ftp.connect(self.config["host"], self.config["port"], self.config["timeout"])
-        ftp.login(self.config["user"], self.config["pass"])
-        if len(self.config["folder"]) > 0:
-            ftp.cwd(self.config["folder"])
-        return ftp
-
-    def run(self):
-        ftp_retries = 10
-        ftp = self.connect_ftp()
-        # main loop
-        while True:
-            filename = self.generate_filename()
-            pushed_lines = 0
-            pushed_bytes = 0
-            while pushed_lines < self.leq_max_history:
-                while len(self.csv_cache) < self.leq_refresh_history:
-                    time.sleep(ftp_sleep)
-                stringbuffer = StringIO.StringIO()
-                if pushed_lines == 0:
-                    stringbuffer.write(self.header+"\n")
-                for i in range(self.leq_refresh_history):
-                    stringbuffer.write(self.write_format % tuple(self.csv_cache.popleft()))
-                pushed_lines += self.leq_refresh_history
-                while True:
-                    try:
-                        stringbuffer.seek(0)
-                        ftp.storbinary('STOR ' + filename, stringbuffer, rest=pushed_bytes)
-                        ftp_retries = 10
-                        break
-                    except ftplib.error_perm as err:
-                        if ftp_retries > 0:
-                            ftp_retries -= 1
-                            print("Error while transferring file, retry\n", err)
-                            time.sleep(5)
-                            ftp = self.connect_ftp()
-                        else:
-                            print("No retry left, ftp sent canceled\n", err)
-                            return
-
-                pushed_bytes += stringbuffer.tell()
-
-
 # Push results to ftp folder
 class HttpServer(threading.Thread):
     def __init__(self, data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
@@ -248,7 +180,9 @@ def usage():
         "ex: arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py")
     print("Usage:")
     print(" -p:\t Serve as http on specified port (Optional)")
-    print(" -f:\t Transfer data to files on ftp server, specify configuration file  (Optional)")
+    print(" -f:\t Sample format")
+    print(" -r:\t Sample rate in Hz")
+    print(" -c:\t Number of channels")
 
 
 ##
@@ -267,37 +201,25 @@ def main():
     # Shared data between process
     data = {'leq': [], "callback_fast": [], "callback_slow": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
             "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n' }
-    ftpconfig = ""
     # parse command line options
     port = 0
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "p:f:")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "p:f:r:c:")[0]:
             if opt == "-p":
                 port = int(value)
+            elif opt == "-r":
+                rates = [32000, 48000]
+                data["rate"] = rates.index(value)
             elif opt == "-f":
-                ftpconfig = value
+                data["sample_format"] = value
+            elif opt == "-c":
+                data["mono"] = c == "1"
     except getopt.error as msg:
         usage()
         exit(-1)
     # run audio processing thread
     processing_thread = AcousticIndicatorsProcessor(data)
     processing_thread.start()
-
-    # ftp push threads
-    if len(ftpconfig) > 0 and os.path.isfile(ftpconfig):
-        config = json.load(open(ftpconfig))
-        # Create a new file when reaching this time length
-        leq_max_history = 30 * 60
-        # push data to FTP when this number of seconds is cached
-        leq_refresh_history = 30
-        csv_header = "epoch,leq,laeq,"+",".join(map(lambda f: "%.1fHz" % f, freqs))
-        ftp_thread_fast = FtpPush(data, config, "fast_", leq_max_history * 8, leq_refresh_history * 8, data["format_fast"], csv_header)
-        data["callback_fast"].append(ftp_thread_fast.on_new_record)
-        ftp_thread_fast.start()
-        ftp_thread_slow = FtpPush(data, config, "slow_", leq_max_history, leq_refresh_history, data["format_slow"],
-                                  "epoch,leq,laeq")
-        data["callback_slow"].append(ftp_thread_slow.on_new_record)
-        ftp_thread_slow.start()
 
     # Http server
     if port > 0:
