@@ -177,7 +177,7 @@ def usage():
     print(
         "This program read audio stream from std input and compute acoustics parameters. This script expect signed 16 bits mono audio on stdin")
     print(
-        "ex: arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py")
+        "ex: arecord -D hw:2,0 -f S32_LE -r 32000 -c 2 -t raw | python -u noisesensor.py -f S32_LE -r 32000 -c 2 -p 8080")
     print("Usage:")
     print(" -p:\t Serve as http on specified port (Optional)")
     print(" -f:\t Sample format")
