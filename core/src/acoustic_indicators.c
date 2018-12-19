@@ -52,6 +52,8 @@
 // int order = max(denominator.length, numerator.length);
 #define ORDER (7)
 
+static const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
+
 // #define AI_APPLY_FREQUENCY_BINS_FILTER
 
 
@@ -80,18 +82,21 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         return AI_FEED_WINDOW_OVERFLOW;
     }
     const size_t max_i = sample_len / (data->mono ? 1 : 2) / ai_formats_bytes[data->format] + data->window_cursor;
+    int curs;
     if(AI_FORMAT_S16_LE == data->format) {
         int16_t* ptr = (int16_t*) sample_data;
 	    for(i=data->window_cursor; i < max_i; i++) {
-		    data->window_data[i] = (ptr[(i-data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)SHRT_MAX;
+            curs = ((i - data->window_cursor)*(data->mono ? 1 : 2));
+		    data->window_data[i] = (ptr[curs]) / (float_t)SHRT_MAX;
 	    }
     } else {
         int32_t* ptr = (int32_t*) sample_data;
         for (i = data->window_cursor; i < max_i; i++) {
-            data->window_data[i] = (ptr[(i - data->window_cursor) * (data->mono ? 1 : 2)]) / (float_t)INT_MAX;
+            curs = (i - data->window_cursor)*(data->mono ? 1 : 2);
+            data->window_data[i] = (ptr[curs]) / (float_t)INT_MAX;
         }
     }
-	data->window_cursor+= sample_len / ai_formats_bytes[data->format];
+	data->window_cursor += (sample_len / (data->mono ? 1 : 2)) / ai_formats_bytes[data->format];
 	if(data->window_cursor >= data->window_data_size) {
 		data->window_cursor = 0;
 		// Compute A weighting

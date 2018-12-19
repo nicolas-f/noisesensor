@@ -38,11 +38,16 @@ import acoustics
 def tostr(arr):
     return numpy.array2string(arr, separator=",", max_line_width=9999999, precision=2)
 
-p = "speak_32000Hz_16bitsPCM_10s.raw"
+p = "ref94dB_48000Hz_32bitsPCM.raw" #"speak_32000Hz_16bitsPCM_10s.raw"
+rate = 48000
+length = 2 # in seconds
+mono = False
+data_type = numpy.int # numpy.short
 
-dat = numpy.fromfile(p, dtype=numpy.short)
-
-s = acoustics.Signal(dat, 32000)
+dat = numpy.fromfile(p, dtype=data_type)
+if not mono:
+    dat = dat[::2]
+s = acoustics.Signal(dat, rate)
 
 print("Slow 1 seconds")
 
