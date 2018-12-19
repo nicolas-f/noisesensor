@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+o n#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -112,7 +112,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
                     if resp == noisepy.feed_complete:
                         leq1s = np.get_leq_slow()
                         push_slow = True
-                resp = npa.push(audiosamples, len(audiosamples) / short_size)
+                resp = npa.push(audiosamples, len(audiosamples))
                 if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
                     laeq125ms = npa.get_leq_fast()
                     push_fast = True
@@ -208,12 +208,12 @@ def main():
             if opt == "-p":
                 port = int(value)
             elif opt == "-r":
-                rates = [32000, 48000]
+                rates = ["32000", "48000"]
                 data["rate"] = rates.index(value)
             elif opt == "-f":
                 data["sample_format"] = value
             elif opt == "-c":
-                data["mono"] = c == "1"
+                data["mono"] = value == "1"
     except getopt.error as msg:
         usage()
         exit(-1)
