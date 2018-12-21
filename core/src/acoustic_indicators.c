@@ -61,14 +61,16 @@ static const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
  * Numerator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
  */
-const float_t a_filter_numerator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {{0.34345834, -0.68691668, -0.34345834, 1.37383335, -0.34345834, -0.68691668, 0.34345834},
-{ 1.        , -4.11304341,  6.55312175, -4.99084929,  1.7857373 , -0.2461906 ,  0.01122425 }};
+const double_t a_filter_numerator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {
+{0.34345834, -0.68691668, -0.34345834, 1.37383335, -0.34345834, -0.68691668, 0.34345834},
+{0.23430179229951348, -0.46860358459902696, -0.23430179229951348, 0.9372071691980539, -0.23430179229951348, -0.46860358459902696, 0.23430179229951348}};
 /**
  * Denominator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
  */
-const float_t a_filter_denominator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {{1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407},
-{ 0.23430179, -0.46860358, -0.23430179,  0.93720717, -0.23430179, -0.46860358,  0.23430179 }};
+const double_t a_filter_denominator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {
+{1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407},
+{1.0, -4.113043408775871, 6.553121752655046, -4.990849294163378, 1.785737302937571, -0.2461905953194862, 0.011224250033231168}};
 
 
 
@@ -101,11 +103,11 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
 		data->window_cursor = 0;
 		// Compute A weighting
         if(data->a_filter) {
-            float_t* weightedSignal = malloc(sizeof(float_t) * data->window_data_size);
+            double_t* weightedSignal = malloc(sizeof(double_t) * data->window_data_size);
             // Filter delays
-            float_t* z = malloc(sizeof(float_t) * data->window_data_size * (ORDER - 1));
+            double_t* z = malloc(sizeof(double_t) * data->window_data_size * (ORDER - 1));
             int idT;
-            for (idT = 0; idT < 4000; idT++) {
+            for (idT = 0; idT < data->window_data_size; idT++) {
                 // Avoid iteration idT=0 exception (z[0][idT-1]=0)
                 weightedSignal[idT] = (a_filter_numerator[data->sample_rate_index][0] * data->window_data[idT] + (idT == 0 ? 0 : z[idT - 1]));
                 // Avoid iteration idT=0 exception (z[1][idT-1]=0)
@@ -118,7 +120,7 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
                 z[data->window_data_size * (ORDER - 2) + idT] = (a_filter_numerator[data->sample_rate_index][ORDER - 1] * data->window_data[idT] - a_filter_denominator[data->sample_rate_index][ORDER - 1] * weightedSignal[idT]);
             }
             free(z);
-            for (idT = 0; idT < 4000; idT++) {
+            for (idT = 0; idT < data->window_data_size; idT++) {
                 data->window_data[idT] = weightedSignal[idT];
             }
             free(weightedSignal);

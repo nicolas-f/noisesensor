@@ -40,12 +40,12 @@ def tostr(arr):
 
 p = "ref94dB_48000Hz_32bitsPCM.raw" #"speak_32000Hz_16bitsPCM_10s.raw"
 rate = 48000
-length = 2 # in seconds
 mono = False
 data_type = numpy.int32 # numpy.short
 dat = numpy.fromfile(p, dtype=data_type)
 if not mono:
     dat = dat[::2]
+length =  dat.shape[0] / rate # in seconds
 s = acoustics.Signal(dat, rate)
 
 print("Slow 1 seconds")
@@ -58,7 +58,7 @@ print("laeq = %s" % tostr(acoustics.standards.iec_61672_1_2013.time_averaged_sou
 
 frequencies, filtered_signals = s.third_octaves()
 
-print("Spectrum 10s")
+print("Spectrum %ds" % length)
 
 leqs = []
 freqs = []
