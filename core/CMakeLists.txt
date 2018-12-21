@@ -12,6 +12,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Dkiss_fft_scalar=float")
 
 set(SOURCE_FILES src/acoustic_indicators.c
                  src/kiss_fft.c
+				 src/kiss_fftr.c
    )
 
 add_library(coresensor ${SOURCE_FILES})
@@ -23,7 +24,7 @@ add_library(coresensor ${SOURCE_FILES})
 
 # Data files
 set(TEST_DATA_DIR "${PROJECT_BINARY_DIR}/Testing")
-file(COPY test/speak_32000Hz_16bitsPCM_10s.raw test/speak_44100Hz_16bitsPCM_10s.raw
+file(COPY test/speak_32000Hz_16bitsPCM_10s.raw test/ref38dB_48000Hz_32bitsPCM.raw test/ref94dB_48000Hz_32bitsPCM.raw
     DESTINATION ${TEST_DATA_DIR})
 
 # Test executable and folder

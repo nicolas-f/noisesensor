@@ -13,5 +13,4 @@ script:
   - make all
   - env CTEST_OUTPUT_ON_FAILURE=1 make test
   - cd ..
-  - python setup.py install --user 
   - python setup.py test

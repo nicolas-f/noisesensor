@@ -6,6 +6,7 @@ dist/
 *.egg-info
 .kdev4
 .idea
+venv
 
 # Compiled source #
 ###################

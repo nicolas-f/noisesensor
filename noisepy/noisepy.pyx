@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 cimport cnoisepy
-from libc.stdint cimport int16_t, int32_t
+from libc.stdint cimport int8_t, int16_t, int32_t
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from libcpp cimport bool
 
@@ -41,24 +41,29 @@ cdef class noisepy:
     cdef bool third_octave
     cdef float ref_pressure
     cdef bool window
+    cdef bool init
     def __cinit__(self):
+        self.init = False
         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
         if self._c_noisepy is NULL:
             raise MemoryError()
 
     def __dealloc__(self):
-        if self._c_noisepy is not NULL:
-            cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+        if self.init:
+            cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
 
-    def __init__(self, a_filter, third_octave, ref_pressure, window):
+    def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
         self.third_octave = third_octave
         self.window = window
-        cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
+        res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+        if res != 0:
+            raise Exception("Init error %d" % res)
+        self.init = True
 
-    def push(self, unsigned char* python_samples, int length):
-      return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
+    def push(self, const int8_t* python_samples, int length):
+      return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
 
     def get_leq_slow(self):
       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
@@ -73,10 +78,10 @@ cdef class noisepy:
       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
 
     def max_samples_length(self):
-      return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+      return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
 
     def get_leq_band_slow(self, int band_id):
       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
 
     def get_rms_spectrum(self):
-      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]
+      return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.ai_get_leq_band_fast_size(self._c_noisepy))]

@@ -38,28 +38,32 @@ import acoustics
 def tostr(arr):
     return numpy.array2string(arr, separator=",", max_line_width=9999999, precision=2)
 
-p = "speak_32000Hz_16bitsPCM_10s.raw"
-
-dat = numpy.fromfile(p, dtype=numpy.short)
-
-s = acoustics.Signal(dat, 32000)
+p = "ref94dB_48000Hz_32bitsPCM.raw" #"speak_32000Hz_16bitsPCM_10s.raw"
+rate = 48000
+mono = False
+data_type = numpy.int32 # numpy.short
+dat = numpy.fromfile(p, dtype=data_type)
+if not mono:
+    dat = dat[::2]
+length =  dat.shape[0] / rate # in seconds
+s = acoustics.Signal(dat, rate)
 
 print("Slow 1 seconds")
 
-print("leq = %s" % tostr(acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(s.values, s.fs, 1., 32767)[1]))
+print("leq = %s" % tostr(acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(s.values, s.fs, 1., numpy.iinfo(data_type).max)[1]))
 
 s_weigh = s.weigh()
 
-print("laeq = %s" % tostr(acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(s_weigh.values, s.fs, 1., 32767)[1]))
+print("laeq = %s" % tostr(acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(s_weigh.values, s.fs, 1., numpy.iinfo(data_type).max)[1]))
 
 frequencies, filtered_signals = s.third_octaves()
 
-print("Spectrum 10s")
+print("Spectrum %ds" % length)
 
 leqs = []
 freqs = []
-for freq, filtered_signal in zip(frequencies, filtered_signals)[3:]:
-    leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, 10., 32767)[1]
+for freq, filtered_signal in list(zip(frequencies, filtered_signals))[3:]:
+    leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, length, numpy.iinfo(data_type).max)[1]
     freqs.append(freq.nominal[0])
     leqs.append(leq[0])
 print("freqs = %s" % tostr(numpy.array(freqs)))
@@ -68,8 +72,8 @@ print("leq = %s" % tostr(numpy.array(leqs)))
 
 frequencies, filtered_signals = s_weigh.third_octaves()
 laeqs = []
-for freq, filtered_signal in zip(frequencies, filtered_signals)[3:]:
-    leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, 10., 32767)[1]
-    leqs.append(leq[0])
+for freq, filtered_signal in list(zip(frequencies, filtered_signals))[3:]:
+    leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, length, numpy.iinfo(data_type).max)[1]
+    laeqs.append(leq[0])
 
-print("laeq = %s" % tostr(numpy.array(leqs)))
+print("laeq = %s" % tostr(numpy.array(laeqs)))

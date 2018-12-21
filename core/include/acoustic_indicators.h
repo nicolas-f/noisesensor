@@ -36,28 +36,43 @@
 #include <math.h>
 #include <stdbool.h>
 
-
 #ifndef ACOUSTIC_INDICATORS_H_
 #define ACOUSTIC_INDICATORS_H_
 
 //number of third octave
 #define AI_NB_BAND             29
-// Note that only the sample rate 32khz is supported for (A) weigting.
-#define AI_SAMPLING_RATE (32000)
 // Analyse using Fast rate (125 ms)
-#define AI_WINDOW_SIZE (4000)
-#define AI_WINDOW_FFT_SIZE (4000)
-#define AI_WINDOWS_SIZE (AI_SAMPLING_RATE / AI_WINDOW_SIZE)
+// 8 windows of 125ms to make leq 1s
+#define AI_WINDOWS_SIZE 8
 
 #define AI_PI 3.141592653589793238462643383279502884197169399375105820974944
 
+#define AI_NB_SUPPORTED_SAMPLES_RATES 2
+
+#define AI_SAMPLE_RATE_32000 0
+#define AI_SAMPLE_RATE_48000 1
+
+#define AI_FORMAT_S16_LE 0
+#define AI_FORMAT_S32_LE 1
+
+
+#define AI_FORMATS_SIZE 2
+
+static const float_t ai_supported_samples_rates[AI_NB_SUPPORTED_SAMPLES_RATES] = { 32000, 48000 };
+static const char* ai_formats[AI_FORMATS_SIZE] = { "S16_LE", "S32_LE" };
+
 typedef struct  {
     int32_t window_cursor;
-    float_t window_data[AI_WINDOW_SIZE];
+    float_t* window_data;
+    int32_t window_data_size;
+    int8_t sample_rate_index; // Sample rate in ai_supported_samples_rates (0 or 1)
     float_t* window_fft_data; // FFt rms
+    int32_t window_fft_data_size;
     int32_t windows_count;
     float_t windows[AI_WINDOWS_SIZE];
     float_t spectrum[AI_WINDOWS_SIZE][AI_NB_BAND];
+    int format;
+    bool mono; // True, one channel, false, two channels
     bool a_filter;
     bool has_spectrum;
     bool window;
@@ -68,6 +83,10 @@ typedef struct  {
     double_t energy_correction; // FFT window energy correction
 } AcousticIndicatorsData;
 
+#define AI_INIT_NO_ERRORS 0
+#define AI_INIT_WRONG_SAMPLE_RATE -1
+#define AI_INIT_WRONG_FORMAT -2
+
 enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
               AI_FEED_IDLE = 0,
               AI_FEED_COMPLETE = 1, //if a complete 1s LAeq has been computed, variable last_leq_slow and last_leq_fast can be read,
@@ -77,14 +96,20 @@ enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
  * Init struct for acoustic indicators
  * @param data Acoustic indicators object
  * @param a_filter Compute A weighting
- * @param Compute leq for each third octaves
+ * @param spectrum Compute leq for each third octaves
+ * @param ref_pressure reference pressure to comptute spl from rms
+ * @param window Apply Hann window before FFT
+ * @param sample_rate_index Sample rate index see ai_supported_samples_rates
+ * @param format Signal encoding see ai_formats
+ * @param mono true if signal as 1 channel, false if 2 channels
+ * @param Error code, see  AI_INIT_NO_ERRORS AI_INIT_WRONG_SAMPLE_RATE
  */
-void ai_InitAcousticIndicatorsData(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window);
+int ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window,int8_t sample_rate_index, const char* format, bool mono);
 
 /**
  * Free struct for acoustic indicators
  */
-void ai_FreeAcousticIndicatorsData(AcousticIndicatorsData* data);
+void ai_free_acoustic_indicators_data(AcousticIndicatorsData* data);
 
 /**
  * Change tukey alpha. Must be between 0 and 1
@@ -99,7 +124,7 @@ AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void);
 /**
  * @param data instance of this struct, create an empty struct on first use
  */
-int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data);
+int ai_get_maximal_sample_size(const AcousticIndicatorsData* data);
 
 /**
  * Add sample to the processing chain
@@ -109,7 +134,7 @@ int ai_GetMaximalSampleSize(const AcousticIndicatorsData* data);
  * @param[out] laeq 1s laeq value if the return is true
  * @return Message code
  */
-int ai_AddSample(AcousticIndicatorsData* data, int sample_len, const int16_t* sample_data);
+int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sample_data);
 
 /**
  * @brief ai_get_band_leq Compute band frequencies
@@ -149,8 +174,14 @@ float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id);
 /**
  * @brief
  * @param data Acoustic indicators object
- * @param band Thin band [0-AI_WINDOW_FFT_SIZE / 2]
+ * @param band Thin band [0-ai_get_leq_band_fast_size]
  * @return RMS value
  */
 float ai_GetThinBandRMS(AcousticIndicatorsData* data, int band);
+
+/**
+ * @brief get size of thin frequency array
+ */
+int32_t ai_get_leq_band_fast_size(AcousticIndicatorsData* data);
+
 #endif

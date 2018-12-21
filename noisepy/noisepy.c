@@ -13,7 +13,8 @@
         "sources": [
             "noisepy/noisepy.pyx", 
             "core/src/acoustic_indicators.c", 
-            "core/src/kiss_fft.c"
+            "core/src/kiss_fft.c", 
+            "core/src/kiss_fftr.c"
         ]
     }, 
     "module_name": "noisepy.wrapped"
@@ -810,6 +811,7 @@ struct __pyx_obj_7noisepy_7wrapped_noisepy {
   bool third_octave;
   float ref_pressure;
   bool window;
+  bool init;
 };
 
 
@@ -902,21 +904,22 @@ static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[],\
     PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args,\
     const char* function_name);
 
-/* ListCompAppend.proto */
-#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
-static CYTHON_INLINE int __Pyx_ListComp_Append(PyObject* list, PyObject* x) {
-    PyListObject* L = (PyListObject*) list;
-    Py_ssize_t len = Py_SIZE(list);
-    if (likely(L->allocated > len)) {
-        Py_INCREF(x);
-        PyList_SET_ITEM(list, len, x);
-        Py_SIZE(list) = len+1;
-        return 0;
-    }
-    return PyList_Append(list, x);
-}
+/* PyCFunctionFastCall.proto */
+#if CYTHON_FAST_PYCCALL
+static CYTHON_INLINE PyObject *__Pyx_PyCFunction_FastCall(PyObject *func, PyObject **args, Py_ssize_t nargs);
 #else
-#define __Pyx_ListComp_Append(L,x) PyList_Append(L,x)
+#define __Pyx_PyCFunction_FastCall(func, args, nargs)  (assert(0), NULL)
+#endif
+
+/* PyFunctionFastCall.proto */
+#if CYTHON_FAST_PYCALL
+#define __Pyx_PyFunction_FastCall(func, args, nargs)\
+    __Pyx_PyFunction_FastCallDict((func), (args), (nargs), NULL)
+#if 1 || PY_VERSION_HEX < 0x030600B1
+static PyObject *__Pyx_PyFunction_FastCallDict(PyObject *func, PyObject **args, int nargs, PyObject *kwargs);
+#else
+#define __Pyx_PyFunction_FastCallDict(func, args, nargs, kwargs) _PyFunction_FastCallDict(func, args, nargs, kwargs)
+#endif
 #endif
 
 /* PyObjectCall.proto */
@@ -925,6 +928,14 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 #else
 #define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
 #endif
+
+/* PyObjectCallMethO.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
+#endif
+
+/* PyObjectCallOneArg.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
 
 /* PyThreadStateGet.proto */
 #if CYTHON_FAST_THREAD_STATE
@@ -964,6 +975,23 @@ static CYTHON_INLINE void __Pyx_ErrFetchInState(PyThreadState *tstate, PyObject 
 
 /* RaiseException.proto */
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
+
+/* ListCompAppend.proto */
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE int __Pyx_ListComp_Append(PyObject* list, PyObject* x) {
+    PyListObject* L = (PyListObject*) list;
+    Py_ssize_t len = Py_SIZE(list);
+    if (likely(L->allocated > len)) {
+        Py_INCREF(x);
+        PyList_SET_ITEM(list, len, x);
+        Py_SIZE(list) = len+1;
+        return 0;
+    }
+    return PyList_Append(list, x);
+}
+#else
+#define __Pyx_ListComp_Append(L,x) PyList_Append(L,x)
+#endif
 
 /* PyObject_GenericGetAttrNoDict.proto */
 #if CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP && PY_VERSION_HEX < 0x03070000
@@ -1009,10 +1037,19 @@ static void __Pyx_AddTraceback(const char *funcname, int c_line,
                                int py_line, const char *filename);
 
 /* CIntToPy.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int32_t(int32_t value);
+
+/* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
 
 /* CIntFromPy.proto */
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
+
+/* CIntFromPy.proto */
+static CYTHON_INLINE int8_t __Pyx_PyInt_As_int8_t(PyObject *);
+
+/* CIntFromPy.proto */
+static CYTHON_INLINE int32_t __Pyx_PyInt_As_int32_t(PyObject *);
 
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
@@ -1087,9 +1124,11 @@ static PyObject *__pyx_builtin_MemoryError;
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_TypeError;
 static const char __pyx_k_main[] = "__main__";
+static const char __pyx_k_mono[] = "mono";
 static const char __pyx_k_name[] = "__name__";
 static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_range[] = "range";
+static const char __pyx_k_format[] = "format";
 static const char __pyx_k_length[] = "length";
 static const char __pyx_k_reduce[] = "__reduce__";
 static const char __pyx_k_window[] = "window";
@@ -1099,21 +1138,26 @@ static const char __pyx_k_setstate[] = "__setstate__";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_reduce_ex[] = "__reduce_ex__";
 static const char __pyx_k_MemoryError[] = "MemoryError";
+static const char __pyx_k_Init_error_d[] = "Init error %d";
 static const char __pyx_k_ref_pressure[] = "ref_pressure";
 static const char __pyx_k_third_octave[] = "third_octave";
 static const char __pyx_k_reduce_cython[] = "__reduce_cython__";
 static const char __pyx_k_python_samples[] = "python_samples";
 static const char __pyx_k_setstate_cython[] = "__setstate_cython__";
+static const char __pyx_k_sample_rate_index[] = "sample_rate_index";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_BSD_3_Clause_License_Copyright[] = "\nBSD 3-Clause License\n\nCopyright (c) 2018, Ifsttar Wi6labs LS2N\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n\n* Redistributions of source code must retain the above copyright notice, this\n  list of conditions and the following disclaimer.\n\n* Redistributions in binary form must reproduce the above copyright notice,\n  this list of conditions and the following disclaimer in the documentation\n  and/or other materials provided with the distribution.\n\n* Neither the name of the copyright holder nor the names of its\n  contributors may be used to endorse or promote products derived from\n  this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\nAND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\nIMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\nDISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\nFOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\nDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\nSERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\nCAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\nOR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\nOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
+static PyObject *__pyx_kp_s_Init_error_d;
 static PyObject *__pyx_n_s_MemoryError;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_n_s_a_filter;
 static PyObject *__pyx_n_s_cline_in_traceback;
+static PyObject *__pyx_n_s_format;
 static PyObject *__pyx_n_s_getstate;
 static PyObject *__pyx_n_s_length;
 static PyObject *__pyx_n_s_main;
+static PyObject *__pyx_n_s_mono;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
 static PyObject *__pyx_n_s_python_samples;
@@ -1122,6 +1166,7 @@ static PyObject *__pyx_n_s_reduce;
 static PyObject *__pyx_n_s_reduce_cython;
 static PyObject *__pyx_n_s_reduce_ex;
 static PyObject *__pyx_n_s_ref_pressure;
+static PyObject *__pyx_n_s_sample_rate_index;
 static PyObject *__pyx_n_s_setstate;
 static PyObject *__pyx_n_s_setstate_cython;
 static PyObject *__pyx_n_s_test;
@@ -1129,8 +1174,8 @@ static PyObject *__pyx_n_s_third_octave;
 static PyObject *__pyx_n_s_window;
 static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
 static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
-static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, PyObject *__pyx_v_a_filter, PyObject *__pyx_v_third_octave, PyObject *__pyx_v_ref_pressure, PyObject *__pyx_v_window); /* proto */
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, unsigned char *__pyx_v_python_samples, int __pyx_v_length); /* proto */
+static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, PyObject *__pyx_v_a_filter, PyObject *__pyx_v_third_octave, PyObject *__pyx_v_ref_pressure, PyObject *__pyx_v_window, PyObject *__pyx_v_sample_rate_index, char const *__pyx_v_format, PyObject *__pyx_v_mono); /* proto */
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int8_t const *__pyx_v_python_samples, int __pyx_v_length); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, float __pyx_v_tukey_alpha); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
@@ -1141,16 +1186,17 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20get_rms_spectrum(struct _
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_22__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_24__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_tp_new_7noisepy_7wrapped_noisepy(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_int_0;
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__2;
 /* Late includes */
 
-/* "noisepy/noisepy.pyx":44
- *     cdef float ref_pressure
+/* "noisepy/noisepy.pyx":45
  *     cdef bool window
+ *     cdef bool init
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
+ *         self.init = False
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
- *         if self._c_noisepy is NULL:
  */
 
 /* Python wrapper */
@@ -1175,17 +1221,26 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "noisepy/noisepy.pyx":45
- *     cdef bool window
+  /* "noisepy/noisepy.pyx":46
+ *     cdef bool init
  *     def __cinit__(self):
+ *         self.init = False             # <<<<<<<<<<<<<<
+ *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
+ *         if self._c_noisepy is NULL:
+ */
+  __pyx_v_self->init = 0;
+
+  /* "noisepy/noisepy.pyx":47
+ *     def __cinit__(self):
+ *         self.init = False
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()             # <<<<<<<<<<<<<<
  *         if self._c_noisepy is NULL:
  *             raise MemoryError()
  */
   __pyx_v_self->_c_noisepy = ai_NewAcousticIndicatorsData();
 
-  /* "noisepy/noisepy.pyx":46
- *     def __cinit__(self):
+  /* "noisepy/noisepy.pyx":48
+ *         self.init = False
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:             # <<<<<<<<<<<<<<
  *             raise MemoryError()
@@ -1194,17 +1249,17 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   __pyx_t_1 = ((__pyx_v_self->_c_noisepy == NULL) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "noisepy/noisepy.pyx":47
+    /* "noisepy/noisepy.pyx":49
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:
  *             raise MemoryError()             # <<<<<<<<<<<<<<
  * 
  *     def __dealloc__(self):
  */
-    PyErr_NoMemory(); __PYX_ERR(0, 47, __pyx_L1_error)
+    PyErr_NoMemory(); __PYX_ERR(0, 49, __pyx_L1_error)
 
-    /* "noisepy/noisepy.pyx":46
- *     def __cinit__(self):
+    /* "noisepy/noisepy.pyx":48
+ *         self.init = False
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
  *         if self._c_noisepy is NULL:             # <<<<<<<<<<<<<<
  *             raise MemoryError()
@@ -1212,12 +1267,12 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
  */
   }
 
-  /* "noisepy/noisepy.pyx":44
- *     cdef float ref_pressure
+  /* "noisepy/noisepy.pyx":45
  *     cdef bool window
+ *     cdef bool init
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
+ *         self.init = False
  *         self._c_noisepy = cnoisepy.ai_NewAcousticIndicatorsData()
- *         if self._c_noisepy is NULL:
  */
 
   /* function exit code */
@@ -1231,12 +1286,12 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy___cinit__(struct __pyx_obj_7noise
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":49
+/* "noisepy/noisepy.pyx":51
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         if self._c_noisepy is not NULL:
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+ *         if self.init:
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
  */
 
 /* Python wrapper */
@@ -1255,50 +1310,50 @@ static void __pyx_pf_7noisepy_7wrapped_7noisepy_2__dealloc__(struct __pyx_obj_7n
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "noisepy/noisepy.pyx":50
+  /* "noisepy/noisepy.pyx":52
  * 
  *     def __dealloc__(self):
- *         if self._c_noisepy is not NULL:             # <<<<<<<<<<<<<<
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+ *         if self.init:             # <<<<<<<<<<<<<<
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
  * 
  */
-  __pyx_t_1 = ((__pyx_v_self->_c_noisepy != NULL) != 0);
+  __pyx_t_1 = (__pyx_v_self->init != 0);
   if (__pyx_t_1) {
 
-    /* "noisepy/noisepy.pyx":51
+    /* "noisepy/noisepy.pyx":53
  *     def __dealloc__(self):
- *         if self._c_noisepy is not NULL:
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)             # <<<<<<<<<<<<<<
+ *         if self.init:
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)             # <<<<<<<<<<<<<<
  * 
- *     def __init__(self, a_filter, third_octave, ref_pressure, window):
+ *     def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
  */
-    ai_FreeAcousticIndicatorsData(__pyx_v_self->_c_noisepy);
+    ai_free_acoustic_indicators_data(__pyx_v_self->_c_noisepy);
 
-    /* "noisepy/noisepy.pyx":50
+    /* "noisepy/noisepy.pyx":52
  * 
  *     def __dealloc__(self):
- *         if self._c_noisepy is not NULL:             # <<<<<<<<<<<<<<
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+ *         if self.init:             # <<<<<<<<<<<<<<
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
  * 
  */
   }
 
-  /* "noisepy/noisepy.pyx":49
+  /* "noisepy/noisepy.pyx":51
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         if self._c_noisepy is not NULL:
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+ *         if self.init:
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
  */
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
 }
 
-/* "noisepy/noisepy.pyx":53
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+/* "noisepy/noisepy.pyx":55
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
  * 
- *     def __init__(self, a_filter, third_octave, ref_pressure, window):             # <<<<<<<<<<<<<<
+ *     def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):             # <<<<<<<<<<<<<<
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure
  */
@@ -1310,16 +1365,25 @@ static int __pyx_pw_7noisepy_7wrapped_7noisepy_5__init__(PyObject *__pyx_v_self,
   PyObject *__pyx_v_third_octave = 0;
   PyObject *__pyx_v_ref_pressure = 0;
   PyObject *__pyx_v_window = 0;
+  PyObject *__pyx_v_sample_rate_index = 0;
+  char const *__pyx_v_format;
+  PyObject *__pyx_v_mono = 0;
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__init__ (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_a_filter,&__pyx_n_s_third_octave,&__pyx_n_s_ref_pressure,&__pyx_n_s_window,0};
-    PyObject* values[4] = {0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_a_filter,&__pyx_n_s_third_octave,&__pyx_n_s_ref_pressure,&__pyx_n_s_window,&__pyx_n_s_sample_rate_index,&__pyx_n_s_format,&__pyx_n_s_mono,0};
+    PyObject* values[7] = {0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+        CYTHON_FALLTHROUGH;
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+        CYTHON_FALLTHROUGH;
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+        CYTHON_FALLTHROUGH;
         case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         CYTHON_FALLTHROUGH;
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
@@ -1340,112 +1404,192 @@ static int __pyx_pw_7noisepy_7wrapped_7noisepy_5__init__(PyObject *__pyx_v_self,
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_third_octave)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 1); __PYX_ERR(0, 53, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 1); __PYX_ERR(0, 55, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_ref_pressure)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 2); __PYX_ERR(0, 53, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 2); __PYX_ERR(0, 55, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_window)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, 3); __PYX_ERR(0, 53, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 3); __PYX_ERR(0, 55, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  4:
+        if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_sample_rate_index)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 4); __PYX_ERR(0, 55, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  5:
+        if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_format)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 5); __PYX_ERR(0, 55, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  6:
+        if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_mono)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, 6); __PYX_ERR(0, 55, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 53, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 55, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
       values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+      values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+      values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+      values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
     }
     __pyx_v_a_filter = values[0];
     __pyx_v_third_octave = values[1];
     __pyx_v_ref_pressure = values[2];
     __pyx_v_window = values[3];
+    __pyx_v_sample_rate_index = values[4];
+    __pyx_v_format = __Pyx_PyObject_AsString(values[5]); if (unlikely((!__pyx_v_format) && PyErr_Occurred())) __PYX_ERR(0, 55, __pyx_L3_error)
+    __pyx_v_mono = values[6];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 53, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 55, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return -1;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), __pyx_v_a_filter, __pyx_v_third_octave, __pyx_v_ref_pressure, __pyx_v_window);
+  __pyx_r = __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(((struct __pyx_obj_7noisepy_7wrapped_noisepy *)__pyx_v_self), __pyx_v_a_filter, __pyx_v_third_octave, __pyx_v_ref_pressure, __pyx_v_window, __pyx_v_sample_rate_index, __pyx_v_format, __pyx_v_mono);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, PyObject *__pyx_v_a_filter, PyObject *__pyx_v_third_octave, PyObject *__pyx_v_ref_pressure, PyObject *__pyx_v_window) {
+static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, PyObject *__pyx_v_a_filter, PyObject *__pyx_v_third_octave, PyObject *__pyx_v_ref_pressure, PyObject *__pyx_v_window, PyObject *__pyx_v_sample_rate_index, char const *__pyx_v_format, PyObject *__pyx_v_mono) {
+  PyObject *__pyx_v_res = NULL;
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   bool __pyx_t_1;
   float __pyx_t_2;
+  int8_t __pyx_t_3;
+  PyObject *__pyx_t_4 = NULL;
+  int __pyx_t_5;
+  PyObject *__pyx_t_6 = NULL;
   __Pyx_RefNannySetupContext("__init__", 0);
 
-  /* "noisepy/noisepy.pyx":54
+  /* "noisepy/noisepy.pyx":56
  * 
- *     def __init__(self, a_filter, third_octave, ref_pressure, window):
+ *     def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
  *         self.a_filter = a_filter             # <<<<<<<<<<<<<<
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_a_filter); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_a_filter); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
   __pyx_v_self->a_filter = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":55
- *     def __init__(self, a_filter, third_octave, ref_pressure, window):
+  /* "noisepy/noisepy.pyx":57
+ *     def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure             # <<<<<<<<<<<<<<
  *         self.third_octave = third_octave
  *         self.window = window
  */
-  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_ref_pressure); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 55, __pyx_L1_error)
+  __pyx_t_2 = __pyx_PyFloat_AsFloat(__pyx_v_ref_pressure); if (unlikely((__pyx_t_2 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
   __pyx_v_self->ref_pressure = __pyx_t_2;
 
-  /* "noisepy/noisepy.pyx":56
+  /* "noisepy/noisepy.pyx":58
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave             # <<<<<<<<<<<<<<
  *         self.window = window
- *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_third_octave); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_third_octave); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 58, __pyx_L1_error)
   __pyx_v_self->third_octave = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":57
+  /* "noisepy/noisepy.pyx":59
  *         self.ref_pressure = ref_pressure
  *         self.third_octave = third_octave
  *         self.window = window             # <<<<<<<<<<<<<<
- *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
- * 
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+ *         if res != 0:
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_window); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_window); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 59, __pyx_L1_error)
   __pyx_v_self->window = __pyx_t_1;
 
-  /* "noisepy/noisepy.pyx":58
+  /* "noisepy/noisepy.pyx":60
  *         self.third_octave = third_octave
  *         self.window = window
- *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)             # <<<<<<<<<<<<<<
- * 
- *     def push(self, unsigned char* python_samples, int length):
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)             # <<<<<<<<<<<<<<
+ *         if res != 0:
+ *             raise Exception("Init error %d" % res)
  */
-  ai_InitAcousticIndicatorsData(__pyx_v_self->_c_noisepy, __pyx_v_self->a_filter, __pyx_v_self->third_octave, __pyx_v_self->ref_pressure, __pyx_v_self->window);
+  __pyx_t_3 = __Pyx_PyInt_As_int8_t(__pyx_v_sample_rate_index); if (unlikely((__pyx_t_3 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_mono); if (unlikely((__pyx_t_1 == ((bool)-1)) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_From_int32_t(ai_init_acoustic_indicators_data(__pyx_v_self->_c_noisepy, __pyx_v_self->a_filter, __pyx_v_self->third_octave, __pyx_v_self->ref_pressure, __pyx_v_self->window, __pyx_t_3, __pyx_v_format, __pyx_t_1)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 60, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_v_res = __pyx_t_4;
+  __pyx_t_4 = 0;
 
-  /* "noisepy/noisepy.pyx":53
- *             cnoisepy.ai_FreeAcousticIndicatorsData(self._c_noisepy)
+  /* "noisepy/noisepy.pyx":61
+ *         self.window = window
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+ *         if res != 0:             # <<<<<<<<<<<<<<
+ *             raise Exception("Init error %d" % res)
+ *         self.init = True
+ */
+  __pyx_t_4 = PyObject_RichCompare(__pyx_v_res, __pyx_int_0, Py_NE); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 61, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 61, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  if (unlikely(__pyx_t_5)) {
+
+    /* "noisepy/noisepy.pyx":62
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+ *         if res != 0:
+ *             raise Exception("Init error %d" % res)             # <<<<<<<<<<<<<<
+ *         self.init = True
  * 
- *     def __init__(self, a_filter, third_octave, ref_pressure, window):             # <<<<<<<<<<<<<<
+ */
+    __pyx_t_4 = __Pyx_PyString_Format(__pyx_kp_s_Init_error_d, __pyx_v_res); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_6 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 62, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_6);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_Raise(__pyx_t_6, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+    __PYX_ERR(0, 62, __pyx_L1_error)
+
+    /* "noisepy/noisepy.pyx":61
+ *         self.window = window
+ *         res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+ *         if res != 0:             # <<<<<<<<<<<<<<
+ *             raise Exception("Init error %d" % res)
+ *         self.init = True
+ */
+  }
+
+  /* "noisepy/noisepy.pyx":63
+ *         if res != 0:
+ *             raise Exception("Init error %d" % res)
+ *         self.init = True             # <<<<<<<<<<<<<<
+ * 
+ *     def push(self, const int8_t* python_samples, int length):
+ */
+  __pyx_v_self->init = 1;
+
+  /* "noisepy/noisepy.pyx":55
+ *             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
+ * 
+ *     def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):             # <<<<<<<<<<<<<<
  *         self.a_filter = a_filter
  *         self.ref_pressure = ref_pressure
  */
@@ -1454,25 +1598,28 @@ static int __pyx_pf_7noisepy_7wrapped_7noisepy_4__init__(struct __pyx_obj_7noise
   __pyx_r = 0;
   goto __pyx_L0;
   __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_6);
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   __pyx_L0:;
+  __Pyx_XDECREF(__pyx_v_res);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":60
- *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
+/* "noisepy/noisepy.pyx":65
+ *         self.init = True
  * 
- *     def push(self, unsigned char* python_samples, int length):             # <<<<<<<<<<<<<<
- *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
+ *     def push(self, const int8_t* python_samples, int length):             # <<<<<<<<<<<<<<
+ *       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
  * 
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
-  unsigned char *__pyx_v_python_samples;
+  int8_t const *__pyx_v_python_samples;
   int __pyx_v_length;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
@@ -1500,11 +1647,11 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_sel
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_length)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, 1); __PYX_ERR(0, 60, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, 1); __PYX_ERR(0, 65, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "push") < 0)) __PYX_ERR(0, 60, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "push") < 0)) __PYX_ERR(0, 65, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1512,12 +1659,12 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_sel
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
     }
-    __pyx_v_python_samples = __Pyx_PyObject_AsWritableUString(values[0]); if (unlikely((!__pyx_v_python_samples) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L3_error)
-    __pyx_v_length = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_length == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 60, __pyx_L3_error)
+    __pyx_v_python_samples = __Pyx_PyObject_AsSString(values[0]); if (unlikely((!__pyx_v_python_samples) && PyErr_Occurred())) __PYX_ERR(0, 65, __pyx_L3_error)
+    __pyx_v_length = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_length == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 65, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 60, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("push", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 65, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("noisepy.wrapped.noisepy.push", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1530,31 +1677,31 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_7push(PyObject *__pyx_v_sel
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, unsigned char *__pyx_v_python_samples, int __pyx_v_length) {
+static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self, int8_t const *__pyx_v_python_samples, int __pyx_v_length) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("push", 0);
 
-  /* "noisepy/noisepy.pyx":61
+  /* "noisepy/noisepy.pyx":66
  * 
- *     def push(self, unsigned char* python_samples, int length):
- *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)             # <<<<<<<<<<<<<<
+ *     def push(self, const int8_t* python_samples, int length):
+ *       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)             # <<<<<<<<<<<<<<
  * 
  *     def get_leq_slow(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(ai_AddSample(__pyx_v_self->_c_noisepy, __pyx_v_length, ((int16_t *)__pyx_v_python_samples))); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(ai_add_sample(__pyx_v_self->_c_noisepy, __pyx_v_length, __pyx_v_python_samples)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":60
- *         cnoisepy.ai_InitAcousticIndicatorsData(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window)
+  /* "noisepy/noisepy.pyx":65
+ *         self.init = True
  * 
- *     def push(self, unsigned char* python_samples, int length):             # <<<<<<<<<<<<<<
- *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
+ *     def push(self, const int8_t* python_samples, int length):             # <<<<<<<<<<<<<<
+ *       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
  * 
  */
 
@@ -1569,8 +1716,8 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_6push(struct __pyx_obj_7noi
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":63
- *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
+/* "noisepy/noisepy.pyx":68
+ *       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
  * 
  *     def get_leq_slow(self):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
@@ -1596,7 +1743,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_slow", 0);
 
-  /* "noisepy/noisepy.pyx":64
+  /* "noisepy/noisepy.pyx":69
  * 
  *     def get_leq_slow(self):
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1604,14 +1751,14 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
  *     def set_tukey_alpha(self, float tukey_alpha):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_slow(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_slow(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":63
- *       return cnoisepy.ai_AddSample(self._c_noisepy, length, <int16_t*>python_samples)
+  /* "noisepy/noisepy.pyx":68
+ *       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)
  * 
  *     def get_leq_slow(self):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
@@ -1629,7 +1776,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_8get_leq_slow(struct __pyx_
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":66
+/* "noisepy/noisepy.pyx":71
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
@@ -1645,7 +1792,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_11set_tukey_alpha(PyObject 
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_tukey_alpha (wrapper)", 0);
   assert(__pyx_arg_tukey_alpha); {
-    __pyx_v_tukey_alpha = __pyx_PyFloat_AsFloat(__pyx_arg_tukey_alpha); if (unlikely((__pyx_v_tukey_alpha == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 66, __pyx_L3_error)
+    __pyx_v_tukey_alpha = __pyx_PyFloat_AsFloat(__pyx_arg_tukey_alpha); if (unlikely((__pyx_v_tukey_alpha == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 71, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1665,7 +1812,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_tukey_alpha", 0);
 
-  /* "noisepy/noisepy.pyx":67
+  /* "noisepy/noisepy.pyx":72
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)             # <<<<<<<<<<<<<<
@@ -1674,7 +1821,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
  */
   ai_SetTukeyAlpha(__pyx_v_self->_c_noisepy, __pyx_v_tukey_alpha);
 
-  /* "noisepy/noisepy.pyx":66
+  /* "noisepy/noisepy.pyx":71
  *       return cnoisepy.ai_get_leq_slow(self._c_noisepy)
  * 
  *     def set_tukey_alpha(self, float tukey_alpha):             # <<<<<<<<<<<<<<
@@ -1689,7 +1836,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_10set_tukey_alpha(struct __
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":69
+/* "noisepy/noisepy.pyx":74
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
@@ -1716,7 +1863,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_fast", 0);
 
-  /* "noisepy/noisepy.pyx":70
+  /* "noisepy/noisepy.pyx":75
  * 
  *     def get_leq_fast(self):
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)             # <<<<<<<<<<<<<<
@@ -1724,13 +1871,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
  *     def get_leq_band_fast(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 70, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_fast(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":69
+  /* "noisepy/noisepy.pyx":74
  *       cnoisepy.ai_SetTukeyAlpha(self._c_noisepy, tukey_alpha)
  * 
  *     def get_leq_fast(self):             # <<<<<<<<<<<<<<
@@ -1749,7 +1896,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_12get_leq_fast(struct __pyx
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":72
+/* "noisepy/noisepy.pyx":77
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1765,7 +1912,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_15get_leq_band_fast(PyObjec
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_fast (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 72, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1786,7 +1933,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_fast", 0);
 
-  /* "noisepy/noisepy.pyx":73
+  /* "noisepy/noisepy.pyx":78
  * 
  *     def get_leq_band_fast(self, int band_id):
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
@@ -1794,13 +1941,13 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
  *     def max_samples_length(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_leq_band_fast(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":72
+  /* "noisepy/noisepy.pyx":77
  *       return cnoisepy.ai_get_leq_fast(self._c_noisepy)
  * 
  *     def get_leq_band_fast(self, int band_id):             # <<<<<<<<<<<<<<
@@ -1819,11 +1966,11 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_14get_leq_band_fast(struct 
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":75
+/* "noisepy/noisepy.pyx":80
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
- *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+ *       return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
  * 
  */
 
@@ -1846,25 +1993,25 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("max_samples_length", 0);
 
-  /* "noisepy/noisepy.pyx":76
+  /* "noisepy/noisepy.pyx":81
  * 
  *     def max_samples_length(self):
- *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)             # <<<<<<<<<<<<<<
+ *       return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)             # <<<<<<<<<<<<<<
  * 
  *     def get_leq_band_slow(self, int band_id):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(ai_GetMaximalSampleSize(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(ai_get_maximal_sample_size(__pyx_v_self->_c_noisepy)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":75
+  /* "noisepy/noisepy.pyx":80
  *       return cnoisepy.ai_get_leq_band_fast(self._c_noisepy, band_id)
  * 
  *     def max_samples_length(self):             # <<<<<<<<<<<<<<
- *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+ *       return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
  * 
  */
 
@@ -1879,8 +2026,8 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_16max_samples_length(struct
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":78
- *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+/* "noisepy/noisepy.pyx":83
+ *       return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
@@ -1895,7 +2042,7 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_19get_leq_band_slow(PyObjec
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_leq_band_slow (wrapper)", 0);
   assert(__pyx_arg_band_id); {
-    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 78, __pyx_L3_error)
+    __pyx_v_band_id = __Pyx_PyInt_As_int(__pyx_arg_band_id); if (unlikely((__pyx_v_band_id == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 83, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L3_error:;
@@ -1916,7 +2063,7 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("get_leq_band_slow", 0);
 
-  /* "noisepy/noisepy.pyx":79
+  /* "noisepy/noisepy.pyx":84
  * 
  *     def get_leq_band_slow(self, int band_id):
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)             # <<<<<<<<<<<<<<
@@ -1924,14 +2071,14 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct 
  *     def get_rms_spectrum(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(ai_get_band_leq(__pyx_v_self->_c_noisepy, __pyx_v_band_id)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":78
- *       return cnoisepy.ai_GetMaximalSampleSize(self._c_noisepy)
+  /* "noisepy/noisepy.pyx":83
+ *       return cnoisepy.ai_get_maximal_sample_size(self._c_noisepy)
  * 
  *     def get_leq_band_slow(self, int band_id):             # <<<<<<<<<<<<<<
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
@@ -1949,11 +2096,11 @@ static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_18get_leq_band_slow(struct 
   return __pyx_r;
 }
 
-/* "noisepy/noisepy.pyx":81
+/* "noisepy/noisepy.pyx":86
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
  * 
  *     def get_rms_spectrum(self):             # <<<<<<<<<<<<<<
- *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.ai_get_leq_band_fast_size(self._c_noisepy))]
  */
 
 /* Python wrapper */
@@ -1970,42 +2117,42 @@ static PyObject *__pyx_pw_7noisepy_7wrapped_7noisepy_21get_rms_spectrum(PyObject
 }
 
 static PyObject *__pyx_pf_7noisepy_7wrapped_7noisepy_20get_rms_spectrum(struct __pyx_obj_7noisepy_7wrapped_noisepy *__pyx_v_self) {
-  int __pyx_v_i;
+  int32_t __pyx_v_i;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
-  int __pyx_t_2;
-  int __pyx_t_3;
-  int __pyx_t_4;
+  int32_t __pyx_t_2;
+  int32_t __pyx_t_3;
+  int32_t __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
   __Pyx_RefNannySetupContext("get_rms_spectrum", 0);
 
-  /* "noisepy/noisepy.pyx":82
+  /* "noisepy/noisepy.pyx":87
  * 
  *     def get_rms_spectrum(self):
- *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]             # <<<<<<<<<<<<<<
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.ai_get_leq_band_fast_size(self._c_noisepy))]             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = AI_WINDOW_FFT_SIZE;
+  __pyx_t_2 = ai_get_leq_band_fast_size(__pyx_v_self->_c_noisepy);
   __pyx_t_3 = __pyx_t_2;
   for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
     __pyx_v_i = __pyx_t_4;
-    __pyx_t_5 = PyFloat_FromDouble(ai_GetThinBandRMS(__pyx_v_self->_c_noisepy, __pyx_v_i)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __pyx_t_5 = PyFloat_FromDouble(ai_GetThinBandRMS(__pyx_v_self->_c_noisepy, __pyx_v_i)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_5))) __PYX_ERR(0, 82, __pyx_L1_error)
+    if (unlikely(__Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_5))) __PYX_ERR(0, 87, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "noisepy/noisepy.pyx":81
+  /* "noisepy/noisepy.pyx":86
  *       return cnoisepy.ai_get_band_leq(self._c_noisepy, band_id)
  * 
  *     def get_rms_spectrum(self):             # <<<<<<<<<<<<<<
- *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.AI_WINDOW_FFT_SIZE)]
+ *       return [cnoisepy.ai_GetThinBandRMS(self._c_noisepy, i) for i in range(cnoisepy.ai_get_leq_band_fast_size(self._c_noisepy))]
  */
 
   /* function exit code */
@@ -2268,13 +2415,16 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
+  {&__pyx_kp_s_Init_error_d, __pyx_k_Init_error_d, sizeof(__pyx_k_Init_error_d), 0, 0, 1, 0},
   {&__pyx_n_s_MemoryError, __pyx_k_MemoryError, sizeof(__pyx_k_MemoryError), 0, 0, 1, 1},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_n_s_a_filter, __pyx_k_a_filter, sizeof(__pyx_k_a_filter), 0, 0, 1, 1},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
+  {&__pyx_n_s_format, __pyx_k_format, sizeof(__pyx_k_format), 0, 0, 1, 1},
   {&__pyx_n_s_getstate, __pyx_k_getstate, sizeof(__pyx_k_getstate), 0, 0, 1, 1},
   {&__pyx_n_s_length, __pyx_k_length, sizeof(__pyx_k_length), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
+  {&__pyx_n_s_mono, __pyx_k_mono, sizeof(__pyx_k_mono), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_kp_s_no_default___reduce___due_to_non, __pyx_k_no_default___reduce___due_to_non, sizeof(__pyx_k_no_default___reduce___due_to_non), 0, 0, 1, 0},
   {&__pyx_n_s_python_samples, __pyx_k_python_samples, sizeof(__pyx_k_python_samples), 0, 0, 1, 1},
@@ -2283,6 +2433,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_reduce_cython, __pyx_k_reduce_cython, sizeof(__pyx_k_reduce_cython), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_ex, __pyx_k_reduce_ex, sizeof(__pyx_k_reduce_ex), 0, 0, 1, 1},
   {&__pyx_n_s_ref_pressure, __pyx_k_ref_pressure, sizeof(__pyx_k_ref_pressure), 0, 0, 1, 1},
+  {&__pyx_n_s_sample_rate_index, __pyx_k_sample_rate_index, sizeof(__pyx_k_sample_rate_index), 0, 0, 1, 1},
   {&__pyx_n_s_setstate, __pyx_k_setstate, sizeof(__pyx_k_setstate), 0, 0, 1, 1},
   {&__pyx_n_s_setstate_cython, __pyx_k_setstate_cython, sizeof(__pyx_k_setstate_cython), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
@@ -2291,8 +2442,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 47, __pyx_L1_error)
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 87, __pyx_L1_error)
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(1, 2, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
@@ -2330,6 +2481,7 @@ static int __Pyx_InitCachedConstants(void) {
 
 static int __Pyx_InitGlobals(void) {
   if (__Pyx_InitStrings(__pyx_string_tab) < 0) __PYX_ERR(0, 1, __pyx_L1_error);
+  __pyx_int_0 = PyInt_FromLong(0); if (unlikely(!__pyx_int_0)) __PYX_ERR(0, 1, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -2855,6 +3007,149 @@ bad:
     return -1;
 }
 
+/* PyCFunctionFastCall */
+#if CYTHON_FAST_PYCCALL
+static CYTHON_INLINE PyObject * __Pyx_PyCFunction_FastCall(PyObject *func_obj, PyObject **args, Py_ssize_t nargs) {
+    PyCFunctionObject *func = (PyCFunctionObject*)func_obj;
+    PyCFunction meth = PyCFunction_GET_FUNCTION(func);
+    PyObject *self = PyCFunction_GET_SELF(func);
+    int flags = PyCFunction_GET_FLAGS(func);
+    assert(PyCFunction_Check(func));
+    assert(METH_FASTCALL == (flags & ~(METH_CLASS | METH_STATIC | METH_COEXIST | METH_KEYWORDS)));
+    assert(nargs >= 0);
+    assert(nargs == 0 || args != NULL);
+    /* _PyCFunction_FastCallDict() must not be called with an exception set,
+       because it may clear it (directly or indirectly) and so the
+       caller loses its exception */
+    assert(!PyErr_Occurred());
+    if ((PY_VERSION_HEX < 0x030700A0) || unlikely(flags & METH_KEYWORDS)) {
+        return (*((__Pyx_PyCFunctionFastWithKeywords)meth)) (self, args, nargs, NULL);
+    } else {
+        return (*((__Pyx_PyCFunctionFast)meth)) (self, args, nargs);
+    }
+}
+#endif
+
+/* PyFunctionFastCall */
+#if CYTHON_FAST_PYCALL
+#include "frameobject.h"
+static PyObject* __Pyx_PyFunction_FastCallNoKw(PyCodeObject *co, PyObject **args, Py_ssize_t na,
+                                               PyObject *globals) {
+    PyFrameObject *f;
+    PyThreadState *tstate = __Pyx_PyThreadState_Current;
+    PyObject **fastlocals;
+    Py_ssize_t i;
+    PyObject *result;
+    assert(globals != NULL);
+    /* XXX Perhaps we should create a specialized
+       PyFrame_New() that doesn't take locals, but does
+       take builtins without sanity checking them.
+       */
+    assert(tstate != NULL);
+    f = PyFrame_New(tstate, co, globals, NULL);
+    if (f == NULL) {
+        return NULL;
+    }
+    fastlocals = f->f_localsplus;
+    for (i = 0; i < na; i++) {
+        Py_INCREF(*args);
+        fastlocals[i] = *args++;
+    }
+    result = PyEval_EvalFrameEx(f,0);
+    ++tstate->recursion_depth;
+    Py_DECREF(f);
+    --tstate->recursion_depth;
+    return result;
+}
+#if 1 || PY_VERSION_HEX < 0x030600B1
+static PyObject *__Pyx_PyFunction_FastCallDict(PyObject *func, PyObject **args, int nargs, PyObject *kwargs) {
+    PyCodeObject *co = (PyCodeObject *)PyFunction_GET_CODE(func);
+    PyObject *globals = PyFunction_GET_GLOBALS(func);
+    PyObject *argdefs = PyFunction_GET_DEFAULTS(func);
+    PyObject *closure;
+#if PY_MAJOR_VERSION >= 3
+    PyObject *kwdefs;
+#endif
+    PyObject *kwtuple, **k;
+    PyObject **d;
+    Py_ssize_t nd;
+    Py_ssize_t nk;
+    PyObject *result;
+    assert(kwargs == NULL || PyDict_Check(kwargs));
+    nk = kwargs ? PyDict_Size(kwargs) : 0;
+    if (Py_EnterRecursiveCall((char*)" while calling a Python object")) {
+        return NULL;
+    }
+    if (
+#if PY_MAJOR_VERSION >= 3
+            co->co_kwonlyargcount == 0 &&
+#endif
+            likely(kwargs == NULL || nk == 0) &&
+            co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)) {
+        if (argdefs == NULL && co->co_argcount == nargs) {
+            result = __Pyx_PyFunction_FastCallNoKw(co, args, nargs, globals);
+            goto done;
+        }
+        else if (nargs == 0 && argdefs != NULL
+                 && co->co_argcount == Py_SIZE(argdefs)) {
+            /* function called with no arguments, but all parameters have
+               a default value: use default values as arguments .*/
+            args = &PyTuple_GET_ITEM(argdefs, 0);
+            result =__Pyx_PyFunction_FastCallNoKw(co, args, Py_SIZE(argdefs), globals);
+            goto done;
+        }
+    }
+    if (kwargs != NULL) {
+        Py_ssize_t pos, i;
+        kwtuple = PyTuple_New(2 * nk);
+        if (kwtuple == NULL) {
+            result = NULL;
+            goto done;
+        }
+        k = &PyTuple_GET_ITEM(kwtuple, 0);
+        pos = i = 0;
+        while (PyDict_Next(kwargs, &pos, &k[i], &k[i+1])) {
+            Py_INCREF(k[i]);
+            Py_INCREF(k[i+1]);
+            i += 2;
+        }
+        nk = i / 2;
+    }
+    else {
+        kwtuple = NULL;
+        k = NULL;
+    }
+    closure = PyFunction_GET_CLOSURE(func);
+#if PY_MAJOR_VERSION >= 3
+    kwdefs = PyFunction_GET_KW_DEFAULTS(func);
+#endif
+    if (argdefs != NULL) {
+        d = &PyTuple_GET_ITEM(argdefs, 0);
+        nd = Py_SIZE(argdefs);
+    }
+    else {
+        d = NULL;
+        nd = 0;
+    }
+#if PY_MAJOR_VERSION >= 3
+    result = PyEval_EvalCodeEx((PyObject*)co, globals, (PyObject *)NULL,
+                               args, nargs,
+                               k, (int)nk,
+                               d, (int)nd, kwdefs, closure);
+#else
+    result = PyEval_EvalCodeEx(co, globals, (PyObject *)NULL,
+                               args, nargs,
+                               k, (int)nk,
+                               d, (int)nd, closure);
+#endif
+    Py_XDECREF(kwtuple);
+done:
+    Py_LeaveRecursiveCall();
+    return result;
+}
+#endif
+#endif
+
 /* PyObjectCall */
 #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw) {
@@ -2871,6 +3166,66 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
             PyExc_SystemError,
             "NULL result without error in PyObject_Call");
     }
+    return result;
+}
+#endif
+
+/* PyObjectCallMethO */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
+    PyObject *self, *result;
+    PyCFunction cfunc;
+    cfunc = PyCFunction_GET_FUNCTION(func);
+    self = PyCFunction_GET_SELF(func);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = cfunc(self, arg);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+/* PyObjectCallOneArg */
+#if CYTHON_COMPILING_IN_CPYTHON
+static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_New(1);
+    if (unlikely(!args)) return NULL;
+    Py_INCREF(arg);
+    PyTuple_SET_ITEM(args, 0, arg);
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+#if CYTHON_FAST_PYCALL
+    if (PyFunction_Check(func)) {
+        return __Pyx_PyFunction_FastCall(func, &arg, 1);
+    }
+#endif
+    if (likely(PyCFunction_Check(func))) {
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
+            return __Pyx_PyObject_CallMethO(func, arg);
+#if CYTHON_FAST_PYCCALL
+        } else if (PyCFunction_GET_FLAGS(func) & METH_FASTCALL) {
+            return __Pyx_PyCFunction_FastCall(func, &arg, 1);
+#endif
+        }
+    }
+    return __Pyx__PyObject_CallOneArg(func, arg);
+}
+#else
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_Pack(1, arg);
+    if (unlikely(!args)) return NULL;
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
     return result;
 }
 #endif
@@ -3409,6 +3764,37 @@ bad:
     }
 
 /* CIntToPy */
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int32_t(int32_t value) {
+    const int32_t neg_one = (int32_t) -1, const_zero = (int32_t) 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(int32_t) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(int32_t) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(int32_t) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+#endif
+        }
+    } else {
+        if (sizeof(int32_t) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+#ifdef HAVE_LONG_LONG
+        } else if (sizeof(int32_t) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+#endif
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(int32_t),
+                                     little, !is_unsigned);
+    }
+}
+
+/* CIntToPy */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     const int neg_one = (int) -1, const_zero = (int) 0;
     const int is_unsigned = neg_one > const_zero;
@@ -3626,6 +4012,384 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to int");
     return (int) -1;
+}
+
+/* CIntFromPy */
+static CYTHON_INLINE int8_t __Pyx_PyInt_As_int8_t(PyObject *x) {
+    const int8_t neg_one = (int8_t) -1, const_zero = (int8_t) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(int8_t) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(int8_t, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (int8_t) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (int8_t) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(int8_t, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(int8_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) >= 2 * PyLong_SHIFT) {
+                            return (int8_t) (((((int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(int8_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) >= 3 * PyLong_SHIFT) {
+                            return (int8_t) (((((((int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(int8_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) >= 4 * PyLong_SHIFT) {
+                            return (int8_t) (((((((((int8_t)digits[3]) << PyLong_SHIFT) | (int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (int8_t) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(int8_t) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int8_t, unsigned long, PyLong_AsUnsignedLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(int8_t) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int8_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+#endif
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (int8_t) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(int8_t, sdigit, (sdigit) (-(sdigit)digits[0]))
+                case  1: __PYX_VERIFY_RETURN_INT(int8_t,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(int8_t) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (int8_t) (((int8_t)-1)*(((((int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(int8_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (int8_t) ((((((int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(int8_t) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (int8_t) (((int8_t)-1)*(((((((int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(int8_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (int8_t) ((((((((int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(int8_t) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (int8_t) (((int8_t)-1)*(((((((((int8_t)digits[3]) << PyLong_SHIFT) | (int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(int8_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int8_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int8_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (int8_t) ((((((((((int8_t)digits[3]) << PyLong_SHIFT) | (int8_t)digits[2]) << PyLong_SHIFT) | (int8_t)digits[1]) << PyLong_SHIFT) | (int8_t)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(int8_t) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int8_t, long, PyLong_AsLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(int8_t) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int8_t, PY_LONG_LONG, PyLong_AsLongLong(x))
+#endif
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            int8_t val;
+            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (int8_t) -1;
+        }
+    } else {
+        int8_t val;
+        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
+        if (!tmp) return (int8_t) -1;
+        val = __Pyx_PyInt_As_int8_t(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to int8_t");
+    return (int8_t) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to int8_t");
+    return (int8_t) -1;
+}
+
+/* CIntFromPy */
+static CYTHON_INLINE int32_t __Pyx_PyInt_As_int32_t(PyObject *x) {
+    const int32_t neg_one = (int32_t) -1, const_zero = (int32_t) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(int32_t) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(int32_t, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (int32_t) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (int32_t) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(int32_t, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(int32_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) >= 2 * PyLong_SHIFT) {
+                            return (int32_t) (((((int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(int32_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) >= 3 * PyLong_SHIFT) {
+                            return (int32_t) (((((((int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(int32_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) >= 4 * PyLong_SHIFT) {
+                            return (int32_t) (((((((((int32_t)digits[3]) << PyLong_SHIFT) | (int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (int32_t) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(int32_t) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int32_t, unsigned long, PyLong_AsUnsignedLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(int32_t) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int32_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+#endif
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (int32_t) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(int32_t, sdigit, (sdigit) (-(sdigit)digits[0]))
+                case  1: __PYX_VERIFY_RETURN_INT(int32_t,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(int32_t) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (int32_t) (((int32_t)-1)*(((((int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(int32_t) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 2 * PyLong_SHIFT) {
+                            return (int32_t) ((((((int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(int32_t) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (int32_t) (((int32_t)-1)*(((((((int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(int32_t) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 3 * PyLong_SHIFT) {
+                            return (int32_t) ((((((((int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(int32_t) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (int32_t) (((int32_t)-1)*(((((((((int32_t)digits[3]) << PyLong_SHIFT) | (int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(int32_t) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(int32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(int32_t) - 1 > 4 * PyLong_SHIFT) {
+                            return (int32_t) ((((((((((int32_t)digits[3]) << PyLong_SHIFT) | (int32_t)digits[2]) << PyLong_SHIFT) | (int32_t)digits[1]) << PyLong_SHIFT) | (int32_t)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(int32_t) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int32_t, long, PyLong_AsLong(x))
+#ifdef HAVE_LONG_LONG
+            } else if (sizeof(int32_t) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(int32_t, PY_LONG_LONG, PyLong_AsLongLong(x))
+#endif
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            int32_t val;
+            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (int32_t) -1;
+        }
+    } else {
+        int32_t val;
+        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
+        if (!tmp) return (int32_t) -1;
+        val = __Pyx_PyInt_As_int32_t(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to int32_t");
+    return (int32_t) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to int32_t");
+    return (int32_t) -1;
 }
 
 /* CIntToPy */
