@@ -1,4 +1,4 @@
-o n#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -45,23 +45,14 @@ except ImportError:
 import noisepy
 import getopt
 import sys
-import os
 import threading
-import struct
-import time
 import datetime
-import StringIO
-import json
-import ftplib
-import uuid
 import collections
 
-## Usage
-# This script expect signed 16 bits mono audio on stdin
-# arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py
-ftp_sleep = 0.02
+## Usage ex
+# arecord -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
 
-__version__ = "1.1.0-dev"
+__version__ = "1.1.1-dev"
 
 freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500]
 
@@ -175,7 +166,7 @@ class HttpServer(threading.Thread):
 
 def usage():
     print(
-        "This program read audio stream from std input and compute acoustics parameters. This script expect signed 16 bits mono audio on stdin")
+        "This program read audio stream from std input and compute acoustics parameters.")
     print(
         "ex: arecord -D hw:2,0 -f S32_LE -r 32000 -c 2 -t raw | python -u noisesensor.py -f S32_LE -r 32000 -c 2 -p 8080")
     print("Usage:")
