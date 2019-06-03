@@ -41,18 +41,18 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def run(self):
         db_delta = 94-56.2
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
-        np = noisepy.noisepy(False, True, ref_sound_pressure, True)
+        ref_sound_pressure = 1.0
+        np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
         np.set_tukey_alpha(0.2)
-        short_size = struct.calcsize('h')
         read = 0
         while True:
-            audiosamples = sys.stdin.read(np.max_samples_length() * short_size)
-            read += len(audiosamples) / short_size
+            audiosamples = sys.stdin.read(np.max_samples_length())
+            read += len(audiosamples) / 32
             if not audiosamples:
                 print("%s End of audio samples" % datetime.datetime.now().isoformat())
                 break
             else:
-                resp = np.push(audiosamples, len(audiosamples) / short_size)
+                resp = np.push(audiosamples, len(audiosamples))
                 # time can be in iso format using datetime.datetime.now().isoformat()
                 if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
                     leqSpectrum = map(np.get_leq_band_fast, range(len(freqs)))
@@ -72,7 +72,10 @@ class AcousticIndicatorsProcessor(threading.Thread):
 
 
 def usage():
-    print("-s 1000 for 1000 Hz tone")
+    print(" -s:\t 1000 for 1000 Hz tone")
+    print(" -f:\t Sample format")
+    print(" -r:\t Sample rate in Hz")
+    print(" -c:\t Number of channels")
 
 
 def main():
@@ -80,9 +83,16 @@ def main():
     freq = 0
     data = {}
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "s:")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "s:f:r:c:")[0]:
             if opt == "-s":
                 freq = float(value)
+            elif opt == "-r":
+                rates = ["32000", "48000"]
+                data["rate"] = rates.index(value)
+            elif opt == "-f":
+                data["sample_format"] = value
+            elif opt == "-c":
+                data["mono"] = value == "1"
     except getopt.error as msg:
         usage()
         exit(-1)
