@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 
 try:
-    from http.server import HTTPServer, BaseHTTPServer
+    from http.server import HTTPServer
     from http.server import BaseHTTPRequestHandler
     from http import HTTPStatus
 except ImportError:
@@ -48,6 +48,7 @@ import sys
 import threading
 import datetime
 import collections
+import time
 
 ## Usage ex
 # arecord -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
@@ -75,16 +76,27 @@ class AcousticIndicatorsProcessor(threading.Thread):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def run(self):
-        db_delta = 94-51.96
+        db_delta = 123.34
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
         npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
+        start = 0
+        total_bytes_read = 0
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         while True:
             audiosamples = sys.stdin.read(np.max_samples_length())
+            total_bytes_read += len(audiosamples)
+            if self.data["debug"]:
+                # Pause stream before gethering more samples
+                cur = time.time()
+                samples_time = len(audiosamples) / bytes_per_seconds
+                if cur - start < samples_time:
+                    time.sleep(samples_time - (cur - start))
+                start = time.time()
             if not audiosamples:
-                print("%s End of audio samples" % datetime.datetime.now().isoformat())
+                print("%s End of audio samples, duration %.3f secondes" % (datetime.datetime.now().isoformat(), total_bytes_read / bytes_per_seconds))
                 break
             else:
                 resp = np.push(audiosamples, len(audiosamples))
@@ -190,12 +202,12 @@ def usage():
 # }
 def main():
     # Shared data between process
-    data = {'leq': [], "callback_fast": [], "callback_slow": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
+    data = {'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
             "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n' }
     # parse command line options
     port = 0
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "p:f:r:c:")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "p:f:r:c:d")[0]:
             if opt == "-p":
                 port = int(value)
             elif opt == "-r":
@@ -205,6 +217,8 @@ def main():
                 data["sample_format"] = value
             elif opt == "-c":
                 data["mono"] = value == "1"
+            elif opt == "-d":
+                data["debug"] = True
     except getopt.error as msg:
         usage()
         exit(-1)
