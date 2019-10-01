@@ -64,6 +64,7 @@ import ssl
 import math
 import numpy
 import io
+import base64
 
 try:
     from Crypto.Cipher import PKCS1_OAEP
@@ -254,6 +255,7 @@ class TriggerProcessor(threading.Thread):
     def run(self):
         status = "wait_trigger"
         start_processing = self.unix_time()
+        trigger_time = 0
         while self.data["running"]:
             if (self.data["debug"] or datetime.datetime.now().hour >= 23)\
                     and time.time() - self.last_fetch_trigger_info >= 2 * 3600.0:
@@ -279,43 +281,48 @@ class TriggerProcessor(threading.Thread):
                     while len(self.fast) > 0:
                         try:
                             spectrum = self.fast.popleft()
-                            #print("%.3f %s" % (
-                            #spectrum[0] - start_processing, "\t".join(["%.2f" % v for v in spectrum[3:]])))
                             laeq = spectrum[2]
-                            print(laeq)
                             if laeq >= self.config["min_leq"]:
                                 # leq condition ok
                                 # check for spectrum condition
                                 cosine_similarity = 1 - self.dist_cosine(spectrum[3:], self.config["spectrum"], w=self.config["weight"])
-                                if int(spectrum[0] - start_processing) == 15:
-                                    cosine_similarity = 1
-                                else:
-                                    cosine_similarity = 0
+                                if self.data["debug"]:
+                                    if int(spectrum[0] - start_processing) == 15:
+                                        cosine_similarity = 1
+                                    else:
+                                        cosine_similarity = 0
                                 if cosine_similarity > self.config["cosine"] / 100.0:
                                     status = "record"
                                     self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
                                     print("Start %.3f recording cosine:%.3f" % (spectrum[0] - start_processing, cosine_similarity))
                                     self.config["trigger_count"] -= 1
+                                    trigger_time = spectrum[0]
 
                         except IndexError:
                             pass
             elif status == "record":
-                while len(self.samples_stack) > 0:
+                while status == "record" and len(self.samples_stack) > 0:
                     samples = self.samples_stack.popleft()
                     size = min(self.remaining_samples, len(samples))
                     self.samples_trigger.append(samples[:size])
                     self.remaining_samples -= size
                     if self.remaining_samples == 0:
                         status = "wait_trigger"
+                        audio_processing_start = time.time()
                         # Compress audio samples
                         output = io.BytesIO()
-                        input = io.BytesIO(b"".join(self.samples_trigger))
+                        input = io.BytesIO("".join(self.samples_trigger))
                         data, samplerate = sf.read(input, format='RAW', channels=1 if self.data['mono'] else 2, samplerate=int(self.sample_rate),
                                                    subtype=['PCM_16', 'PCM_32'][['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
                         sf.write(output, data, samplerate, format='OGG')
                         self.samples_trigger = []
-                        audio_data = output.getvalue()
-                        audio_data_encrypt = self.encrypt(audio_data)
+                        audio_data_encrypt = self.encrypt(output.getvalue())
+                        if self.data["debug"]:
+                            print("t: %.3f d: %d bytes in %.3f seconds" % (
+                            trigger_time, len(base64.b64encode(audio_data_encrypt)),
+                            time.time() - audio_processing_start))
+                        for f in self.data["callback_encrypted_audio"]:
+                            f(trigger_time, audio_data_encrypt)
 
             time.sleep(0.125)
 
@@ -397,7 +404,7 @@ def usage():
 def main():
     # Shared data between process
     data = {'running':True, 'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n' }
+            "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     try:
