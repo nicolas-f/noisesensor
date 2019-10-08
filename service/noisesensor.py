@@ -123,7 +123,8 @@ class AcousticIndicatorsProcessor(threading.Thread):
             while True:
                 audiosamples = sys.stdin.read(np.max_samples_length())
                 if not audiosamples:
-                    print("%s End of audio samples, duration %.3f secondes" % (datetime.datetime.now().isoformat(), total_bytes_read / bytes_per_seconds))
+                    print("%s End of audio samples, duration %.3f seconds" % (datetime.datetime.now().isoformat(),
+                                                                              total_bytes_read / bytes_per_seconds))
                     break
                 else:
                     total_bytes_read += len(audiosamples)
@@ -257,32 +258,41 @@ class TriggerProcessor(threading.Thread):
         start_processing = self.unix_time()
         trigger_time = 0
         while self.data["running"]:
-            if (self.data["debug"] or datetime.datetime.now().hour >= 23)\
+            if ("spectrum" not in self.config or self.data["debug"] or datetime.datetime.now().hour >= 23)\
                     and time.time() - self.last_fetch_trigger_info >= 2 * 3600.0:
                 # Fetch trigger information
                 try:
-                    res = urlopen("https://127.0.0.1:4430/get-trigger", context=ssl._create_unverified_context())
+                    res = urlopen("https://dashboard.raw.noise-planet.org/get-trigger",
+                                  context=ssl._create_unverified_context() if self.data["debug"] else None)
                     self.config = json.loads(res.read())
                     if time.time() * 1000 < self.config["date_end"]:
-                        self.data["callback_fast"].append(self.push_data_fast)
-                        self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * 0.125) / (self.config["cached_length"] + 1)))
-                        self.data["callback_samples"].append(self.push_data_samples)
+                        # Cache samples for configured length before trigger
+                        self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
+                        if self.push_data_samples not in self.data["callback_samples"]:
+                            self.data["callback_samples"].append(self.push_data_samples)
+                        if self.push_data_fast not in self.data["callback_fast"]:
+                            self.data["callback_fast"].append(self.push_data_fast)
                     self.last_fetch_trigger_info = time.time()
-                except [URLError, ValueError] as e:
+                except [URLError, ValueError, KeyError] as e:
                     # ignore
+                    print(self.config)
+                    print(e)
                     time.sleep(60)
-            elif self.config is not None and status == "wait_trigger" and self.config["trigger_count"] > 0:
+            elif self.config is not None and status == "wait_trigger":
                 cur_time = time.time() * 1000
                 if cur_time > self.config["date_end"]:
+                    # Do not cache samples anymore
                     self.samples_stack = None
-                elif cur_time > self.config["date_start"] and self.check_hour():
+                    self.data["callback_samples"].remove(self.push_data_samples)
+                    self.data["callback_fast"].remove(self.push_data_fast)
+                elif self.config["trigger_count"] > 0 and cur_time > self.config["date_start"] and self.check_hour():
                     # Time condition ok
                     # now check audio condition
                     while len(self.fast) > 0:
                         try:
                             spectrum = self.fast.popleft()
                             laeq = spectrum[2]
-                            if laeq >= self.config["min_leq"]:
+                            if self.data["debug"] or laeq >= self.config["min_leq"]:
                                 # leq condition ok
                                 # check for spectrum condition
                                 cosine_similarity = 1 - self.dist_cosine(spectrum[3:], self.config["spectrum"], w=self.config["weight"])
@@ -294,9 +304,10 @@ class TriggerProcessor(threading.Thread):
                                 if cosine_similarity > self.config["cosine"] / 100.0:
                                     status = "record"
                                     self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
-                                    print("Start %.3f recording cosine:%.3f" % (spectrum[0] - start_processing, cosine_similarity))
+                                    print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
                                     self.config["trigger_count"] -= 1
                                     trigger_time = spectrum[0]
+                                    break
 
                         except IndexError:
                             pass
@@ -308,19 +319,21 @@ class TriggerProcessor(threading.Thread):
                     self.remaining_samples -= size
                     if self.remaining_samples == 0:
                         status = "wait_trigger"
-                        audio_processing_start = time.time()
+                        audio_processing_start = time.clock()
                         # Compress audio samples
                         output = io.BytesIO()
                         input = io.BytesIO("".join(self.samples_trigger))
                         data, samplerate = sf.read(input, format='RAW', channels=1 if self.data['mono'] else 2, samplerate=int(self.sample_rate),
                                                    subtype=['PCM_16', 'PCM_32'][['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
                         sf.write(output, data, samplerate, format='OGG')
-                        self.samples_trigger = []
                         audio_data_encrypt = self.encrypt(output.getvalue())
+                        self.samples_trigger = []
+                        self.fast.clear()
+                        self.samples_stack.clear()
                         if self.data["debug"]:
                             print("t: %.3f d: %d bytes in %.3f seconds" % (
                             trigger_time, len(base64.b64encode(audio_data_encrypt)),
-                            time.time() - audio_processing_start))
+                            time.clock() - audio_processing_start))
                         for f in self.data["callback_encrypted_audio"]:
                             f(trigger_time, audio_data_encrypt)
 
@@ -337,14 +350,19 @@ class AcousticIndicatorsServer(HTTPServer):
         self.data = data
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.slow = collections.deque(maxlen=data['row_cache_slow'])
+        self.samples = collections.deque()
         self.data["callback_fast"].append(self.push_data_fast)
         self.data["callback_slow"].append(self.push_data_slow)
+        self.data["callback_encrypted_audio"].append(self.push_samples)
 
     def push_data_fast(self, line):
         self.fast.append(line)
 
     def push_data_slow(self, line):
         self.slow.append(line)
+
+    def push_samples(self, t, samples):
+        self.samples.append("%s,%s\n" % (t, base64.b64encode(samples)))
 
 class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
@@ -355,6 +373,9 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
         if self.path.startswith("/fast"):
             while len(self.server.fast) > 0:
                 self.wfile.write(self.server.data["format_fast"] % tuple(self.server.fast.popleft()))
+        elif self.path.startswith("/samples"):
+            while len(self.server.samples) > 0:
+                self.wfile.write(self.server.samples.popleft())
         else:
             while len(self.server.slow) > 0:
                 self.wfile.write(self.server.data["format_slow"] % tuple(self.server.slow.popleft()))
