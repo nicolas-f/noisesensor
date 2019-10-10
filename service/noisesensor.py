@@ -250,8 +250,8 @@ class TriggerProcessor(threading.Thread):
 
         aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv)
         # pad audio data
-        if AES.block_size % len(audio_data) > 0:
-            audio_data = audio_data.ljust(len(audio_data) + AES.block_size % len(audio_data), '\0')
+        if len(audio_data) % AES.block_size > 0:
+            audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size, '\0')
         # Write AES data
         output_encrypted.write(aes_cipher.encrypt(audio_data))
         return output_encrypted.getvalue()
