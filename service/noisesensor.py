@@ -248,7 +248,10 @@ class TriggerProcessor(threading.Thread):
         # Write OAEP header
         output_encrypted.write(cipher.encrypt(aes_key + iv))
 
-        aes_cipher = AES.new(aes_key, AES.MODE_CFB, iv)
+        aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        # pad audio data
+        if AES.block_size % len(audio_data) > 0:
+            audio_data = audio_data.ljust(len(audio_data) + AES.block_size % len(audio_data), '\0')
         # Write AES data
         output_encrypted.write(aes_cipher.encrypt(audio_data))
         return output_encrypted.getvalue()
@@ -364,8 +367,8 @@ class AcousticIndicatorsServer(HTTPServer):
     def push_samples(self, t, samples):
         self.samples.append("%s,%s\n" % (t, base64.b64encode(samples)))
 
-class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
 
+class AcousticIndicatorsHttpServe(object, BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain;charset=UTF-8')
@@ -380,6 +383,12 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
             while len(self.server.slow) > 0:
                 self.wfile.write(self.server.data["format_slow"] % tuple(self.server.slow.popleft()))
         return
+
+    def log_message(self, format, *args):
+        if self.server.data["debug"]:
+            super(AcousticIndicatorsHttpServe, self).log_message(format, args)
+        return
+
 
 # Push results to ftp folder
 class HttpServer(threading.Thread):
