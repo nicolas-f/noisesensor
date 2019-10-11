@@ -272,6 +272,7 @@ class TriggerProcessor(threading.Thread):
                                   context=ssl._create_unverified_context() if self.data["debug"] else None)
                     jsondata = res.read()
                     jsonsha = hashlib.sha256(jsondata).digest()
+                    self.last_fetch_trigger_info = time.time()
                     if trigger_sha != jsonsha:
                         print("Load trigger data")
                         trigger_sha = jsonsha
@@ -284,7 +285,6 @@ class TriggerProcessor(threading.Thread):
                                 self.data["callback_samples"].append(self.push_data_samples)
                             if self.push_data_fast not in self.data["callback_fast"]:
                                 self.data["callback_fast"].append(self.push_data_fast)
-                        self.last_fetch_trigger_info = time.time()
                 except [URLError, ValueError, KeyError] as e:
                     # ignore
                     print(self.config)
