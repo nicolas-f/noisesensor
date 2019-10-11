@@ -65,6 +65,7 @@ import math
 import numpy
 import io
 import base64
+import hashlib
 
 try:
     from Crypto.Cipher import PKCS1_OAEP
@@ -257,28 +258,33 @@ class TriggerProcessor(threading.Thread):
         return output_encrypted.getvalue()
 
     def run(self):
+        trigger_sha = ""
         status = "wait_trigger"
         start_processing = self.unix_time()
         trigger_time = 0
         samples_trigger = io.BytesIO()
         while self.data["running"]:
-            if ("spectrum" not in self.config or self.data["debug"] or datetime.datetime.now().hour >= 23)\
-                    and time.time() - self.last_fetch_trigger_info >= 2 * 3600.0:
+            if time.time() - self.last_fetch_trigger_info >= 15 * 60.0:
                 # Fetch trigger information
                 try:
                     print("Download trigger information")
                     res = urlopen("https://dashboard.raw.noise-planet.org/get-trigger",
                                   context=ssl._create_unverified_context() if self.data["debug"] else None)
-                    self.config = json.loads(res.read())
-                    self.remaining_triggers = self.config["trigger_count"]
-                    if time.time() * 1000 < self.config["date_end"]:
-                        # Cache samples for configured length before trigger
-                        self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
-                        if self.push_data_samples not in self.data["callback_samples"]:
-                            self.data["callback_samples"].append(self.push_data_samples)
-                        if self.push_data_fast not in self.data["callback_fast"]:
-                            self.data["callback_fast"].append(self.push_data_fast)
-                    self.last_fetch_trigger_info = time.time()
+                    jsondata = res.read()
+                    jsonsha = hashlib.sha256(jsondata).digest()
+                    if trigger_sha != jsonsha:
+                        print("Load trigger data")
+                        trigger_sha = jsonsha
+                        self.config = json.loads(jsondata)
+                        self.remaining_triggers = self.config["trigger_count"]
+                        if time.time() * 1000 < self.config["date_end"]:
+                            # Cache samples for configured length before trigger
+                            self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
+                            if self.push_data_samples not in self.data["callback_samples"]:
+                                self.data["callback_samples"].append(self.push_data_samples)
+                            if self.push_data_fast not in self.data["callback_fast"]:
+                                self.data["callback_fast"].append(self.push_data_fast)
+                        self.last_fetch_trigger_info = time.time()
                 except [URLError, ValueError, KeyError] as e:
                     # ignore
                     print(self.config)
@@ -288,8 +294,10 @@ class TriggerProcessor(threading.Thread):
                 cur_time = time.time() * 1000
                 if cur_time > self.config["date_end"] or self.remaining_triggers == 0:
                     # Do not cache samples anymore
-                    self.data["callback_samples"].remove(self.push_data_samples)
-                    self.data["callback_fast"].remove(self.push_data_fast)
+                    if self.push_data_samples in self.data["callback_samples"]:
+                        self.data["callback_samples"].remove(self.push_data_samples)
+                    if self.push_data_fast in self.data["callback_fast"]:
+                        self.data["callback_fast"].remove(self.push_data_fast)
                     self.fast.clear()
                     self.samples_stack = None
                 elif self.remaining_triggers > 0 and cur_time > self.config["date_start"] and self.check_hour():
