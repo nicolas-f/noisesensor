@@ -176,8 +176,8 @@ class TriggerProcessor(threading.Thread):
         self.sample_rate = [32000.0, 48000.0][self.data["rate"]]
         self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         self.samples_stack = None
-        self.samples_trigger = []
         self.remaining_samples = 0
+        self.remaining_triggers = 0
         self.last_fetch_trigger_info = 0
         self.epoch = datetime.datetime.utcfromtimestamp(0)
 
@@ -260,14 +260,17 @@ class TriggerProcessor(threading.Thread):
         status = "wait_trigger"
         start_processing = self.unix_time()
         trigger_time = 0
+        samples_trigger = io.BytesIO()
         while self.data["running"]:
             if ("spectrum" not in self.config or self.data["debug"] or datetime.datetime.now().hour >= 23)\
                     and time.time() - self.last_fetch_trigger_info >= 2 * 3600.0:
                 # Fetch trigger information
                 try:
+                    print("Download trigger information")
                     res = urlopen("https://dashboard.raw.noise-planet.org/get-trigger",
                                   context=ssl._create_unverified_context() if self.data["debug"] else None)
                     self.config = json.loads(res.read())
+                    self.remaining_triggers = self.config["trigger_count"]
                     if time.time() * 1000 < self.config["date_end"]:
                         # Cache samples for configured length before trigger
                         self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
@@ -283,12 +286,13 @@ class TriggerProcessor(threading.Thread):
                     time.sleep(60)
             elif self.config is not None and status == "wait_trigger":
                 cur_time = time.time() * 1000
-                if cur_time > self.config["date_end"]:
+                if cur_time > self.config["date_end"] or self.remaining_triggers == 0:
                     # Do not cache samples anymore
-                    self.samples_stack = None
                     self.data["callback_samples"].remove(self.push_data_samples)
                     self.data["callback_fast"].remove(self.push_data_fast)
-                elif self.config["trigger_count"] > 0 and cur_time > self.config["date_start"] and self.check_hour():
+                    self.fast.clear()
+                    self.samples_stack = None
+                elif self.remaining_triggers > 0 and cur_time > self.config["date_start"] and self.check_hour():
                     # Time condition ok
                     # now check audio condition
                     while len(self.fast) > 0:
@@ -308,7 +312,7 @@ class TriggerProcessor(threading.Thread):
                                     status = "record"
                                     self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
                                     print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
-                                    self.config["trigger_count"] -= 1
+                                    self.remaining_triggers -= 1
                                     trigger_time = spectrum[0]
                                     break
 
@@ -318,28 +322,32 @@ class TriggerProcessor(threading.Thread):
                 while status == "record" and len(self.samples_stack) > 0:
                     samples = self.samples_stack.popleft()
                     size = min(self.remaining_samples, len(samples))
-                    self.samples_trigger.append(samples[:size])
+                    samples_trigger.write(samples[:size])
                     self.remaining_samples -= size
                     if self.remaining_samples == 0:
                         status = "wait_trigger"
                         audio_processing_start = time.clock()
                         # Compress audio samples
                         output = io.BytesIO()
-                        input = io.BytesIO("".join(self.samples_trigger))
-                        data, samplerate = sf.read(input, format='RAW', channels=1 if self.data['mono'] else 2, samplerate=int(self.sample_rate),
+                        data, samplerate = sf.read(samples_trigger, format='RAW', channels=1 if self.data['mono'] else 2, samplerate=int(self.sample_rate),
                                                    subtype=['PCM_16', 'PCM_32'][['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
-                        sf.write(output, data, samplerate, format='OGG')
+                        data = data[:, 0]
+                        channels = 1
+                        with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
+                            f.write(data)
+                            f.flush()
                         audio_data_encrypt = self.encrypt(output.getvalue())
-                        self.samples_trigger = []
-                        self.fast.clear()
-                        self.samples_stack.clear()
-                        if self.data["debug"]:
-                            print("t: %.3f d: %d bytes in %.3f seconds" % (
-                            trigger_time, len(base64.b64encode(audio_data_encrypt)),
-                            time.clock() - audio_processing_start))
+                        print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
+                        samples_trigger.tell(),data.shape[0], len(base64.b64encode(audio_data_encrypt)),
+                        time.clock() - audio_processing_start))
+                        samples_trigger = io.BytesIO()
+                        info = sf.info(io.BytesIO(output.getvalue()))
+                        print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
                         for f in self.data["callback_encrypted_audio"]:
                             f(trigger_time, audio_data_encrypt)
-
+                        self.samples_stack.clear()
+                        time.sleep(self.config["cached_length"])
+                        self.fast.clear()
             time.sleep(0.125)
 
     def unix_time(self):
@@ -368,7 +376,7 @@ class AcousticIndicatorsServer(HTTPServer):
         self.samples.append("%s,%s\n" % (t, base64.b64encode(samples)))
 
 
-class AcousticIndicatorsHttpServe(object, BaseHTTPRequestHandler):
+class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain;charset=UTF-8')
@@ -386,7 +394,10 @@ class AcousticIndicatorsHttpServe(object, BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         if self.server.data["debug"]:
-            super(AcousticIndicatorsHttpServe, self).log_message(format, args)
+            sys.stderr.write("%s - - [%s] %s\n" %
+                             (self.client_address[0],
+                              self.log_date_time_string(),
+                              format%args))
         return
 
 
