@@ -264,7 +264,7 @@ class TriggerProcessor(threading.Thread):
         trigger_time = 0
         samples_trigger = io.BytesIO()
         while self.data["running"]:
-            if time.time() - self.last_fetch_trigger_info >= 15 * 60.0:
+            if time.time() - self.last_fetch_trigger_info >= 15 * 60.0 and 8 <= time.localtime().tm_hour < 19:
                 # Fetch trigger information
                 try:
                     print("Download trigger information")
