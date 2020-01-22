@@ -62,7 +62,6 @@ import time
 import json
 import ssl
 import math
-import numpy
 import io
 import base64
 import hashlib
@@ -73,9 +72,11 @@ try:
     from Crypto.Cipher import AES
     from Crypto import Random
     from Crypto.Random import get_random_bytes
+    import numpy
 except ImportError:
     print("Please install PyCrypto")
     print("pip install pycrypto")
+    print("Audio capture has been disabled")
 
 import soundfile as sf
 
@@ -119,10 +120,10 @@ class AcousticIndicatorsProcessor(threading.Thread):
         npa.set_tukey_alpha(0.2)
         start = 0
         total_bytes_read = 0
-        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][[b"S16_LE", b"S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         try:
             while True:
-                audiosamples = sys.stdin.read(np.max_samples_length())
+                audiosamples = sys.stdin.buffer.read(np.max_samples_length())
                 if not audiosamples:
                     print("%s End of audio samples, duration %.3f seconds" % (datetime.datetime.now().isoformat(),
                                                                               total_bytes_read / bytes_per_seconds))
@@ -148,7 +149,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
                     # time can be in iso format using datetime.datetime.now().isoformat()
                     if resp == noisepy.feed_complete or resp == noisepy.feed_fast:
                         leq125ms = np.get_leq_fast()
-                        leqSpectrum = map(np.get_leq_band_fast, range(len(freqs)))
+                        leqSpectrum = list(map(np.get_leq_band_fast, range(len(freqs))))
                         push_fast = True
                         if resp == noisepy.feed_complete:
                             leq1s = np.get_leq_slow()
@@ -175,7 +176,7 @@ class TriggerProcessor(threading.Thread):
         self.config = {}
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.sample_rate = [32000.0, 48000.0][self.data["rate"]]
-        self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        self.bytes_per_seconds = self.sample_rate * [2, 4][[b"S16_LE", b"S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         self.samples_stack = None
         self.remaining_samples = 0
         self.remaining_triggers = 0
@@ -191,7 +192,7 @@ class TriggerProcessor(threading.Thread):
         self.fast.append(line)
 
     # from scipy
-    def _validate_weights(self,w, dtype=numpy.double):
+    def _validate_weights(self,w, dtype):
         w = self._validate_vector(w, dtype=dtype)
         if numpy.any(w < 0):
             raise ValueError("Input weights should be all non-negative")
@@ -212,7 +213,7 @@ class TriggerProcessor(threading.Thread):
         u = self._validate_vector(u)
         v = self._validate_vector(v)
         if w is not None:
-            w = self._validate_weights(w)
+            w = self._validate_weights(w, numpy.double)
         uv = numpy.average(u * v, weights=w)
         uu = numpy.average(numpy.square(u), weights=w)
         vv = numpy.average(numpy.square(v), weights=w)
@@ -453,7 +454,7 @@ def usage():
 def main():
     # Shared data between process
     data = {'running':True, 'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast" : b'%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
+            "format_fast" : bytes('%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+'\n', "utf-8"), "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     try:
@@ -464,7 +465,7 @@ def main():
                 rates = ["32000", "48000"]
                 data["rate"] = rates.index(value)
             elif opt == "-f":
-                data["sample_format"] = value
+                data["sample_format"] = bytes(value,"utf-8")
             elif opt == "-c":
                 data["mono"] = value == "1"
             elif opt == "-d":
@@ -482,8 +483,9 @@ def main():
     processing_thread.start()
 
     # run trigger processing thread
-    trigger_thread = TriggerProcessor(data)
-    trigger_thread.start()
+    if "numpy" in globals():
+        trigger_thread = TriggerProcessor(data)
+        trigger_thread.start()
 
     # Http server
     if port > 0:
