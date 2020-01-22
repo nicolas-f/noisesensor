@@ -62,7 +62,6 @@ import time
 import json
 import ssl
 import math
-import numpy
 import io
 import base64
 import hashlib
@@ -73,9 +72,11 @@ try:
     from Crypto.Cipher import AES
     from Crypto import Random
     from Crypto.Random import get_random_bytes
+    import numpy
 except ImportError:
     print("Please install PyCrypto")
     print("pip install pycrypto")
+    print("Audio capture has been disabled")
 
 import soundfile as sf
 
@@ -191,7 +192,7 @@ class TriggerProcessor(threading.Thread):
         self.fast.append(line)
 
     # from scipy
-    def _validate_weights(self,w, dtype=numpy.double):
+    def _validate_weights(self,w, dtype):
         w = self._validate_vector(w, dtype=dtype)
         if numpy.any(w < 0):
             raise ValueError("Input weights should be all non-negative")
@@ -212,7 +213,7 @@ class TriggerProcessor(threading.Thread):
         u = self._validate_vector(u)
         v = self._validate_vector(v)
         if w is not None:
-            w = self._validate_weights(w)
+            w = self._validate_weights(w, numpy.double)
         uv = numpy.average(u * v, weights=w)
         uu = numpy.average(numpy.square(u), weights=w)
         vv = numpy.average(numpy.square(v), weights=w)
@@ -482,8 +483,9 @@ def main():
     processing_thread.start()
 
     # run trigger processing thread
-    trigger_thread = TriggerProcessor(data)
-    trigger_thread.start()
+    if "numpy" in globals():
+        trigger_thread = TriggerProcessor(data)
+        trigger_thread.start()
 
     # Http server
     if port > 0:
