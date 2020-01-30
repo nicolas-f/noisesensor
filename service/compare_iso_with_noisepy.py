@@ -5,7 +5,7 @@ import numpy
 
 def analyze(raw_path, print_freqs):
     # Process with acoustics
-    dat = numpy.fromfile(raw_path, dtype=numpy.int32)
+    dat = numpy.fromfile(raw_path, dtype=numpy.int16)
     # convert to mono and remove first and last 2 seconds
     rate = 32000
     #dat = dat[::2]
@@ -15,7 +15,7 @@ def analyze(raw_path, print_freqs):
     freqs = []
     frequencies, filtered_signals = s.third_octaves()
     for freq, filtered_signal in list(zip(frequencies, filtered_signals))[3:]:
-        leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, len(dat) / rate, numpy.iinfo(numpy.int32).max)[1]
+        leq = acoustics.standards.iec_61672_1_2013.time_averaged_sound_level(filtered_signal.values, filtered_signal.fs, len(dat) / rate, numpy.iinfo(numpy.int16).max)[1]
         freqs.append(freq.nominal[0])
         leqs.append(leq[0])
     if print_freqs:
@@ -24,7 +24,7 @@ def analyze(raw_path, print_freqs):
     print("iec_61672_1_2013(%s)," % raw_path +",".join(["%.2f" % f for f in leqs]))
     # Process with noisepy
     np = noisepy.noisepy(False, True, 1., True, noisepy.ai_sample_rate_32000,
-                         noisepy.ai_formats[noisepy.ai_format_s16_le], False)
+                         noisepy.ai_formats[noisepy.ai_format_s16_le], True)
     np.set_tukey_alpha(0.2)
     results = []
     with open(raw_path, "rb") as f:
