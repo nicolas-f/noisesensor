@@ -503,7 +503,7 @@ def main():
     processing_thread.start()
 
     # run trigger processing thread
-    if "numpy" in globals():
+    if "numpy" in globals() and "sf" in globals():
         trigger_thread = TriggerProcessor(data)
         trigger_thread.start()
 
