@@ -7,8 +7,8 @@ def analyze(raw_path, print_freqs):
     # Process with acoustics
     dat = numpy.fromfile(raw_path, dtype=numpy.int32)
     # convert to mono and remove first and last 2 seconds
-    rate = 48000
-    dat = dat[::2]
+    rate = 32000
+    #dat = dat[::2]
     dat = dat[rate * 2: - rate * 2]
     s = acoustics.Signal(dat, rate)
     leqs = []
@@ -23,8 +23,8 @@ def analyze(raw_path, print_freqs):
 
     print("iec_61672_1_2013(%s)," % raw_path +",".join(["%.2f" % f for f in leqs]))
     # Process with noisepy
-    np = noisepy.noisepy(False, True, 1., True, noisepy.ai_sample_rate_48000,
-                         noisepy.ai_formats[noisepy.ai_format_s32_le], False)
+    np = noisepy.noisepy(False, True, 1., True, noisepy.ai_sample_rate_32000,
+                         noisepy.ai_formats[noisepy.ai_format_s16_le], False)
     np.set_tukey_alpha(0.2)
     results = []
     with open(raw_path, "rb") as f:
@@ -37,7 +37,7 @@ def analyze(raw_path, print_freqs):
     print("code_ifsttar(%s)," % raw_path + ",".join(["%.2f" % (10 * math.log10(sum(band_leq) / len(band_leq))) for idband, band_leq in
                     enumerate(zip(*results[2:-2]))]))
 
-fichs = ["record_31.5.raw", "record_63.raw", "record_125.raw", "record_150.raw", "record_500.raw", "record_1000.raw", "record_2000.raw", "record_3000.raw", "record_8000.raw", "record_12500.raw", "record_16000.raw", "record_background.raw"]
+fichs = ["core/test/speak_32000Hz_16bitsPCM_10s.raw"]
 
 for i, p in zip(range(len(fichs)), fichs):
     analyze(p, i == 0)
