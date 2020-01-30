@@ -78,7 +78,14 @@ except ImportError:
     print("pip install pycrypto")
     print("Audio capture has been disabled")
 
-import soundfile as sf
+try:
+    import soundfile as sf
+except ImportError:
+    print("Please install soundfile")
+    print("pip install soundfile")
+    print("Audio capture has been disabled")
+
+
 
 
 
