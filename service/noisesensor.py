@@ -33,7 +33,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from __future__ import print_function
+from __future__ import print_function, division, unicode_literals
 
 try:
     # For Python 3.0 and later
@@ -114,16 +114,27 @@ class AcousticIndicatorsProcessor(threading.Thread):
     def run(self):
         db_delta = 123.34
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
-        np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
-        npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"], self.data["sample_format"], self.data["mono"])
+        np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"],
+                             self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+        npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"],
+                              self.data["sample_format"].encode('UTF-8'), self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
         start = 0
         total_bytes_read = 0
-        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][[b"S16_LE", b"S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         try:
+            input_stream = None
+            if self.data["debug"]:
+                input_stream = open(self.data["debug_file"], 'rb')
+            else:
+                if sys.version_info.major == 2:
+                    input_stream = sys.stdin
+                else:
+                    input_stream = sys.stdin.buffer
+
             while True:
-                audiosamples = sys.stdin.buffer.read(np.max_samples_length())
+                audiosamples = input_stream.read(np.max_samples_length())
                 if not audiosamples:
                     print("%s End of audio samples, duration %.3f seconds" % (datetime.datetime.now().isoformat(),
                                                                               total_bytes_read / bytes_per_seconds))
@@ -176,7 +187,7 @@ class TriggerProcessor(threading.Thread):
         self.config = {}
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.sample_rate = [32000.0, 48000.0][self.data["rate"]]
-        self.bytes_per_seconds = self.sample_rate * [2, 4][[b"S16_LE", b"S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         self.samples_stack = None
         self.remaining_samples = 0
         self.remaining_triggers = 0
@@ -253,13 +264,18 @@ class TriggerProcessor(threading.Thread):
         aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv)
         # pad audio data
         if len(audio_data) % AES.block_size > 0:
-            audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size, '\0')
+            if sys.version_info.major == 2:
+                audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size,
+                                              str('\0'))
+            else:
+                audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size,
+                                              b'\0')
         # Write AES data
         output_encrypted.write(aes_cipher.encrypt(audio_data))
         return output_encrypted.getvalue()
 
     def run(self):
-        trigger_sha = ""
+        trigger_sha = str("")
         status = "wait_trigger"
         start_processing = self.unix_time()
         trigger_time = 0
@@ -454,7 +470,7 @@ def usage():
 def main():
     # Shared data between process
     data = {'running':True, 'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast" : bytes('%.3f,%.2f,%.2f,' + ",".join(["%.2f"]*len(freqs))+'\n', "utf-8"), "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
+            "format_fast" : b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     try:
@@ -465,7 +481,7 @@ def main():
                 rates = ["32000", "48000"]
                 data["rate"] = rates.index(value)
             elif opt == "-f":
-                data["sample_format"] = bytes(value,"utf-8")
+                data["sample_format"] = value
             elif opt == "-c":
                 data["mono"] = value == "1"
             elif opt == "-d":
@@ -474,9 +490,6 @@ def main():
     except getopt.error as msg:
         usage()
         exit(-1)
-
-    if data["debug"]:
-        sys.stdin = open(data["debug_file"], 'rb')
 
     # run audio processing thread
     processing_thread = AcousticIndicatorsProcessor(data)
