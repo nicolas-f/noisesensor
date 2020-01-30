@@ -78,7 +78,14 @@ except ImportError:
     print("pip install pycrypto")
     print("Audio capture has been disabled")
 
-import soundfile as sf
+try:
+    import soundfile as sf
+except ImportError:
+    print("Please install soundfile")
+    print("pip install soundfile")
+    print("Audio capture has been disabled")
+
+
 
 
 
@@ -496,7 +503,7 @@ def main():
     processing_thread.start()
 
     # run trigger processing thread
-    if "numpy" in globals():
+    if "numpy" in globals() and "sf" in globals():
         trigger_thread = TriggerProcessor(data)
         trigger_thread.start()
 
