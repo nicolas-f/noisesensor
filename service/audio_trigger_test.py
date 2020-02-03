@@ -1,15 +1,18 @@
 import numpy
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
-from itertools import izip
 import math
+import matplotlib.ticker as mtick
+
+freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500]
+
 
 def cosine_distance(a, b, weight = None):
     assert len(a) == len(b)
     if weight is None:
         weight = [1.0] * len(a)
     ab_sum, a_sum, b_sum = 0, 0, 0
-    for ai, bi, wi in izip(a, b, weight):
+    for ai, bi, wi in zip(a, b, weight):
         ab_sum += ai * bi
         a_sum += ai * ai
         b_sum += bi * bi
@@ -79,37 +82,55 @@ test2_spectrum = numpy.rot90(test2_spectrum)
 
 test3_spectrum = numpy.rot90(test3_spectrum)
 
-plt.subplot(4, 2, 1)
+fig, axes = plt.subplots(nrows=4, ncols=3, constrained_layout=True)
 
-plt.imshow(ref_spectrum)
+gs = axes[0, 0].get_gridspec()
 
-ax1 = plt.subplot(4, 2, 2)
+axes[0, 1].imshow(ref_spectrum)
 
-autocolor(plt.bar(numpy.arange(len(dist0)), dist0))
+autocolor(axes[0, 2].bar(numpy.arange(len(dist0)), dist0))
 
-plt.subplot(4, 2, 3)
+axes[1, 1].imshow(test1_spectrum)
 
-plt.imshow(test1_spectrum)
+autocolor(axes[1, 2].bar(numpy.arange(len(dist1)), dist1))
 
-plt.subplot(4, 2, 4, sharey=ax1)
+axes[2, 1].imshow(test2_spectrum)
 
-autocolor(plt.bar(numpy.arange(len(dist1)), dist1))
+autocolor(axes[2, 2].bar(numpy.arange(len(dist2)), dist2))
 
-plt.subplot(4, 2, 5)
+axes[3, 1].imshow(test3_spectrum)
 
-plt.imshow(test2_spectrum)
+axes[3, 2].bar(numpy.arange(len(dist2)), dist3)
 
-plt.subplot(4, 2, 6, sharey=ax1)
-autocolor(plt.bar(numpy.arange(len(dist2)), dist2))
+for ax in axes[0:, 0]:
+    ax.remove()
+
+axbig = fig.add_subplot(gs[0:, 0])
+
+axbig.set_title("Spectrum trigger")
+
+axbig.imshow(numpy.rot90([trigger]))
+
+for i in range(len(axes)):
+    axes[i, 2].set_ylim([0.95, 1.0])
+    axes[i, 1].set_yticks(range(len(freqs))[::5])
+    axes[i, 1].set_yticklabels([str(ylab) + " Hz" for ylab in freqs[::5]][::-1])
+    axes[i, 1].set_xticks(range(len(ref_spectrum[0]))[::20])
+    axes[i, 1].set_xticklabels([str(xlabel)+" s" % xlabel for xlabel in numpy.arange(0, 10, 0.125)][::20])
+    axes[i, 2].set_xticks(range(len(ref_spectrum[0]))[::20])
+    axes[i, 2].set_xticklabels([str(xlabel)+" s" % xlabel for xlabel in numpy.arange(0, 10, 0.125)][::20])
+    axes[i, 2].set_ylabel("Cosine similarity (%)")
+    axes[i, 2].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    axes[i, 1].set_title("Spectrogram "+str(i)+" (dB)")
 
 
-plt.subplot(4, 2, 7)
-
-plt.imshow(test3_spectrum)
-
-plt.subplot(4, 2, 8, sharey=ax1)
-plt.bar(numpy.arange(len(dist2)), dist3)
-
-ax1.set_ylim([0.95, 1.0])
+axbig.set_yticks(range(len(freqs)))
+axbig.set_yticklabels([str(ylab) + " Hz" for ylab in freqs][::-1])
+axbig.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False)  # labels along the bottom edge are off
 
 plt.show()
