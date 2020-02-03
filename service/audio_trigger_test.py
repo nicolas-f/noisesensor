@@ -69,47 +69,47 @@ dist3 = numpy.ones(len(ref_spectrum)) - [distance.cosine(trigger, test3_spectrum
 
 dist0_bis = numpy.ones(len(ref_spectrum)) - [dist_cosine(trigger, ref_spectrum[idfreq], w=weight) for idfreq in range(len(ref_spectrum))]
 
-print(numpy.around(dist0_bis - dist0, 3))
+#print(numpy.around(dist0_bis - dist0, 3))
 
-# ref_spectrum = numpy.rot90(ref_spectrum)
-#
-# test1_spectrum = numpy.rot90(test1_spectrum)
-#
-# test2_spectrum = numpy.rot90(test2_spectrum)
-#
-# test3_spectrum = numpy.rot90(test3_spectrum)
-#
-# plt.subplot(4, 2, 1)
-#
-# plt.imshow(ref_spectrum)
-#
-# ax1 = plt.subplot(4, 2, 2)
-#
-# ax1.set_ylim(0.96, 1.0)
-#
-# autocolor(plt.bar(numpy.arange(len(dist0)), dist0))
-#
-# plt.subplot(4, 2, 3)
-#
-# plt.imshow(test1_spectrum)
-#
-# plt.subplot(4, 2, 4, sharey=ax1)
-#
-# autocolor(plt.bar(numpy.arange(len(dist1)), dist1))
-#
-# plt.subplot(4, 2, 5)
-#
-# plt.imshow(test2_spectrum)
-#
-# plt.subplot(4, 2, 6, sharey=ax1)
-# autocolor(plt.bar(numpy.arange(len(dist2)), dist2))
-#
-#
-# plt.subplot(4, 2, 7)
-#
-# plt.imshow(test3_spectrum)
-#
-# plt.subplot(4, 2, 8, sharey=ax1)
-# plt.bar(numpy.arange(len(dist2)), dist3)
-#
-# plt.show()
+ref_spectrum = numpy.rot90(ref_spectrum)
+
+test1_spectrum = numpy.rot90(test1_spectrum)
+
+test2_spectrum = numpy.rot90(test2_spectrum)
+
+test3_spectrum = numpy.rot90(test3_spectrum)
+
+plt.subplot(4, 2, 1)
+
+plt.imshow(ref_spectrum)
+
+ax1 = plt.subplot(4, 2, 2)
+
+autocolor(plt.bar(numpy.arange(len(dist0)), dist0))
+
+plt.subplot(4, 2, 3)
+
+plt.imshow(test1_spectrum)
+
+plt.subplot(4, 2, 4, sharey=ax1)
+
+autocolor(plt.bar(numpy.arange(len(dist1)), dist1))
+
+plt.subplot(4, 2, 5)
+
+plt.imshow(test2_spectrum)
+
+plt.subplot(4, 2, 6, sharey=ax1)
+autocolor(plt.bar(numpy.arange(len(dist2)), dist2))
+
+
+plt.subplot(4, 2, 7)
+
+plt.imshow(test3_spectrum)
+
+plt.subplot(4, 2, 8, sharey=ax1)
+plt.bar(numpy.arange(len(dist2)), dist3)
+
+ax1.set_ylim([0.95, 1.0])
+
+plt.show()
