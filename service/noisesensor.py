@@ -289,8 +289,9 @@ class TriggerProcessor(threading.Thread):
         samples_trigger = io.BytesIO()
         last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         while self.data["running"]:
-            if last_day_of_year != datetime.datetime.now().timetuple().tm_yday:
+            if last_day_of_year != datetime.datetime.now().timetuple().tm_yday and "trigger_count" in self.config:
                 # reset trigger counter each day
+                print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config["trigger_count"]
             if time.time() - self.last_fetch_trigger_info >= 15 * 60.0 and 8 <= time.localtime().tm_hour < 19:
