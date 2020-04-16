@@ -287,7 +287,12 @@ class TriggerProcessor(threading.Thread):
         start_processing = self.unix_time()
         trigger_time = 0
         samples_trigger = io.BytesIO()
+        last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         while self.data["running"]:
+            if last_day_of_year != datetime.datetime.now().timetuple().tm_yday:
+                # reset trigger counter each day
+                last_day_of_year = datetime.datetime.now().timetuple().tm_yday
+                self.remaining_triggers = self.config["trigger_count"]
             if time.time() - self.last_fetch_trigger_info >= 15 * 60.0 and 8 <= time.localtime().tm_hour < 19:
                 # Fetch trigger information
                 try:
@@ -316,7 +321,7 @@ class TriggerProcessor(threading.Thread):
                     time.sleep(60)
             elif self.config is not None and status == "wait_trigger":
                 cur_time = time.time() * 1000
-                if cur_time > self.config["date_end"] or self.remaining_triggers == 0:
+                if cur_time > self.config["date_end"]:
                     # Do not cache samples anymore
                     if self.push_data_samples in self.data["callback_samples"]:
                         self.data["callback_samples"].remove(self.push_data_samples)
