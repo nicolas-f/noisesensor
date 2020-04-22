@@ -333,26 +333,27 @@ class TriggerProcessor(threading.Thread):
                 elif self.remaining_triggers > 0 and cur_time > self.config["date_start"] and self.check_hour():
                     # Time condition ok
                     # now check audio condition
-                    while len(self.fast) > 0:
+                    while len(self.fast) > 0 and status == "wait_trigger":
                         try:
                             spectrum = self.fast.popleft()
                             laeq = spectrum[2]
                             if self.data["debug"] or laeq >= self.config["min_leq"]:
                                 # leq condition ok
                                 # check for spectrum condition
-                                cosine_similarity = 1 - self.dist_cosine(spectrum[3:], self.config["spectrum"], w=self.config["weight"])
-                                if self.data["debug"]:
-                                    if int(spectrum[0] - start_processing) == 15:
-                                        cosine_similarity = 1
-                                    else:
-                                        cosine_similarity = 0
-                                if cosine_similarity > self.config["cosine"] / 100.0:
-                                    status = "record"
-                                    self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
-                                    print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
-                                    self.remaining_triggers -= 1
-                                    trigger_time = spectrum[0]
-                                    break
+                                for spectrum_template, weight_template in zip(self.config["spectrum"], self.config["weight"]):
+                                    cosine_similarity = 1 - self.dist_cosine(spectrum[3:], spectrum_template, w=weight_template)
+                                    if self.data["debug"]:
+                                        if int(spectrum[0] - start_processing) == 15:
+                                            cosine_similarity = 1
+                                        else:
+                                            cosine_similarity = 0
+                                    if cosine_similarity > self.config["cosine"] / 100.0:
+                                        status = "record"
+                                        self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
+                                        print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
+                                        self.remaining_triggers -= 1
+                                        trigger_time = spectrum[0]
+                                        break
 
                         except IndexError:
                             pass
