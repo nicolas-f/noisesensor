@@ -1,0 +1,34 @@
+#######################################
+# Syntax Coloring Map for Arduino IDE
+#######################################
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+ai_new_acoustic_indicators_data		KEYWORD2
+ai_init_acoustic_indicators_data	KEYWORD2
+ai_free_acoustic_indicators_data	KEYWORD2
+ai_SetTukeyAlpha					KEYWORD2
+ai_NewAcousticIndicatorsData		KEYWORD2
+ai_get_maximal_sample_size			KEYWORD2
+ai_add_sample						KEYWORD2
+ai_get_band_leq						KEYWORD2
+ai_get_frequency					KEYWORD2
+ai_get_leq_slow						KEYWORD2
+ai_get_leq_fast						KEYWORD2
+ai_get_leq_band_fast				KEYWORD2
+ai_GetThinBandRMS					KEYWORD2
+ai_get_leq_band_fast_size			KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+AI_INIT_NO_ERRORS				LITERAL1
+AI_INIT_WRONG_SAMPLE_RATE		LITERAL1
+AI_INIT_WRONG_FORMAT			LITERAL1
+AI_FEED_WINDOW_OVERFLOW			LITERAL1
+AI_FEED_IDLE					LITERAL1
+AI_FEED_COMPLETE				LITERAL1
+AI_FEED_FAST					LITERAL1

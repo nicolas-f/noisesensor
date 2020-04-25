@@ -63,46 +63,49 @@ static const int ai_formats_bytes[AI_FORMATS_SIZE] = { 2, 4 };
  */
 const double_t a_filter_numerator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {
 {0.34345834, -0.68691668, -0.34345834, 1.37383335, -0.34345834, -0.68691668, 0.34345834},
-{0.23430179229951348, -0.46860358459902696, -0.23430179229951348, 0.9372071691980539, -0.23430179229951348, -0.46860358459902696, 0.23430179229951348}};
+{0.23430179229951348, -0.46860358459902696, -0.23430179229951348, 0.9372071691980539, -0.23430179229951348, -0.46860358459902696, 0.23430179229951348} };
 /**
  * Denominator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
  * second-order section analog weights to second-order section digital weights.
  */
 const double_t a_filter_denominator[AI_NB_SUPPORTED_SAMPLES_RATES][ORDER] = {
 {1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407},
-{1.0, -4.113043408775871, 6.553121752655046, -4.990849294163378, 1.785737302937571, -0.2461905953194862, 0.011224250033231168}};
+{1.0, -4.113043408775871, 6.553121752655046, -4.990849294163378, 1.785737302937571, -0.2461905953194862, 0.011224250033231168} };
 
-
+AcousticIndicatorsData* ai_new_acoustic_indicators_data() {
+    return malloc(sizeof(AcousticIndicatorsData));
+}
 
 int ai_get_maximal_sample_size(const AcousticIndicatorsData* data) {
-	return (data->window_data_size - data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2);
+    return (data->window_data_size - data->window_cursor) * ai_formats_bytes[data->format] * (data->mono ? 1 : 2);
 }
 
 int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sample_data) {
     int i;
-	if(sample_len > ai_get_maximal_sample_size(data)) {
+    if (sample_len > ai_get_maximal_sample_size(data)) {
         return AI_FEED_WINDOW_OVERFLOW;
     }
-    const size_t max_i = sample_len / (data->mono ? 1 : 2) / ai_formats_bytes[data->format] + data->window_cursor;
+    const int max_i = sample_len / (data->mono ? 1 : 2) / ai_formats_bytes[data->format] + data->window_cursor;
     int curs;
-    if(AI_FORMAT_S16_LE == data->format) {
-        int16_t* ptr = (int16_t*) sample_data;
-	    for(i=data->window_cursor; i < max_i; i++) {
-            curs = ((i - data->window_cursor)*(data->mono ? 1 : 2));
-		    data->window_data[i] = (ptr[curs]) / (float_t)SHRT_MAX;
-	    }
-    } else {
-        int32_t* ptr = (int32_t*) sample_data;
+    if (AI_FORMAT_S16_LE == data->format) {
+        int16_t* ptr = (int16_t*)sample_data;
         for (i = data->window_cursor; i < max_i; i++) {
-            curs = (i - data->window_cursor)*(data->mono ? 1 : 2);
+            curs = ((i - data->window_cursor) * (data->mono ? 1 : 2));
+            data->window_data[i] = (ptr[curs]) / (float_t)SHRT_MAX;
+        }
+    }
+    else {
+        int32_t* ptr = (int32_t*)sample_data;
+        for (i = data->window_cursor; i < max_i; i++) {
+            curs = (i - data->window_cursor) * (data->mono ? 1 : 2);
             data->window_data[i] = (ptr[curs]) / (float_t)INT_MAX;
         }
     }
-	data->window_cursor += (sample_len / (data->mono ? 1 : 2)) / ai_formats_bytes[data->format];
-	if(data->window_cursor >= data->window_data_size) {
-		data->window_cursor = 0;
-		// Compute A weighting
-        if(data->a_filter) {
+    data->window_cursor += (sample_len / (data->mono ? 1 : 2)) / ai_formats_bytes[data->format];
+    if (data->window_cursor >= data->window_data_size) {
+        data->window_cursor = 0;
+        // Compute A weighting
+        if (data->a_filter) {
             double_t* weightedSignal = malloc(sizeof(double_t) * data->window_data_size);
             // Filter delays
             double_t* z = malloc(sizeof(double_t) * data->window_data_size * (ORDER - 1));
@@ -113,54 +116,55 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
                 // Avoid iteration idT=0 exception (z[1][idT-1]=0)
                 z[idT] = (a_filter_numerator[data->sample_rate_index][1] * data->window_data[idT] + (idT == 0 ? 0 : z[data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][1] * data->window_data[idT]);
                 int k;
-                for (k = 0; k<ORDER - 2; k++) {
+                for (k = 0; k < ORDER - 2; k++) {
                     // Avoid iteration idT=0 exception (z[k+1][idT-1]=0)
-                    z[k*data->window_data_size + idT] = (a_filter_numerator[data->sample_rate_index][k + 1] * data->window_data[idT] + (idT == 0 ? 0 : z[(k + 1)*data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][k + 1] * weightedSignal[idT]);
+                    z[k * data->window_data_size + idT] = (a_filter_numerator[data->sample_rate_index][k + 1] * data->window_data[idT] + (idT == 0 ? 0 : z[(k + 1) * data->window_data_size + idT - 1]) - a_filter_denominator[data->sample_rate_index][k + 1] * weightedSignal[idT]);
                 }
                 z[data->window_data_size * (ORDER - 2) + idT] = (a_filter_numerator[data->sample_rate_index][ORDER - 1] * data->window_data[idT] - a_filter_denominator[data->sample_rate_index][ORDER - 1] * weightedSignal[idT]);
             }
             free(z);
             for (idT = 0; idT < data->window_data_size; idT++) {
-                data->window_data[idT] = weightedSignal[idT];
+                data->window_data[idT] = (float_t)weightedSignal[idT];
             }
             free(weightedSignal);
-		}
+        }
         // Compute spectrum
-        if(data->has_spectrum) {
+        if (data->has_spectrum) {
 
             kiss_fftr_cfg cfg = kiss_fftr_alloc(data->window_fft_data_size, 0, NULL, NULL);
 
             // Convert short to kiss_fft_scalar type and apply windowing
-			data->energy_correction = 0;
-            if(!data->window) {
-			  data->energy_correction = data->window_data_size;
-              memcpy(data->window_fft_data, data->window_data, sizeof(kiss_fft_scalar) * data->window_data_size);
-              if(data->window_fft_data_size > data->window_data_size) {
-                  memset(&data->window_fft_data[data->window_data_size], 0, sizeof(kiss_fft_scalar) * (data->window_fft_data_size - data->window_data_size));
-              }
-            } else {
-              int index_begin_flat = (data->tukey_alpha / 2) * data->window_data_size;
-              int index_end_flat = data->window_data_size - index_begin_flat;
-							double window_value = 0;
-              for(i=0; i < index_begin_flat; i++) {
-								window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)data->window_data_size) - data->tukey_alpha / 2))));
-								data->energy_correction += window_value * window_value;
-                                data->window_fft_data[i] = (kiss_fft_scalar) data->window_data[i] * window_value;
-              }
-              // Flat part
-							data->energy_correction += index_end_flat - index_begin_flat;
-              for(i=index_begin_flat; i < index_end_flat; i++) {
-                  data->window_fft_data[i] = (kiss_fft_scalar) data->window_data[i];
-              }
-              // End Hann part
-              for(i=index_end_flat; i < data->window_data_size; i++) {
-				window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (float)data->window_data_size) - 1 + data->tukey_alpha / 2))));
-				data->energy_correction += window_value * window_value;
-                data->window_fft_data[i] = (kiss_fft_scalar) data->window_data[i] * window_value;
-              }
+            data->energy_correction = 0;
+            if (!data->window) {
+                data->energy_correction = data->window_data_size;
+                memcpy(data->window_fft_data, data->window_data, sizeof(kiss_fft_scalar) * data->window_data_size);
+                if (data->window_fft_data_size > data->window_data_size) {
+                    memset(&data->window_fft_data[data->window_data_size], 0, sizeof(kiss_fft_scalar) * ((int64_t)data->window_fft_data_size - data->window_data_size));
+                }
             }
-			data->energy_correction = 1.0 / sqrt(data->energy_correction / data->window_data_size);
-            size_t fft_out_size = data->window_fft_data_size / 2 + 1;
+            else {
+                int index_begin_flat = (data->tukey_alpha / 2) * data->window_data_size;
+                int index_end_flat = data->window_data_size - index_begin_flat;
+                double window_value = 0;
+                for (i = 0; i < index_begin_flat; i++) {
+                    window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (double)data->window_data_size) - data->tukey_alpha / 2))));
+                    data->energy_correction += window_value * window_value;
+                    data->window_fft_data[i] = (kiss_fft_scalar)(data->window_data[i] * window_value);
+                }
+                // Flat part
+                data->energy_correction += (int64_t)index_end_flat - index_begin_flat;
+                for (i = index_begin_flat; i < index_end_flat; i++) {
+                    data->window_fft_data[i] = (kiss_fft_scalar)data->window_data[i];
+                }
+                // End Hann part
+                for (i = index_end_flat; i < data->window_data_size; i++) {
+                    window_value = (0.5 * (1 + cos(2 * AI_PI / data->tukey_alpha * ((i / (double)data->window_data_size) - 1 + data->tukey_alpha / 2))));
+                    data->energy_correction += window_value * window_value;
+                    data->window_fft_data[i] = (kiss_fft_scalar)data->window_data[i] * window_value;
+                }
+            }
+            data->energy_correction = 1.0 / sqrt(data->energy_correction / data->window_data_size);
+            int32_t fft_out_size = data->window_fft_data_size / 2 + 1;
             kiss_fft_cpx* fft_out = malloc(sizeof(kiss_fft_cpx) * fft_out_size);
 
             kiss_fftr(cfg, data->window_fft_data, fft_out);
@@ -169,108 +173,110 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
 
             // Compute RMS for each thin frequency bands
             int fft_offset = data->window_fft_data_size - data->window_data_size;
-            for(i=fft_offset; i < fft_out_size; i++) {
-                data->window_fft_data[i-fft_offset] = fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i;
+            for (i = fft_offset; i < fft_out_size; i++) {
+                data->window_fft_data[i - fft_offset] = fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i;
             }
             free(fft_out);
             // Compute RMS for each third octave frequency bands by applying filters
             int id_third_octave;
             double freqByCell = ai_supported_samples_rates[data->sample_rate_index] / data->window_data_size;
             int refFreq = 17; // 1000 hz
-            for(id_third_octave = 0; id_third_octave < AI_NB_BAND; id_third_octave++) {
+            for (id_third_octave = 0; id_third_octave < AI_NB_BAND; id_third_octave++) {
                 // Compute lower and upper value of third-octave
                 // NF-EN 61260
                 // base 10
-                double fCenter = pow(10, (id_third_octave - refFreq)/10.) * 1000;
+                double fCenter = pow(10, ((int64_t)id_third_octave - refFreq) / 10.) * 1000;
                 double fLower = fCenter * pow(10, -1. / 20.);
                 double fUpper = fCenter * pow(10, 1. / 20.);
                 double sumRms = 0;
                 int cellFloor = (int)(ceil(fLower / freqByCell));
-                int cellCeil = MIN(data->window_data_size - 1, (int) (floor(fUpper / freqByCell)));
+                int cellCeil = MIN(data->window_data_size - 1, (int)(floor(fUpper / freqByCell)));
                 int cellLower = MIN(cellFloor, cellCeil);
                 int cellUpper = MAX(cellFloor, cellCeil);
-									int idCell;
-                for(idCell = cellLower; idCell <= cellUpper; idCell++) {
+                int idCell;
+                for (idCell = cellLower; idCell <= cellUpper; idCell++) {
                     sumRms += data->window_fft_data[idCell];
                 }
                 const float_t rms = (sqrt(sumRms / 2) / (data->window_data_size / 2.)) * data->energy_correction;
                 data->spectrum[data->windows_count][id_third_octave] = 20 * log10(rms / data->ref_pressure);
             }
         }
-		// Compute RMS
-		float_t sampleSum = 0;
-		for(i=0; i < data->window_data_size; i++) {
-			sampleSum += (float_t)data->window_data[i] * (float_t)data->window_data[i];
-		}
-		// Push window sum in windows struct data
-		data->windows[data->windows_count++] = sampleSum;
+        // Compute RMS
+        float_t sampleSum = 0;
+        for (i = 0; i < data->window_data_size; i++) {
+            sampleSum += (float_t)data->window_data[i] * (float_t)data->window_data[i];
+        }
+        // Push window sum in windows struct data
+        data->windows[data->windows_count++] = sampleSum;
         // Convert into dB(A)
-        data->last_leq_fast = 10 * log10((double)data->windows[data->windows_count - 1] / (data->window_data_size) / (data->ref_pressure * data->ref_pressure));
-        if(data->windows_count == AI_WINDOWS_SIZE) { // 1s computation complete
+        data->last_leq_fast = 10 * log10((double)data->windows[data->windows_count - 1] / (data->window_data_size) / ((double)data->ref_pressure * data->ref_pressure));
+        if (data->windows_count == AI_WINDOWS_SIZE) { // 1s computation complete
             // compute energetic average
             float_t sumWindows = 0;
-            for(i=0; i<AI_WINDOWS_SIZE;i++) {
-                sumWindows+=data->windows[i];
+            for (i = 0; i < AI_WINDOWS_SIZE; i++) {
+                sumWindows += data->windows[i];
             }
             // Convert into dB(A)
-            data->last_leq_slow = 10 * log10((double)sumWindows / (AI_WINDOWS_SIZE * data->window_data_size) / (data->ref_pressure * data->ref_pressure));
+            data->last_leq_slow = 10 * log10f(sumWindows / (AI_WINDOWS_SIZE * data->window_data_size) / (data->ref_pressure * data->ref_pressure));
             data->windows_count = 0;
             return AI_FEED_COMPLETE;
-        } else { // 125ms complete
+        }
+        else { // 125ms complete
             return AI_FEED_FAST;
         }
-	}
+    }
     return AI_FEED_IDLE;
 }
 
 AcousticIndicatorsData* ai_NewAcousticIndicatorsData(void) {
-		AcousticIndicatorsData* p = malloc(sizeof(AcousticIndicatorsData));
-		return p;
+    AcousticIndicatorsData* p = malloc(sizeof(AcousticIndicatorsData));
+    return p;
 }
 
 void ai_SetTukeyAlpha(AcousticIndicatorsData* data, float_t tukey_alpha) {
-	data->tukey_alpha = tukey_alpha;
+    data->tukey_alpha = tukey_alpha;
 }
 
 void ai_free_acoustic_indicators_data(AcousticIndicatorsData* data) {
-  if(data->window_data) {
-    free(data->window_data);
-  }
-  if(data->has_spectrum) {
-      free(data->window_fft_data);
-  }
+    if (data->window_data) {
+        free(data->window_data);
+    }
+    if (data->has_spectrum) {
+        free(data->window_fft_data);
+    }
 }
 
 float_t ai_GetThinBandRMS(AcousticIndicatorsData* data, int32_t band) {
-	if(data->has_spectrum) {
-		return data->window_fft_data[band];
-	} else {
-		return 0;
-	}
+    if (data->has_spectrum) {
+        return data->window_fft_data[band];
+    }
+    else {
+        return 0;
+    }
 }
 
 int ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float_t ref_pressure, bool window, int8_t sample_rate_index, const char* format, bool mono)
 {
-    if(sample_rate_index >= AI_NB_SUPPORTED_SAMPLES_RATES) {
+    if (sample_rate_index >= AI_NB_SUPPORTED_SAMPLES_RATES) {
         return AI_INIT_WRONG_SAMPLE_RATE;
     }
     int i;
     data->format = -1;
-    for(i = 0; i < AI_FORMATS_SIZE; i++) {
-        if(strcmp(format, ai_formats[i]) == 0) {
+    for (i = 0; i < AI_FORMATS_SIZE; i++) {
+        if (strcmp(format, ai_formats[i]) == 0) {
             data->format = i;
             break;
         }
     }
-    if(data->format == -1) {
+    if (data->format == -1) {
         return AI_INIT_WRONG_FORMAT;
     }
     data->sample_rate_index = sample_rate_index;
     data->mono = mono;
     data->window_data_size = (size_t)(ai_supported_samples_rates[sample_rate_index] / AI_WINDOWS_SIZE);
     data->window_data = malloc(data->window_data_size * sizeof(float_t));
-	data->windows_count = 0;
-	data->window_cursor = 0;
+    data->windows_count = 0;
+    data->window_cursor = 0;
     data->window = window;
     data->a_filter = a_filter;
     data->has_spectrum = spectrum;
@@ -279,10 +285,11 @@ int ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter
     data->last_leq_slow = 0;
     data->tukey_alpha = 0.5;
     data->window_fft_data_size = kiss_fft_next_fast_size(data->window_data_size);
-    if(spectrum) {
+    if (spectrum) {
         data->window_fft_data = malloc(data->window_fft_data_size * sizeof(float_t));
         memset(data->window_fft_data, 0, data->window_fft_data_size * sizeof(float_t));
-    } else {
+    }
+    else {
         data->window_fft_data = NULL;
     }
     return AI_INIT_NO_ERRORS;
@@ -290,15 +297,16 @@ int ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter
 
 
 float ai_get_band_leq(AcousticIndicatorsData* data, int band_id) {
-    if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
+    if (data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
         int i;
         double sum = 0;
         int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE : data->windows_count;
-        for(i=0; i < window_count; i++) {
+        for (i = 0; i < window_count; i++) {
             sum += pow(10, data->spectrum[i][band_id] / 10.0);
         }
         return (float_t)(10 * log10(sum / AI_WINDOWS_SIZE));
-    } else {
+    }
+    else {
         return 0.f;
     }
 }
@@ -317,10 +325,11 @@ float ai_get_leq_fast(AcousticIndicatorsData* data) {
 }
 
 float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id) {
-    if(data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
+    if (data->has_spectrum && band_id >= 0 && band_id < AI_NB_BAND) {
         int window_count = data->windows_count == 0 ? AI_WINDOWS_SIZE - 1 : data->windows_count - 1;
         return data->spectrum[window_count][band_id];
-    } else {
+    }
+    else {
         return 0.;
     }
 }
