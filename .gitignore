@@ -9,6 +9,7 @@ dist/
 venv
 .vscode
 .vs
+.build
 
 # Compiled source #
 ###################
