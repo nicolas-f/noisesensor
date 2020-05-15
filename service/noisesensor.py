@@ -315,7 +315,7 @@ class TriggerProcessor(threading.Thread):
                                 self.data["callback_samples"].append(self.push_data_samples)
                             if self.push_data_fast not in self.data["callback_fast"]:
                                 self.data["callback_fast"].append(self.push_data_fast)
-                except [URLError, ValueError, KeyError] as e:
+                except (URLError, ValueError, KeyError) as e:
                     # ignore
                     print(self.config)
                     print(e)
