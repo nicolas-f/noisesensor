@@ -39,6 +39,11 @@
 #ifndef ACOUSTIC_INDICATORS_H_
 #define ACOUSTIC_INDICATORS_H_
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //number of third octave
 #define AI_NB_BAND             29
 // Analyse using Fast rate (125 ms)
@@ -92,6 +97,13 @@ enum AI_FEED {AI_FEED_WINDOW_OVERFLOW = -1, //Exceed window array size
               AI_FEED_COMPLETE = 1, //if a complete 1s LAeq has been computed, variable last_leq_slow and last_leq_fast can be read,
               AI_FEED_FAST = 2, //if a 125ms LAeq has been computed, variable last_leq_fast can be read
              };
+
+
+/**
+ * @return Allocated memory for AcousticIndicatorsData
+ */
+AcousticIndicatorsData* ai_new_acoustic_indicators_data();
+
 /**
  * Init struct for acoustic indicators
  * @param data Acoustic indicators object
@@ -177,11 +189,15 @@ float ai_get_leq_band_fast(AcousticIndicatorsData* data, int band_id);
  * @param band Thin band [0-ai_get_leq_band_fast_size]
  * @return RMS value
  */
-float ai_GetThinBandRMS(AcousticIndicatorsData* data, int band);
+float_t ai_GetThinBandRMS(AcousticIndicatorsData* data, int32_t band);
 
 /**
  * @brief get size of thin frequency array
  */
 int32_t ai_get_leq_band_fast_size(AcousticIndicatorsData* data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

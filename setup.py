@@ -24,9 +24,9 @@ except ImportError as e:
 ext = ".pyx" if USE_CYTHON else ".c"
 
 ext_1 = Extension(SRC_DIR + ".wrapped",
-                  ["core/src/acoustic_indicators.c","core/src/kiss_fft.c","core/src/kiss_fftr.c", SRC_DIR + "/noisepy" + ext],
+                  ["src/acoustic_indicators.c","src/kiss_fft.c","src/kiss_fftr.c", SRC_DIR + "/noisepy" + ext],
                   libraries=[],
-                  include_dirs=["core/include"])
+                  include_dirs=["src"])
 
 EXTENSIONS = [ext_1]
 

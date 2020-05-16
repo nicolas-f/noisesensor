@@ -7,6 +7,9 @@ dist/
 .kdev4
 .idea
 venv
+.vscode
+.vs
+.build
 
 # Compiled source #
 ###################
