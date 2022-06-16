@@ -457,16 +457,43 @@ class HttpServer(threading.Thread):
             print("Stop the server on http://localhost:%d" % self.port)
             self.httpd.socket.close()
 
+
+class CsvWriter(threading.Thread):
+    """
+    Handle the writing of CSV files in the provided folder(s)
+    """
+    def __init__(self, data, csv_files):
+        threading.Thread.__init__(self)
+        self.data = data
+        self.csv_files = csv_files
+        self.fast = collections.deque(maxlen=data['row_cache_fast'])
+        self.data["callback_fast"].append(self.push_data_fast)
+        self.data["callback_slow"].append(self.push_data_slow)
+        self.data["callback_encrypted_audio"].append(self.push_samples)
+
+    def push_data_fast(self, line):
+        self.fast.append(line)
+
+    def run(self):
+        while self.data["running"]:
+            while len(self.fast) > 0:
+                line = self.last.popleft()
+            time.sleep(10)
+
+
+
+
 def usage():
     print(
         "This program read audio stream from std input and compute acoustics parameters.")
     print(
         "ex: arecord -D hw:2,0 -f S32_LE -r 32000 -c 2 -t raw | python -u noisesensor.py -f S32_LE -r 32000 -c 2 -p 8080")
     print("Usage:")
-    print(" -p:\t Serve as http on specified port (Optional)")
+    print(" -p:\t Serve as http on specified port (Optional) http://localhost:port/fast")
     print(" -f:\t Sample format")
     print(" -r:\t Sample rate in Hz")
     print(" -c:\t Number of channels")
+    print(" -o:\t Folder that will contain csv files (can be repeated for multiple copies)")
 
 
 ##
@@ -487,8 +514,9 @@ def main():
             "format_fast" : b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
+    outputs_csv = []
     try:
-        for opt, value in getopt.getopt(sys.argv[1:], "p:f:r:c:d:")[0]:
+        for opt, value in getopt.getopt(sys.argv[1:], "p:f:r:c:d:o:")[0]:
             if opt == "-p":
                 port = int(value)
             elif opt == "-r":
@@ -501,6 +529,8 @@ def main():
             elif opt == "-d":
                 data["debug"] = True
                 data["debug_file"] = value
+            elif opt == "-o":
+                outputs_csv.append(value)
     except getopt.error as msg:
         usage()
         exit(-1)
@@ -518,6 +548,10 @@ def main():
     if port > 0:
         httpserver = HttpServer(data, port=port)
         httpserver.start()
+
+    if len(outputs_csv) > 0:
+        csv_writer = CsvWriter(data, outputs_csv)
+        csv_writer.start()
 
     # End program when audio processing end
     try:
