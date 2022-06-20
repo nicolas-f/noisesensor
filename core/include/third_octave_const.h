@@ -31,7 +31,7 @@
 *
 */
 
-//Description: Third oictave analysis constants
+//Description: Third octave analysis constants
 
 #include <inttypes.h>
 

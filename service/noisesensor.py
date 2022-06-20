@@ -35,26 +35,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function, division, unicode_literals
 
-try:
-    # For Python 3.0 and later
-    from http.server import HTTPServer
-    from http.server import BaseHTTPRequestHandler
-    from http import HTTPStatus
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-    from urllib.error import URLError
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen, URLError
-
+from http.server import HTTPServer
+from http.server import BaseHTTPRequestHandler
+from urllib.request import urlopen
+from urllib.error import URLError
 import noisepy
 import getopt
 import sys
+import os
+import pathlib
 import threading
 import datetime
 import collections
@@ -458,6 +447,10 @@ class HttpServer(threading.Thread):
             self.httpd.socket.close()
 
 
+def build_csv_path(folder, epoch):
+    return os.path.join(folder, datetime.date.fromtimestamp(epoch).strftime("%Y_%m_%d.csv"))
+
+
 class CsvWriter(threading.Thread):
     """
     Handle the writing of CSV files in the provided folder(s)
@@ -465,20 +458,52 @@ class CsvWriter(threading.Thread):
     def __init__(self, data, csv_files):
         threading.Thread.__init__(self)
         self.data = data
+        self.csv_temp_files = [None] * len(csv_files)
         self.csv_files = csv_files
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.data["callback_fast"].append(self.push_data_fast)
-        self.data["callback_slow"].append(self.push_data_slow)
-        self.data["callback_encrypted_audio"].append(self.push_samples)
 
     def push_data_fast(self, line):
         self.fast.append(line)
 
     def run(self):
         while self.data["running"]:
+            # rows_to_write will contains all rows to write that belong to the same UTC day
+            rows_to_write = []
+            epoch = None
             while len(self.fast) > 0:
-                line = self.last.popleft()
+                new_epoch = self.fast[0][0]
+                if len(rows_to_write) > 0:
+                    # break if we change to a new day
+                    if datetime.date.fromtimestamp(epoch).day != datetime.date.fromtimestamp(new_epoch).day:
+                        break
+                else:
+                    epoch = new_epoch
+                rows_to_write.append(self.data["format_fast"] % tuple(self.fast.popleft()))
+            if len(rows_to_write) > 0:
+                for file_index, file_folder in enumerate(self.csv_files):
+                    file_path = build_csv_path(file_folder, epoch) + ".tmp"
+                    write_header = False
+                    if not os.path.exists(file_path):
+                        parent_folder = pathlib.Path(file_path).parent
+                        if not os.path.exists(parent_folder):
+                            os.mkdir(parent_folder)
+                        # file does not exists so we will write the header first
+                        write_header = True
+                    with open(file_path, 'ab') as file_object:
+                        if write_header:
+                            file_object.write(bytes("epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n", encoding='UTF-8'))
+                            if self.csv_temp_files[file_index] is not None:
+                                # remove .tmp extension of completed file
+                                os.rename(self.csv_temp_files[file_index], self.csv_temp_files[file_index][:-len(".tmp")])
+                            self.csv_temp_files[file_index] = file_path
+                        for row in rows_to_write:
+                            file_object.write(row)
             time.sleep(10)
+        for file_index, file_folder in enumerate(self.csv_files):
+            if self.csv_temp_files[file_index] is not None:
+                # remove .tmp extension of completed file
+                os.rename(self.csv_temp_files[file_index], self.csv_temp_files[file_index][:-len(".tmp")])
 
 
 
