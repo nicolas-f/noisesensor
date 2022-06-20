@@ -79,7 +79,7 @@ except ImportError:
 
 
 ## Usage ex
-# arecord -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
+# arecord --disable-softvol -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
 
 __version__ = "1.1.1-dev"
 
