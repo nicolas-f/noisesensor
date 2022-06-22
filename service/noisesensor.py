@@ -448,7 +448,7 @@ class HttpServer(threading.Thread):
 
 
 def build_csv_path(folder, epoch):
-    return os.path.join(folder, datetime.date.fromtimestamp(epoch).strftime("%Y_%m_%d.csv"))
+    return os.path.join(folder, datetime.datetime.utcfromtimestamp(epoch).strftime("%Y_%m_%d.csv"))
 
 
 class CsvWriter(threading.Thread):
@@ -474,8 +474,9 @@ class CsvWriter(threading.Thread):
             while len(self.fast) > 0:
                 new_epoch = self.fast[0][0]
                 if len(rows_to_write) > 0:
-                    # break if we change to a new day
-                    if datetime.date.fromtimestamp(epoch).day != datetime.date.fromtimestamp(new_epoch).day:
+                    # break if we change to a new day (in UTC)
+                    if datetime.datetime.utcfromtimestamp(epoch).day != \
+                            datetime.datetime.utcfromtimestamp(new_epoch).day:
                         break
                 else:
                     epoch = new_epoch
