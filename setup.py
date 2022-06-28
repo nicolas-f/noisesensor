@@ -2,7 +2,7 @@ import os
 from setuptools import setup, Extension
 
 NAME = "noisepy"
-VERSION = "0.1"
+VERSION = "0.2"
 DESCR = "Convert audio feed into noise indicators"
 URL = "http://noise-planet.org"
 REQUIRES = []
