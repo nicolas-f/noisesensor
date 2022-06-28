@@ -81,7 +81,7 @@ except ImportError:
 ## Usage ex
 # arecord --disable-softvol -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
 
-__version__ = "1.1.1-dev"
+__version__ = "1.2.0-dev"
 
 freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500]
 
