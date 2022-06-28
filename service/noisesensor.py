@@ -118,7 +118,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
         npa.set_tukey_alpha(0.2)
         start = 0
         total_bytes_read = 0
-        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][["S16_LE", "S32_LE" , "FLOAT_LE", "S24_3LE", "S24_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         try:
             input_stream = None
             if self.data["debug"]:
