@@ -107,7 +107,7 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
         int32_t* ptr = (int32_t*) sample_data;
         for (i = data->window_cursor; i < max_i; i++) {
             curs = (i - data->window_cursor)*(data->mono ? 1 : 2);
-            data->window_data[i] = ptr[curs] / 8388608.0f;
+            data->window_data[i] = (int32_t)((((uint32_t)ptr[curs] >> 8) & 0x00FFFFFF)) / (float_t)INT_MAX;
         }
     } else if(AI_FORMAT_S24_3LE == data->format){
         for (i = data->window_cursor; i < max_i; i++) {
@@ -116,7 +116,7 @@ int ai_add_sample(AcousticIndicatorsData* data, int sample_len, const int8_t* sa
             int32_t value = (int32_t)((((uint32_t)sample_data[curs + 2] << 24) & 0xFF000000) |
                     (((uint32_t)sample_data[curs+1] << 16) & 0x00FF0000) |
                     (((uint32_t)sample_data[curs] <<  8) & 0x0000FF00)) >> 8;
-            data->window_data[i] = value / 8388608.0f;
+            data->window_data[i] = value / (float_t)INT_MAX;
         }
     }
 	data->window_cursor += (sample_len / (data->mono ? 1 : 2)) / ai_formats_bytes[data->format];
