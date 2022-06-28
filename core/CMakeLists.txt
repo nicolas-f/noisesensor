@@ -24,7 +24,7 @@ add_library(coresensor ${SOURCE_FILES})
 
 # Data files
 set(TEST_DATA_DIR "${PROJECT_BINARY_DIR}/Testing")
-file(COPY test/speak_32000Hz_16bitsPCM_10s.raw test/ref38dB_48000Hz_32bitsPCM.raw test/ref94dB_48000Hz_32bitsPCM.raw
+file(COPY test/speak_32000Hz_16bitsPCM_10s.raw test/ref38dB_48000Hz_32bitsPCM.raw test/ref94dB_48000Hz_32bitsPCM.raw test/sinus1khz_32000Hz_24bitsPCM_2s.raw
     DESTINATION ${TEST_DATA_DIR})
 
 # Test executable and folder

@@ -54,12 +54,14 @@
 
 #define AI_FORMAT_S16_LE 0
 #define AI_FORMAT_S32_LE 1
+#define AI_FORMAT_FLOAT_LE 2
+#define AI_FORMAT_S24_3LE 3
+#define AI_FORMAT_S24_LE 4
 
-
-#define AI_FORMATS_SIZE 2
+#define AI_FORMATS_SIZE 5
 
 static const float_t ai_supported_samples_rates[AI_NB_SUPPORTED_SAMPLES_RATES] = { 32000, 48000 };
-static const char* ai_formats[AI_FORMATS_SIZE] = { "S16_LE", "S32_LE" };
+static const char* ai_formats[AI_FORMATS_SIZE] = { "S16_LE", "S32_LE" , "FLOAT_LE", "S24_3LE", "S24_LE"};
 
 typedef struct  {
     int32_t window_cursor;

@@ -757,6 +757,98 @@ static char * test_stereo_laeq_38db_48khz() {
 /**
 * Read raw audio signal file
 */
+static char * test_mono_24bits() {
+    float_t REF_SOUND_PRESSURE = 1.;
+
+    const char *filename = "sinus1khz_32000Hz_24bitsPCM_2s.raw";
+    FILE *ptr;
+    AcousticIndicatorsData acousticIndicatorsData;
+    bool mono = true;
+    ai_init_acoustic_indicators_data(&acousticIndicatorsData, true, true, REF_SOUND_PRESSURE, true, AI_SAMPLE_RATE_32000, ai_formats[AI_FORMAT_S24_3LE], mono);
+
+    int8_t buffer[32000 / AI_WINDOWS_SIZE * 3];
+
+    // open file
+    ptr = fopen(filename, "rb");
+    if (ptr == NULL) {
+        printf("test_mono_24bits - Error opening audio file\n");
+        exit(1);
+    }
+
+    int total_read = 0;
+    int read = 0;
+
+    float leqs[AI_NB_BAND];
+    memset(leqs, 0, sizeof(float) * AI_NB_BAND);
+    // single tone at 1000 hz
+    float expected_leqs[AI_NB_BAND] = { -78.7,-84.2,-88.7,-93.7,-96.7,-103.2,-102.0,-105.7,-109.1,-109.1,-112.3,-112.0,-111.7,-108.0,-101.1,-92.0,-73.4,-5.2,-75.7,-95.1,-104.7,-111.6,-117.8,-123.3,-128.6,-133.8,-139.3,-144.9,-150.2};
+
+    if (ai_unit_test_print) {
+        printf("test_mono_24bits - Frequency");
+        int iband;
+        for (iband = 0; iband<AI_NB_BAND; iband++) {
+            printf(",%.1f", ai_get_frequency(iband));
+        }
+        printf("\ntest_mono_24bits - Ref");
+        for (iband = 0; iband<AI_NB_BAND; iband++) {
+            printf(",%.1f", expected_leqs[iband]);
+        }
+        printf("\n");
+    }
+    int leqId = 0;
+    int i;
+    while (!feof(ptr)) {
+        read = fread(buffer, 1, sizeof(buffer), ptr);
+        total_read += read;
+        // File fragment is in read array
+        // Process short sample
+        int sampleCursor = 0;
+        do {
+            int maxLen = ai_get_maximal_sample_size(&acousticIndicatorsData);
+            int sampleLen = (read - sampleCursor) < maxLen ? (read - sampleCursor) : maxLen;
+            if (ai_add_sample(&acousticIndicatorsData, sampleLen, buffer + sampleCursor) == AI_FEED_COMPLETE) {
+                if (ai_unit_test_print) {
+                    printf("test_mono_24bits - laeq: %.1f\n", ai_get_leq_slow(&acousticIndicatorsData));
+                }
+                mu_assert("test_mono_24bits - Too much iteration, more than 2s in file or wrong sampling rate", leqId < 2);
+                for (i = 0; i < AI_NB_BAND; i++) {
+                    double db_1s = ai_get_band_leq(&acousticIndicatorsData, i);
+                    leqs[i] += pow(10, db_1s / 10.);
+                }
+                leqId++;
+            }
+            sampleCursor += sampleLen;
+        } while (sampleCursor < read);
+    }
+    mu_assert("Wrong number of parsed samples", total_read == 32000 * 3 * 2);
+    ai_free_acoustic_indicators_data(&acousticIndicatorsData);
+    // Check expected leq
+    int idfreq;
+    double sumval = 0;
+    if (ai_unit_test_print) {
+        printf("test_mono_24bits - STFFT");
+    }
+    for (idfreq = 0; idfreq < AI_NB_BAND; idfreq++) {
+        float leqstfft = 10 * log10(leqs[idfreq] / leqId);
+        float leqdiff = leqstfft - expected_leqs[idfreq];
+        if (ai_unit_test_print) {
+            printf(",%.1f", leqstfft);
+        }
+        sumval += leqdiff*leqdiff;
+    }
+    if (ai_unit_test_print) {
+        printf("\n");
+    }
+    double expected_mean_error = 7;
+    double mean_error = sqrt(sumval / AI_NB_BAND);
+    sprintf(mu_message, "Wrong mean error expected %f got %f\n", expected_mean_error, mean_error);
+    mu_assert(mu_message, mean_error < expected_mean_error);
+    return 0;
+}
+
+/**
+* Read raw audio signal file
+*/
 static char * test_stereo_laeq_94db_48khz() {
     float_t REF_SOUND_PRESSURE = 1.;
 
@@ -861,6 +953,7 @@ static char * all_tests() {
    mu_run_test(test_stereo_leq_94db_48khz);
    mu_run_test(test_stereo_laeq_38db_48khz);
    mu_run_test(test_stereo_laeq_94db_48khz);
+   mu_run_test(test_mono_24bits);
 
    return 0;
 }

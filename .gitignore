@@ -18,6 +18,6 @@ venv
 *.so
 *.pyc
 *.kdev4
-CMakeLists.txt.user
+CMakeLists.txt.user*
 ftpconfig.json
 .atom-dbg.cson
