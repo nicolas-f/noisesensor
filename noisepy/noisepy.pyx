@@ -52,12 +52,12 @@ cdef class noisepy:
         if self.init:
             cnoisepy.ai_free_acoustic_indicators_data(self._c_noisepy)
 
-    def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, const char * format, mono):
+    def __init__(self, a_filter, third_octave, ref_pressure, window, sample_rate_index, basestring format, mono):
         self.a_filter = a_filter
         self.ref_pressure = ref_pressure
         self.third_octave = third_octave
         self.window = window
-        res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format, mono)
+        res = cnoisepy.ai_init_acoustic_indicators_data(self._c_noisepy, self.a_filter, self.third_octave, self.ref_pressure, self.window, sample_rate_index, format.encode('utf8'), mono)
         if res != 0:
             raise Exception("Init error %d" % res)
         self.init = True

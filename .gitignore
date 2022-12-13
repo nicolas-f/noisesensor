@@ -21,3 +21,4 @@ venv
 CMakeLists.txt.user*
 ftpconfig.json
 .atom-dbg.cson
+*.whl

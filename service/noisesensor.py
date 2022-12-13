@@ -111,9 +111,9 @@ class AcousticIndicatorsProcessor(threading.Thread):
         db_delta = 123.34
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"],
-                             self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+                             self.data["sample_format"], self.data["mono"])
         npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"],
-                              self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+                              self.data["sample_format"], self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
         start = 0
