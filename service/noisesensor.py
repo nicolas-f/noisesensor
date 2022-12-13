@@ -82,7 +82,9 @@ __version__ = "1.2.0-dev"
 freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500,
          3150, 4000, 5000, 6300, 8000, 10000, 12500]
 
-DELAY_PRINT_STREAM_STATS = 15 * 60 * 1000
+# Bytes read output message delay in seconds
+DELAY_PRINT_STREAM_STATS = 15 * 60
+
 
 class AcousticIndicatorsProcessor(threading.Thread):
     def __init__(self, data):
@@ -138,6 +140,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
                     break
                 else:
                     self.total_bytes_read += len(audiosamples)
+                    self.data["total_bytes_read"] = self.total_bytes_read
                     self.push_samples(audiosamples)
                     if self.data["debug"]:
                         # Pause stream before gathering more samples
@@ -173,12 +176,20 @@ class AcousticIndicatorsProcessor(threading.Thread):
                         self.push_data_fast([self.unix_time(), leq125ms, laeq125ms] + leqSpectrum)
                     if push_slow:
                         self.push_data_slow([self.unix_time(), leq1s, laeq1s])
-                        if time.time() - self.last_print_stats > DELAY_PRINT_STREAM_STATS:
-                            self.last_print_stats = time.time()
-                            print("%s Bytes read: %ld" % (datetime.datetime.now().replace(microsecond=0).isoformat(),
-                                                          self.total_bytes_read))
         finally:
             self.data["running"] = False
+
+
+class StatusThread(threading.Thread):
+    def __init__(self, data):
+        threading.Thread.__init__(self)
+        self.data = data
+
+    def run(self):
+        while self.data["running"]:
+            print("%s Bytes read: %ld" % (datetime.datetime.now().replace(microsecond=0).isoformat(),
+                                          self.data['total_bytes_read']))
+            time.sleep(DELAY_PRINT_STREAM_STATS)
 
 
 class TriggerProcessor(threading.Thread):
@@ -554,7 +565,7 @@ def usage():
 # }
 def main():
     # Shared data between process
-    data = {'running': True, 'debug': False, 'leq': [], "callback_fast": [], "callback_slow": [],
+    data = {'running': True, 'total_bytes_read': 0, 'debug': False, 'leq': [], "callback_fast": [], "callback_slow": [],
             "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
             "format_fast": b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"] * len(freqs)) + b'\n',
             "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
@@ -584,6 +595,10 @@ def main():
     # run audio processing thread
     processing_thread = AcousticIndicatorsProcessor(data)
     processing_thread.start()
+
+    # run stats thread
+    status_thread = StatusThread(data)
+    status_thread.start()
 
     # run trigger processing thread
     if "numpy" in globals() and "sf" in globals():
