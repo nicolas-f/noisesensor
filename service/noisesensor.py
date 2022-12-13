@@ -74,23 +74,23 @@ except ImportError:
     print("pip install soundfile")
     print("Audio capture has been disabled")
 
-
-
-
-
 ## Usage ex
 # arecord --disable-softvol -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
 
 __version__ = "1.2.0-dev"
 
-freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500]
+freqs = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500,
+         3150, 4000, 5000, 6300, 8000, 10000, 12500]
 
+DELAY_PRINT_STREAM_STATS = 15 * 60 * 1000
 
 class AcousticIndicatorsProcessor(threading.Thread):
     def __init__(self, data):
         threading.Thread.__init__(self)
+        self.total_bytes_read = 0
         self.data = data
         self.epoch = datetime.datetime.utcfromtimestamp(0)
+        self.last_print_stats = 0
 
     def push_data_fast(self, line):
         for fun in self.data["callback_fast"]:
@@ -111,14 +111,15 @@ class AcousticIndicatorsProcessor(threading.Thread):
         db_delta = 123.34
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"],
-                             self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+                             self.data["sample_format"], self.data["mono"])
         npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"],
-                              self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+                              self.data["sample_format"], self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
         start = 0
-        total_bytes_read = 0
-        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][["S16_LE", "S32_LE" , "FLOAT_LE", "S24_3LE", "S24_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][
+            ["S16_LE", "S32_LE", "FLOAT_LE", "S24_3LE", "S24_LE"].index(self.data["sample_format"])] * (
+                                1 if self.data["mono"] else 2)
         try:
             input_stream = None
             if self.data["debug"]:
@@ -133,10 +134,10 @@ class AcousticIndicatorsProcessor(threading.Thread):
                 audiosamples = input_stream.read(np.max_samples_length())
                 if not audiosamples:
                     print("%s End of audio samples, duration %.3f seconds" % (datetime.datetime.now().isoformat(),
-                                                                              total_bytes_read / bytes_per_seconds))
+                                                                              self.total_bytes_read / bytes_per_seconds))
                     break
                 else:
-                    total_bytes_read += len(audiosamples)
+                    self.total_bytes_read += len(audiosamples)
                     self.push_samples(audiosamples)
                     if self.data["debug"]:
                         # Pause stream before gathering more samples
@@ -172,6 +173,10 @@ class AcousticIndicatorsProcessor(threading.Thread):
                         self.push_data_fast([self.unix_time(), leq125ms, laeq125ms] + leqSpectrum)
                     if push_slow:
                         self.push_data_slow([self.unix_time(), leq1s, laeq1s])
+                        if time.time() - self.last_print_stats > DELAY_PRINT_STREAM_STATS:
+                            self.last_print_stats = time.time()
+                            print("%s Bytes read: %ld" % (datetime.datetime.now().replace(microsecond=0).isoformat(),
+                                                          self.total_bytes_read))
         finally:
             self.data["running"] = False
 
@@ -183,7 +188,8 @@ class TriggerProcessor(threading.Thread):
         self.config = {}
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.sample_rate = [32000.0, 48000.0][self.data["rate"]]
-        self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (
+            1 if self.data["mono"] else 2)
         self.samples_stack = None
         self.remaining_samples = 0
         self.remaining_triggers = 0
@@ -199,14 +205,14 @@ class TriggerProcessor(threading.Thread):
         self.fast.append(line)
 
     # from scipy
-    def _validate_weights(self,w, dtype):
+    def _validate_weights(self, w, dtype):
         w = self._validate_vector(w, dtype=dtype)
         if numpy.any(w < 0):
             raise ValueError("Input weights should be all non-negative")
         return w
 
     # from scipy
-    def _validate_vector(self,u, dtype=None):
+    def _validate_vector(self, u, dtype=None):
         # XXX Is order='c' really necessary?
         u = numpy.asarray(u, dtype=dtype, order='c').squeeze()
         # Ensure values such as u=1 and u=[1] still return 1-D arrays.
@@ -216,7 +222,7 @@ class TriggerProcessor(threading.Thread):
         return u
 
     # from scipy
-    def dist_cosine(self,u, v, w=None):
+    def dist_cosine(self, u, v, w=None):
         u = self._validate_vector(u)
         v = self._validate_vector(v)
         if w is not None:
@@ -299,7 +305,9 @@ class TriggerProcessor(threading.Thread):
                         self.remaining_triggers = self.config["trigger_count"]
                         if time.time() * 1000 < self.config["date_end"]:
                             # Cache samples for configured length before trigger
-                            self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
+                            self.samples_stack = collections.deque(maxlen=math.ceil(
+                                (self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (
+                                        self.bytes_per_seconds * 0.125)))
                             if self.push_data_samples not in self.data["callback_samples"]:
                                 self.data["callback_samples"].append(self.push_data_samples)
                             if self.push_data_fast not in self.data["callback_fast"]:
@@ -329,8 +337,10 @@ class TriggerProcessor(threading.Thread):
                             if self.data["debug"] or laeq >= self.config["min_leq"]:
                                 # leq condition ok
                                 # check for spectrum condition
-                                for spectrum_template, weight_template in zip(self.config["spectrum"], self.config["weight"]):
-                                    cosine_similarity = 1 - self.dist_cosine(spectrum[3:], spectrum_template, w=weight_template)
+                                for spectrum_template, weight_template in zip(self.config["spectrum"],
+                                                                              self.config["weight"]):
+                                    cosine_similarity = 1 - self.dist_cosine(spectrum[3:], spectrum_template,
+                                                                             w=weight_template)
                                     if self.data["debug"]:
                                         if int(spectrum[0] - start_processing) == 15:
                                             cosine_similarity = 1
@@ -338,8 +348,10 @@ class TriggerProcessor(threading.Thread):
                                             cosine_similarity = 0
                                     if cosine_similarity > self.config["cosine"] / 100.0:
                                         status = "record"
-                                        self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
-                                        print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
+                                        self.remaining_samples = int(
+                                            self.bytes_per_seconds * self.config["total_length"])
+                                        print("Start %.3f recording cosine:%.3f expecting %d samples" % (
+                                            spectrum[0], cosine_similarity, self.remaining_samples))
                                         self.remaining_triggers -= 1
                                         trigger_time = spectrum[0]
                                         break
@@ -357,8 +369,11 @@ class TriggerProcessor(threading.Thread):
                         audio_processing_start = time.clock()
                         # Compress audio samples
                         output = io.BytesIO()
-                        data, samplerate = sf.read(samples_trigger, format='RAW', channels=1 if self.data['mono'] else 2, samplerate=int(self.sample_rate),
-                                                   subtype=['PCM_16', 'PCM_32'][['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
+                        data, samplerate = sf.read(samples_trigger, format='RAW',
+                                                   channels=1 if self.data['mono'] else 2,
+                                                   samplerate=int(self.sample_rate),
+                                                   subtype=['PCM_16', 'PCM_32'][
+                                                       ['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
                         data = data[:, 0]
                         channels = 1
                         with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
@@ -366,8 +381,8 @@ class TriggerProcessor(threading.Thread):
                             f.flush()
                         audio_data_encrypt = self.encrypt(output.getvalue())
                         print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
-                        samples_trigger.tell(),data.shape[0], len(base64.b64encode(audio_data_encrypt)),
-                        time.clock() - audio_processing_start))
+                            samples_trigger.tell(), data.shape[0], len(base64.b64encode(audio_data_encrypt)),
+                            time.clock() - audio_processing_start))
                         samples_trigger = io.BytesIO()
                         info = sf.info(io.BytesIO(output.getvalue()))
                         print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
@@ -380,6 +395,7 @@ class TriggerProcessor(threading.Thread):
 
     def unix_time(self):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
+
 
 class AcousticIndicatorsServer(HTTPServer):
     def __init__(self, data, *args, **kwargs):
@@ -425,13 +441,14 @@ class AcousticIndicatorsHttpServe(BaseHTTPRequestHandler):
             sys.stderr.write("%s - - [%s] %s\n" %
                              (self.client_address[0],
                               self.log_date_time_string(),
-                              format%args))
+                              format % args))
         return
 
 
 # Push results to ftp folder
 class HttpServer(threading.Thread):
-    def __init__(self, data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe, port=8000):
+    def __init__(self, data, server_class=AcousticIndicatorsServer, handler_class=AcousticIndicatorsHttpServe,
+                 port=8000):
         threading.Thread.__init__(self)
         self.port = port
         self.daemon = True
@@ -455,6 +472,7 @@ class CsvWriter(threading.Thread):
     """
     Handle the writing of CSV files in the provided folder(s)
     """
+
     def __init__(self, data, csv_files):
         threading.Thread.__init__(self)
         self.data = data
@@ -493,10 +511,12 @@ class CsvWriter(threading.Thread):
                         write_header = True
                     with open(file_path, 'ab') as file_object:
                         if write_header:
-                            file_object.write(bytes("epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n", encoding='UTF-8'))
+                            file_object.write(
+                                bytes("epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n", encoding='UTF-8'))
                             if self.csv_temp_files[file_index] is not None:
                                 # remove .tmp extension of completed file
-                                os.rename(self.csv_temp_files[file_index], self.csv_temp_files[file_index][:-len(".tmp")])
+                                os.rename(self.csv_temp_files[file_index],
+                                          self.csv_temp_files[file_index][:-len(".tmp")])
                             self.csv_temp_files[file_index] = file_path
                         for row in rows_to_write:
                             file_object.write(row)
@@ -505,8 +525,6 @@ class CsvWriter(threading.Thread):
             if self.csv_temp_files[file_index] is not None:
                 # remove .tmp extension of completed file
                 os.rename(self.csv_temp_files[file_index], self.csv_temp_files[file_index][:-len(".tmp")])
-
-
 
 
 def usage():
@@ -536,8 +554,10 @@ def usage():
 # }
 def main():
     # Shared data between process
-    data = {'running':True, 'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast" : b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
+    data = {'running': True, 'debug': False, 'leq': [], "callback_fast": [], "callback_slow": [],
+            "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
+            "format_fast": b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"] * len(freqs)) + b'\n',
+            "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     outputs_csv = []
@@ -584,6 +604,7 @@ def main():
         processing_thread.join()
     finally:
         data["running"] = False
+
 
 if __name__ == "__main__":
     main()
