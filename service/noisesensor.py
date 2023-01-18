@@ -572,8 +572,8 @@ def main():
     # Shared data between process
     data = {'running': True, 'total_bytes_read': 0, 'debug': False, 'leq': [], "callback_fast": [], "callback_slow": [],
             "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast": b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"] * len(freqs)) + b'\n',
-            "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
+            "format_fast": '%.3f,%.2f,%.2f,' + ",".join(["%.2f"] * len(freqs)) + '\n',
+            "format_slow": '%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     outputs_csv = []
