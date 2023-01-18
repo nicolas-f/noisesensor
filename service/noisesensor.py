@@ -54,6 +54,7 @@ import math
 import io
 import base64
 import hashlib
+import traceback
 
 try:
     from Crypto.Cipher import PKCS1_OAEP
@@ -526,8 +527,12 @@ class CsvWriter(threading.Thread):
                                 bytes("epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n", encoding='UTF-8'))
                             if self.csv_temp_files[file_index] is not None:
                                 # remove .tmp extension of completed file
-                                os.rename(self.csv_temp_files[file_index],
-                                          self.csv_temp_files[file_index][:-len(".tmp")])
+                                try:
+                                    os.rename(self.csv_temp_files[file_index],
+                                              self.csv_temp_files[file_index][:-len(".tmp")])
+                                except FileNotFoundError as err:
+                                    # Ignore error but print it
+                                    traceback.print_exc()
                             self.csv_temp_files[file_index] = file_path
                         for row in rows_to_write:
                             file_object.write(row)
