@@ -111,12 +111,12 @@ class AcousticIndicatorsProcessor(threading.Thread):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def run(self):
-        db_delta = 123.34
+        db_delta = 110.96
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"],
-                             self.data["sample_format"], self.data["mono"])
+                             self.data["sample_format"].encode(), self.data["mono"])
         npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"],
-                              self.data["sample_format"], self.data["mono"])
+                              self.data["sample_format"].encode(), self.data["mono"])
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
         start = 0
@@ -521,10 +521,10 @@ class CsvWriter(threading.Thread):
                             os.mkdir(parent_folder)
                         # file does not exists so we will write the header first
                         write_header = True
-                    with open(file_path, 'ab') as file_object:
+                    with open(file_path, 'a', encoding='urf-8') as file_object:
                         if write_header:
                             file_object.write(
-                                bytes("epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n", encoding='UTF-8'))
+                                "epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n")
                             if self.csv_temp_files[file_index] is not None:
                                 # remove .tmp extension of completed file
                                 try:
