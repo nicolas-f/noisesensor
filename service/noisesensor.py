@@ -521,7 +521,7 @@ class CsvWriter(threading.Thread):
                             os.mkdir(parent_folder)
                         # file does not exists so we will write the header first
                         write_header = True
-                    with open(file_path, 'a', encoding='urf-8') as file_object:
+                    with open(file_path, 'a', encoding='utf-8') as file_object:
                         if write_header:
                             file_object.write(
                                 "epoch,leq,laeq," + ",".join(map(str, freqs)) + "\n")
