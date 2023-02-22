@@ -131,6 +131,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
                              self.data["sample_format"].encode('UTF-8'), self.data["mono"])
         npa = noisepy.noisepy(True, False, ref_sound_pressure, True, self.data["rate"],
                               self.data["sample_format"].encode('UTF-8'), self.data["mono"])
+        print(repr(np.myfunc()))
         np.set_tukey_alpha(0.2)
         npa.set_tukey_alpha(0.2)
         start = 0

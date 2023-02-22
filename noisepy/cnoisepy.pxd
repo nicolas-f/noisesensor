@@ -4,7 +4,7 @@ from libcpp cimport bool
 
 cdef extern from "acoustic_indicators.h":
     ctypedef struct AcousticIndicatorsData:
-      pass
+        int window_data_size
     # Imports definitions from a c header file
     int32_t ai_init_acoustic_indicators_data(AcousticIndicatorsData* data, bool a_filter, bool spectrum, float ref_pressure, bool window,int8_t sample_rate_index, const char* format, bool mono)
     void ai_free_acoustic_indicators_data(AcousticIndicatorsData* data)
