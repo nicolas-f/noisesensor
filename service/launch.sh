@@ -1,1 +1,1 @@
-arecord -D hw:2,0 -f S16_LE -r 32000 -c 2 -t wav | sox -t wav - -b 16 -t raw --channels 1 - | python -u noisesensor.py -fftpconfig.json
+arecord --disable-softvol -D hw:CARD=U18dB,DEV=0 -r 48000 -f S24_3LE -c 2 -t raw | python3 -u noisesensor.py -c 2 -f S24_3LE -r 48000

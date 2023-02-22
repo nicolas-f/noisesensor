@@ -54,6 +54,7 @@ import math
 import io
 import base64
 import hashlib
+from multiprocessing import Process, Value, Array, Manager
 
 try:
     from Crypto.Cipher import PKCS1_OAEP
@@ -63,8 +64,8 @@ try:
     from Crypto.Random import get_random_bytes
     import numpy
 except ImportError:
-    print("Please install PyCrypto")
-    print("pip install pycrypto")
+    print("Please install PyCryptodome")
+    print("pip install pycryptodome")
     print("Audio capture has been disabled")
 
 try:
@@ -72,14 +73,30 @@ try:
 except ImportError:
     print("Please install soundfile")
     print("pip install soundfile")
-    print("Audio capture has been disabled")
+    print("Audio encryption has been disabled")
+
+try:
+    import yamnet
+except ImportError as e:
+    print(e)
+    print("Please install tensorflow")
+    print("pip install tensorflow")
+    print("Audio recognition has been disabled")
+
+try:
+    import resampy
+except ImportError as e:
+    print(e)
+    print("Please install resampy")
+    print("pip install resampy")
+    print("Audio recognition has been disabled")
 
 
 
 
 
-## Usage ex
-# arecord --disable-softvol -D hw:1 -r 48000 -f S32_LE -c2 -t raw | python -u noisesensor.py -c 2 -f S32_LE -r 48000 -p 8090
+## Usage ex for Umik-1 on ubuntu
+# arecord --disable-softvol -D hw:1 -r 48000 -f S24_3LE -c 2 -t raw | python3 -u noisesensor.py -c 2 -f S24_3LE -r 48000
 
 __version__ = "1.2.0-dev"
 
@@ -108,7 +125,7 @@ class AcousticIndicatorsProcessor(threading.Thread):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def run(self):
-        db_delta = 123.34
+        db_delta = 94 + 28.34  # sensitivity of my Umik-1 is -28.34 dBFS @ 94 dB/1khz
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         np = noisepy.noisepy(False, True, ref_sound_pressure, True, self.data["rate"],
                              self.data["sample_format"].encode('UTF-8'), self.data["mono"])
@@ -118,7 +135,9 @@ class AcousticIndicatorsProcessor(threading.Thread):
         npa.set_tukey_alpha(0.2)
         start = 0
         total_bytes_read = 0
-        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][["S16_LE", "S32_LE" , "FLOAT_LE", "S24_3LE", "S24_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][["S16_LE", "S32_LE", "FLOAT_LE",
+                                                                                     "S24_3LE", "S24_LE"].index(
+            self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         try:
             input_stream = None
             if self.data["debug"]:
@@ -180,15 +199,33 @@ class TriggerProcessor(threading.Thread):
     def __init__(self, data):
         threading.Thread.__init__(self)
         self.data = data
-        self.config = {}
+        self.config = {"date_start": 0,
+                       "date_end": 4106967057000,
+                       "trigger_count": 10,
+                       "min_laeq": 30,
+                       "min_leq": 30,
+                       "total_length": 10,
+                       "cached_length": 5,
+                       "file": "~/.ssh/id_rsa.pub"}
         self.fast = collections.deque(maxlen=data['row_cache_fast'])
         self.sample_rate = [32000.0, 48000.0][self.data["rate"]]
-        self.bytes_per_seconds = self.sample_rate * [2, 4][["S16_LE", "S32_LE"].index(self.data["sample_format"])] * (1 if self.data["mono"] else 2)
+        self.bytes_per_seconds = [32000.0, 48000.0][self.data["rate"]] * [2, 4, 4, 3, 4][["S16_LE", "S32_LE", "FLOAT_LE",
+                                                                                     "S24_3LE", "S24_LE"].index(
+            self.data["sample_format"])] * (1 if self.data["mono"] else 2)
         self.samples_stack = None
         self.remaining_samples = 0
-        self.remaining_triggers = 0
+        self.remaining_triggers = 10
         self.last_fetch_trigger_info = 0
         self.epoch = datetime.datetime.utcfromtimestamp(0)
+        # Prepare for collecting samples
+
+        # Cache samples for configured length before trigger
+        self.samples_stack = collections.deque(maxlen=math.ceil(
+            (self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
+        if self.push_data_samples not in self.data["callback_samples"]:
+            self.data["callback_samples"].append(self.push_data_samples)
+        if self.push_data_fast not in self.data["callback_fast"]:
+            self.data["callback_fast"].append(self.push_data_fast)
 
     def push_data_samples(self, samples):
         stack = self.samples_stack
@@ -197,35 +234,6 @@ class TriggerProcessor(threading.Thread):
 
     def push_data_fast(self, line):
         self.fast.append(line)
-
-    # from scipy
-    def _validate_weights(self,w, dtype):
-        w = self._validate_vector(w, dtype=dtype)
-        if numpy.any(w < 0):
-            raise ValueError("Input weights should be all non-negative")
-        return w
-
-    # from scipy
-    def _validate_vector(self,u, dtype=None):
-        # XXX Is order='c' really necessary?
-        u = numpy.asarray(u, dtype=dtype, order='c').squeeze()
-        # Ensure values such as u=1 and u=[1] still return 1-D arrays.
-        u = numpy.atleast_1d(u)
-        if u.ndim > 1:
-            raise ValueError("Input vector should be 1-D.")
-        return u
-
-    # from scipy
-    def dist_cosine(self,u, v, w=None):
-        u = self._validate_vector(u)
-        v = self._validate_vector(v)
-        if w is not None:
-            w = self._validate_weights(w, numpy.double)
-        uv = numpy.average(u * v, weights=w)
-        uu = numpy.average(numpy.square(u), weights=w)
-        vv = numpy.average(numpy.square(v), weights=w)
-        dist = 1.0 - uv / numpy.sqrt(uu * vv)
-        return dist
 
     def check_hour(self):
         t = datetime.datetime.now()
@@ -283,33 +291,7 @@ class TriggerProcessor(threading.Thread):
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config["trigger_count"]
-            if time.time() - self.last_fetch_trigger_info >= 15 * 60.0 and 8 <= time.localtime().tm_hour < 19:
-                # Fetch trigger information
-                try:
-                    print("Download trigger information")
-                    res = urlopen("https://dashboard.raw.noise-planet.org/get-trigger",
-                                  context=ssl._create_unverified_context() if self.data["debug"] else None)
-                    jsondata = res.read()
-                    jsonsha = hashlib.sha256(jsondata).digest()
-                    self.last_fetch_trigger_info = time.time()
-                    if trigger_sha != jsonsha:
-                        print("Load trigger data")
-                        trigger_sha = jsonsha
-                        self.config = json.loads(jsondata)
-                        self.remaining_triggers = self.config["trigger_count"]
-                        if time.time() * 1000 < self.config["date_end"]:
-                            # Cache samples for configured length before trigger
-                            self.samples_stack = collections.deque(maxlen=math.ceil((self.bytes_per_seconds * (self.config["cached_length"] + 1)) / (self.bytes_per_seconds * 0.125)))
-                            if self.push_data_samples not in self.data["callback_samples"]:
-                                self.data["callback_samples"].append(self.push_data_samples)
-                            if self.push_data_fast not in self.data["callback_fast"]:
-                                self.data["callback_fast"].append(self.push_data_fast)
-                except (URLError, ValueError, KeyError) as e:
-                    # ignore
-                    print(self.config)
-                    print(e)
-                    time.sleep(60)
-            elif self.config is not None and status == "wait_trigger":
+            if self.config is not None and status == "wait_trigger":
                 cur_time = time.time() * 1000
                 if cur_time > self.config["date_end"]:
                     # Do not cache samples anymore
@@ -325,29 +307,25 @@ class TriggerProcessor(threading.Thread):
                     while len(self.fast) > 0 and status == "wait_trigger":
                         try:
                             spectrum = self.fast.popleft()
+
                             laeq = spectrum[2]
+                            print(sum([len(s) for s in self.samples_stack]))
                             if self.data["debug"] or laeq >= self.config["min_leq"]:
                                 # leq condition ok
-                                # check for spectrum condition
-                                for spectrum_template, weight_template in zip(self.config["spectrum"], self.config["weight"]):
-                                    cosine_similarity = 1 - self.dist_cosine(spectrum[3:], spectrum_template, w=weight_template)
-                                    if self.data["debug"]:
-                                        if int(spectrum[0] - start_processing) == 15:
-                                            cosine_similarity = 1
-                                        else:
-                                            cosine_similarity = 0
-                                    if cosine_similarity > self.config["cosine"] / 100.0:
-                                        status = "record"
-                                        self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
-                                        print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0], cosine_similarity, self.remaining_samples))
-                                        self.remaining_triggers -= 1
-                                        trigger_time = spectrum[0]
-                                        break
+                                # check for sound recognition tags
+                                # status = "record"
+                                # self.remaining_samples = int(self.bytes_per_seconds * self.config["total_length"])
+                                # print("Start %.3f recording cosine:%.3f expecting %d samples" % (spectrum[0],
+                                # cosine_similarity, self.remaining_samples))
+                                # self.remaining_triggers -= 1
+                                # trigger_time = spectrum[0]
+                                # break
+                                pass
 
                         except IndexError:
                             pass
             elif status == "record":
-                while status == "record" and len(self.samples_stack) > 0:
+                while status == "record" and self.samples_stack is not None and len(self.samples_stack) > 0:
                     samples = self.samples_stack.popleft()
                     size = min(self.remaining_samples, len(samples))
                     samples_trigger.write(samples[:size])
@@ -366,8 +344,8 @@ class TriggerProcessor(threading.Thread):
                             f.flush()
                         audio_data_encrypt = self.encrypt(output.getvalue())
                         print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
-                        samples_trigger.tell(),data.shape[0], len(base64.b64encode(audio_data_encrypt)),
-                        time.clock() - audio_processing_start))
+                            samples_trigger.tell(), data.shape[0], len(base64.b64encode(audio_data_encrypt)),
+                            time.clock() - audio_processing_start))
                         samples_trigger = io.BytesIO()
                         info = sf.info(io.BytesIO(output.getvalue()))
                         print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
@@ -536,8 +514,10 @@ def usage():
 # }
 def main():
     # Shared data between process
-    data = {'running':True, 'debug':False, 'leq': [], "callback_fast": [], "callback_slow": [], "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
-            "format_fast" : b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"]*len(freqs))+b'\n', "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
+    data = {'running': True, 'debug': False, 'leq': [], "callback_fast": [], "callback_slow": [],
+            "callback_samples": [], "row_cache_fast": 60 * 8, "row_cache_slow": 60,
+            "format_fast": b'%.3f,%.2f,%.2f,' + b",".join([b"%.2f"] * len(freqs)) + b'\n',
+            "format_slow": b'%d,%.2f,%.2f\n', "callback_encrypted_audio": []}
     # parse command line options
     port = 0
     outputs_csv = []
@@ -566,7 +546,8 @@ def main():
     processing_thread.start()
 
     # run trigger processing thread
-    if "numpy" in globals() and "sf" in globals():
+    if "sf" in globals() and "yamnet" in globals() and "resampy" in globals():
+        print("Starting sound source recognition thread..")
         trigger_thread = TriggerProcessor(data)
         trigger_thread.start()
 

@@ -21,3 +21,7 @@ venv
 CMakeLists.txt.user*
 ftpconfig.json
 .atom-dbg.cson
+
+service/yamnet/ESC-50-master
+yamnet.h5
+
