@@ -1,1 +1,1 @@
-arecord --disable-softvol -D hw:CARD=U18dB,DEV=0 -r 48000 -f S24_3LE -c 2 -t raw | python3 -u noisesensor.py -c 2 -f S24_3LE -r 48000
+arecord --disable-softvol -D plughw:CARD=U18dB,DEV=0 -r 48000 -f FLOAT_LE -c 1 -t raw | python3 -u noisesensor.py -c 1 -f FLOAT_LE -r 48000 -p 8090
