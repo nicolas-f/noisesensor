@@ -31,8 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 cimport cnoisepy
-import numpy as np
-cimport numpy as np
 from libc.stdint cimport int8_t, int16_t, int32_t
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from libcpp cimport bool
@@ -63,14 +61,6 @@ cdef class noisepy:
         if res != 0:
             raise Exception("Init error %d" % res)
         self.init = True
-
-    def myfunc(self):
-        #cdef Py_ssize_t i, j
-        #for i in range(A.shape[0]):
-        #    j = 2*i
-        #    k = 2*i
-        cdef ret_matrix = np.zeros((self._c_noisepy.window_data_size), dtype=np.float32)
-        return ret_matrix
 
     def push(self, const int8_t* python_samples, int length):
       return cnoisepy.ai_add_sample(self._c_noisepy, length, python_samples)

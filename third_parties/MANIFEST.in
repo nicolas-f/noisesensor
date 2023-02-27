@@ -1,0 +1,2 @@
+include yamnet/*.csv
+include yamnet/*.h5
