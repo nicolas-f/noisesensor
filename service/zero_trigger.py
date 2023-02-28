@@ -141,7 +141,7 @@ class TriggerProcessor:
 
     def process_tags(self):
         # check for sound recognition tags
-        waveform = np.zeros((int(self.yamnet_config.patch_window_seconds * self.yamnet_config.sample_rate)),
+        waveform = np.zeros((int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)),
                             dtype=np.float32)
         last_index = len(waveform)
         # copy from newer samples to older samples
@@ -177,14 +177,14 @@ class TriggerProcessor:
                 # reset trigger counter each day
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
-                self.remaining_triggers = self.config["trigger_count"]
+                self.remaining_triggers = self.config.trigger_count
             if self.config is not None and status == "wait_trigger":
                 cur_time = time.time() * 1000
                 if cur_time > self.config.date_end:
                     # Do not cache samples anymore
                     self.samples_stack = collections.deque()
                     self.socket.disconnect()
-                elif self.remaining_triggers > 0 and cur_time > self.config["date_start"] and self.check_hour():
+                elif self.remaining_triggers > 0 and cur_time > self.config.date_start and self.check_hour():
                     # Time condition ok
                     # now check audio condition
                     while status == "wait_trigger":
@@ -193,24 +193,32 @@ class TriggerProcessor:
                         unprocessed_samples += len(audio_data_bytes)
                         self.samples_stack.append(audio_data_bytes)
                         # will keep keep_only_samples samples, and drop older stack elements
-                        keep_only_samples = max(self.config.cached_length, yamnet_config.patch_window_seconds) * self.config.sample_rate
+                        keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * self.config.sample_rate
                         while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
                             self.samples_stack.popleft()
-                        if unprocessed_samples / self.config.sample_rate >= yamnet_config.patch_window_seconds:
+                        if unprocessed_samples / self.config.sample_rate >= self.yamnet_config.patch_window_seconds:
                             unprocessed_samples = 0
                             leq = 60  # todo compute leq
-                            print(sum([len(s) for s in self.samples_stack]))
                             if leq >= self.config.min_leq:
                                 # leq condition ok
+                                deb = time.time()
+                                scores, embeddings, spectrogram = self.process_tags()
+                                end_process = time.time()
+                                # Scores is a matrix of (time_frames, num_classes) classifier scores.
+                                # Average them along with time to get an overall classifier output for the clip.
+                                prediction = np.mean(scores, axis=0)
+                                # Report the highest-scoring classes and their scores.
+                                top5_i = np.argsort(prediction)[::-1][:5]
+                                tags = ' '.join('  {:12s}: {:.3f}'.format(self.yamnet_classes[i], prediction[i])
+                                                for i in top5_i)
                                 self.process_tags()
-                                status = "record"
-                                tags = {}
                                 self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
-                                print("Start %.3f recording got tags:%s expecting %d samples" % (leq,
-                                repr(tags), self.remaining_samples))
-                                self.remaining_triggers -= 1
-                                trigger_time = time.time()
-                                break  # process recording
+                                print("%s tags:%s in %.3f seconds" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                                                                          tags, end_process - deb))
+                                #self.remaining_triggers -= 1
+                                #trigger_time = time.time()
+                                #break  # process recording
+                                # status = "record"
                 elif status == "record":
                     while status == "record" and not self.socket.closed:
                         samples = self.samples_stack.popleft()
@@ -263,5 +271,6 @@ if __name__ == "__main__":
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
-    trigger = TriggerProcessor(parser.parse_args())
+    args = parser.parse_args()
+    trigger = TriggerProcessor(args)
     trigger.run()
