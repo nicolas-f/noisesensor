@@ -87,8 +87,14 @@ class TriggerProcessor:
         self.socket = None
         self.yamnet_config = params.Params()
         self.yamnet = yamnet.yamnet_frames_model(self.yamnet_config)
-        self.yamnet.load_weights(files('yamnet').joinpath('yamnet.h5'))
-        self.yamnet_classes = yamnet.class_names(files('yamnet').joinpath('yamnet_class_map.csv'))
+        yamnet_weights = self.config.yamnet_weights
+        if yamnet_weights is None:
+            yamnet_weights = files('yamnet').joinpath('yamnet.h5')
+        self.yamnet.load_weights(yamnet_weights)
+        yamnet_class_map = self.config.yamnet_class_map
+        if yamnet_class_map is None:
+            yamnet_class_map = files('yamnet').joinpath('yamnet_class_map.csv')
+        self.yamnet_classes = yamnet.class_names(yamnet_class_map)
 
     def check_hour(self):
         t = datetime.datetime.now()
@@ -196,7 +202,7 @@ class TriggerProcessor:
                         keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * self.config.sample_rate
                         while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
                             self.samples_stack.popleft()
-                        if unprocessed_samples / self.config.sample_rate >= self.yamnet_config.patch_window_seconds:
+                        if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_scan_interval:
                             unprocessed_samples = 0
                             leq = 60  # todo compute leq
                             if leq >= self.config.min_leq:
@@ -271,6 +277,10 @@ if __name__ == "__main__":
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
+    parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
+    parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
+    parser.add_argument("--yamnet_scan_interval", help="Yamnet delay between audio recogition, default is window size",
+                        default=0.96)
     args = parser.parse_args()
     trigger = TriggerProcessor(args)
     trigger.run()
