@@ -977,7 +977,7 @@ static const char *__pyx_filename;
 static const char *__pyx_f[] = {
   "noisepy/noisepy.pyx",
   "stringsource",
-  "type.pxd",
+  "venv/lib/python3.10/site-packages/Cython/Includes/cpython/type.pxd",
 };
 
 /*--- Type declarations ---*/

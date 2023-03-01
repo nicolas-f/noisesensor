@@ -37,8 +37,9 @@ import collections
 import argparse
 import time
 import array
-
+import math
 import numpy as np
+from scipy import signal
 
 try:
     import zmq
@@ -95,6 +96,14 @@ class TriggerProcessor:
         if yamnet_class_map is None:
             yamnet_class_map = files('yamnet').joinpath('yamnet_class_map.csv')
         self.yamnet_classes = yamnet.class_names(yamnet_class_map)
+        self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
+                                                        self.yamnet_config.sample_rate)
+
+    def butter_highpass(self, cutoff, fs, order=4):
+        return signal.butter(order, cutoff / (fs / 2.0), btype='high', output='sos')
+
+    def butter_highpass_filter(self, waveform):
+        return signal.sosfilt(self.sos, waveform)
 
     def check_hour(self):
         t = datetime.datetime.now()
@@ -165,6 +174,15 @@ class TriggerProcessor:
         # resample if necessary
         if self.config.sample_rate != self.yamnet_config.sample_rate:
             waveform = resampy.resample(waveform, self.config.sample_rate, self.yamnet_config.sample_rate)
+        # filter and normalize signal
+        if self.config.yamnet_cutoff_frequency > 0:
+            waveform = self.butter_highpass_filter(waveform)
+        if self.config.yamnet_max_gain > 0:
+            # apply gain
+            max_value = float(numpy.max(numpy.abs(waveform)))
+            gain = 10*math.log10(1 / max_value)
+            gain = min(self.config.yamnet_max_gain, gain)
+            waveform *= 10**(gain/10.0)
         # Predict YAMNet classes.
         scores, embeddings, spectrogram = self.yamnet(waveform)
         return scores, embeddings, spectrogram
@@ -203,8 +221,23 @@ class TriggerProcessor:
                         while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
                             self.samples_stack.popleft()
                         if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_scan_interval:
+                            # compute leq
+                            reference_pressure = 1 / 10 ** ((94 - self.config.sensitivity) / 20.0)
+                            sum_samples = 0
+                            processed_samples = 0
+                            samples_to_process = int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)
+                            for samples in reversed(self.samples_stack):
+                                if processed_samples >= samples_to_process:
+                                    break
+                                waveform = samples
+                                if len(waveform) + processed_samples > samples_to_process:
+                                    window = len(waveform) - (samples_to_process - processed_samples)
+                                    waveform = waveform[window:]
+                                processed_samples += len(waveform)
+                                sum_samples += np.sum(np.power(np.array(waveform) / reference_pressure, 2.0))
+                            leq = 10 * math.log10(sum_samples / processed_samples) # / (reference_pressure ** 2))
+                            print("Leq: %.2f dB" % leq)
                             unprocessed_samples = 0
-                            leq = 60  # todo compute leq
                             if leq >= self.config.min_leq:
                                 # leq condition ok
                                 deb = time.time()
@@ -212,12 +245,11 @@ class TriggerProcessor:
                                 end_process = time.time()
                                 # Scores is a matrix of (time_frames, num_classes) classifier scores.
                                 # Average them along with time to get an overall classifier output for the clip.
-                                prediction = np.mean(scores, axis=0)
+                                prediction = np.median(scores, axis=0)
                                 # Report the highest-scoring classes and their scores.
                                 top5_i = np.argsort(prediction)[::-1][:5]
-                                tags = ' '.join('  {:12s}: {:.3f}'.format(self.yamnet_classes[i], prediction[i])
+                                tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
                                                 for i in top5_i)
-                                self.process_tags()
                                 self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
                                 print("%s tags:%s in %.3f seconds" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                                                           tags, end_process - deb))
@@ -267,13 +299,13 @@ class TriggerProcessor:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and publish noise events',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0)
-    parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000)
+    parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
+    parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000, type=int)
     parser.add_argument("--trigger_count", help="limit the number of triggers by this count", default=10)
-    parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30)
-    parser.add_argument("--total_length", help="record length total in seconds", default=10)
-    parser.add_argument("--cached_length", help="record length before the trigger", default=5)
-    parser.add_argument("--sample_rate", help="audio sample rate", default=48000)
+    parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
+    parser.add_argument("--total_length", help="record length total in seconds", default=10, type=float)
+    parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
+    parser.add_argument("--sample_rate", help="audio sample rate", default=48000, type=int)
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
@@ -281,6 +313,10 @@ if __name__ == "__main__":
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
     parser.add_argument("--yamnet_scan_interval", help="Yamnet delay between audio recogition, default is window size",
                         default=0.96)
+    parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
+    parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
+    parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34, type=float)
     args = parser.parse_args()
+    print("Configuration: " + repr(args))
     trigger = TriggerProcessor(args)
     trigger.run()
