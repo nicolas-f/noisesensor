@@ -35,11 +35,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
 import zmq
-import array
 import argparse
+import time
+import datetime
 
-
-def publish_samples(interface: str, port: int, block_size: int):
+def publish_samples(interface: str, port: int, block_size: int, byte_rate: int):
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     address = "tcp://%s:%d" % (interface, port)
@@ -47,9 +47,23 @@ def publish_samples(interface: str, port: int, block_size: int):
     print("Publishing samples on interface:")
     print(address)
     input_buffer = sys.stdin.buffer
+    start = time.time()
+    total_bytes_read = 0
     while True:
         audio_data_bytes = input_buffer.read(block_size)
-        audio_data = array.array('f', audio_data_bytes)
+        if not audio_data_bytes:
+            print("%s End of audio samples, total bytes read %d" % (datetime.datetime.now().isoformat(),
+                                                                    total_bytes_read))
+            break
+        total_bytes_read += len(audio_data_bytes)
+        if byte_rate > 0:
+            # if byte rate provided by user
+            # pause time before reading the next bytes according to expected byte rate
+            cur = time.time()
+            samples_time = len(audio_data_bytes) / byte_rate
+            if cur - start < samples_time:
+                time.sleep(samples_time - (cur - start))
+            start = time.time()
         # audio_data contains a list of block_size // 4 floats representing audio values
         socket.send(audio_data_bytes)
 
@@ -64,8 +78,10 @@ def main():
     parser.add_argument("-p", "--port", help="Port to publish samples", default=10001)
     parser.add_argument("-i", "--interface", help="Interface to publish", default="*")
     parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024)
+    parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
+                                                  " second of transfer", default=0, type=int)
     args = parser.parse_args()
-    publish_samples(args.interface, args.port, args.block_size)
+    publish_samples(args.interface, args.port, args.block_size, args.debug_byte_rate)
 
 
 if __name__ == "__main__":
