@@ -69,6 +69,7 @@ from yamnet import yamnet, params
 import resampy
 from importlib.resources import files
 
+
 class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
@@ -99,7 +100,7 @@ class TriggerProcessor:
             yamnet_class_map = files('yamnet').joinpath('yamnet_class_map.csv')
         self.yamnet_classes = yamnet.class_names(yamnet_class_map)
         self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
-                                                        self.yamnet_config.sample_rate)
+                                        self.yamnet_config.sample_rate)
 
     def butter_highpass(self, cutoff, fs, order=4):
         return signal.butter(order, cutoff / (fs / 2.0), btype='high', output='sos')
@@ -158,23 +159,32 @@ class TriggerProcessor:
         self.socket_out = context.socket(zmq.PUB)
         self.socket_out.bind(self.config.output_address)
 
-    def process_tags(self):
+    def process_tags(self, samples_to_process: int):
         # check for sound recognition tags
         waveform = np.zeros((int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)),
                             dtype=np.float32)
-        last_index = len(waveform)
-        # copy from newer samples to older samples
-        for samples in reversed(self.samples_stack):
-            destination = last_index - len(samples)
-            if destination < 0:
-                samples_slice = samples[-destination:]
+        total_samples = sum([len(s) for s in self.samples_stack])
+        first_index = max(0, total_samples - samples_to_process)
+        # copy from older samples to newer samples (using only the last samples_to_process of the stack)
+        cursor = 0
+        for samples in self.samples_stack:
+            if cursor + len(samples) <= first_index:
+                # We have already processed those samples (not marked as to process)
+                cursor += len(samples)
+                continue
+            if cursor < first_index:
+                # only some samples from this array have to be processed
+                samples_slice = samples[first_index - cursor:]
                 waveform[0:len(samples_slice)] = samples_slice
+                cursor += len(samples_slice)
             else:
-                waveform[destination:destination + len(samples)] = samples
-            last_index = destination
-            if last_index <= 0:
-                # all analysis samples are copied
-                break
+                copy_from = cursor - first_index
+                copy_to = min(len(samples), first_index + len(waveform) - cursor)
+                if copy_to > 0:
+                    waveform[copy_from:copy_from + copy_to] = samples[:copy_to]
+                    cursor += copy_to
+                else:
+                    break
         # resample if necessary
         if self.config.sample_rate != self.yamnet_config.sample_rate:
             waveform = resampy.resample(waveform, self.config.sample_rate, self.yamnet_config.sample_rate)
@@ -184,19 +194,30 @@ class TriggerProcessor:
         if self.config.yamnet_max_gain > 0:
             # apply gain
             max_value = float(numpy.max(numpy.abs(waveform)))
-            gain = 10*math.log10(1 / max_value)
+            gain = 10 * math.log10(1 / max_value)
             gain = min(self.config.yamnet_max_gain, gain)
-            waveform *= 10**(gain/10.0)
+            waveform *= 10 ** (gain / 10.0)
         # Predict YAMNet classes.
         scores, embeddings, spectrogram = self.yamnet(waveform)
         return scores, embeddings, spectrogram
+
+    def fetch_audio_data(self):
+        if self.samples_stack is None:
+            self.samples_stack = collections.deque()
+        audio_data_bytes = array.array('f', self.socket.recv())
+        self.samples_stack.append(audio_data_bytes)
+        # will keep keep_only_samples samples, and drop older stack elements
+        keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * \
+                            self.config.sample_rate
+        while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
+            self.samples_stack.popleft()
+        return audio_data_bytes
 
     def run(self):
         trigger_sha = str("")
         status = "wait_trigger"
         start_processing = self.unix_time()
         trigger_time = 0
-        unprocessed_samples = 0  # Samples pushed to samples_stack but not processed
         samples_trigger = io.BytesIO()
         last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         self.init_socket()
@@ -215,22 +236,18 @@ class TriggerProcessor:
                 elif self.remaining_triggers > 0 and cur_time > self.config.date_start and self.check_hour():
                     # Time condition ok
                     # now check audio condition
+                    unprocessed_samples = 0
                     while status == "wait_trigger":
-                        cur_time = time.time() * 1000
                         # fetch next packet
-                        audio_data_bytes = array.array('f', self.socket.recv())
+                        audio_data_bytes = self.fetch_audio_data()
                         unprocessed_samples += len(audio_data_bytes)
-                        self.samples_stack.append(audio_data_bytes)
-                        # will keep keep_only_samples samples, and drop older stack elements
-                        keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * self.config.sample_rate
-                        while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
-                            self.samples_stack.popleft()
-                        if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_scan_interval:
+                        if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_leq_interval:
                             # compute leq
                             reference_pressure = 1 / 10 ** ((94 - self.config.sensitivity) / 20.0)
                             sum_samples = 0
                             processed_samples = 0
-                            samples_to_process = int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)
+                            samples_to_process = int(self.config.yamnet_leq_interval * self.config.sample_rate)
+                            # retrieve the last samples_to_process samples to a numpy array
                             for samples in reversed(self.samples_stack):
                                 if processed_samples >= samples_to_process:
                                     break
@@ -241,66 +258,93 @@ class TriggerProcessor:
                                 processed_samples += len(waveform)
                                 sum_samples += np.sum(np.power(np.array(waveform) / reference_pressure, 2.0))
                             leq = 10 * math.log10(sum_samples / processed_samples)
-                            print("Leq: %.2f dB" % leq)
-                            unprocessed_samples = 0
                             if leq >= self.config.min_leq:
-                                # leq condition ok
-                                deb = time.time()
-                                scores, embeddings, spectrogram = self.process_tags()
-                                end_process = time.time()
-                                # Scores is a matrix of (time_frames, num_classes) classifier scores.
-                                # Average them along with time to get an overall classifier output for the clip.
-                                prediction = np.median(scores, axis=0)
-                                # Report the highest-scoring classes and their scores.
-                                top5_i = np.argsort(prediction)[::-1][:5]
-                                document = {"scores": {self.yamnet_classes[i]: round(float(prediction[i]), 4)
-                                                       for i in np.argsort(prediction)[::-1][:10]},
-                                            "spectrogram": [[round(v, 3) for v in band] for band in
-                                                            spectrogram.numpy().tolist()],
-                                            "leq": leq, "epoch_millisecond": cur_time}
-                                self.socket_out.send_json(document)
-                                tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
-                                                for i in top5_i)
-                                self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
-                                print("%s tags:%s in %.3f seconds" % (time.strftime("%Y-%m-%d %H:%M:%S"),
-                                                                          tags, end_process - deb))
-                                #self.remaining_triggers -= 1
-                                #trigger_time = time.time()
-                                #break  # process recording
-                                # status = "record"
-                elif status == "record":
-                    while status == "record" and not self.socket.closed:
-                        samples = self.samples_stack.popleft()
-                        size = min(self.remaining_samples, len(samples))
-                        samples_trigger.write(samples[:size])
-                        self.remaining_samples -= size
-                        if self.remaining_samples == 0:
+                                print("Leq: %.2f dB > %.2f dB, so now try to recognize sound source "
+                                      % (leq, self.config.min_leq))
+                                status = "sound_event_detection"
+                                break
+            if status == "sound_event_detection":
+                # Samples pushed to samples_stack but not processed in sound recognition algorithm
+                unprocessed_samples = sum([len(s) for s in self.samples_stack])
+                remaining_window_count = self.config.yamnet_sound_event_windows
+                all_scores = None
+                total_process_time = 0
+                total_processed_samples = 0
+                while status == "sound_event_detection":
+                    while unprocessed_samples / self.config.sample_rate >= self.yamnet_config.patch_window_seconds:
+                        # leq condition ok
+                        deb_process = time.time()
+                        scores, embeddings, spectrogram = self.process_tags(unprocessed_samples)
+                        unprocessed_samples -= int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)
+                        total_processed_samples += int(
+                            self.yamnet_config.patch_window_seconds * self.config.sample_rate)
+                        if all_scores is None:
+                            all_scores = scores
+                        else:
+                            all_scores = np.concatenate((all_scores, scores))
+                        total_process_time += time.time() - deb_process
+                        remaining_window_count -= 1
+                        if remaining_window_count <= 0:
+                            # Scores is a matrix of (time_frames, num_classes) classifier scores.
+                            # Average them along with time to get an overall classifier output for the clip.
+                            prediction = np.median(scores, axis=0)
+                            # Report the highest-scoring classes and their scores.
+                            top5_i = np.argsort(prediction)[::-1][:5]
+                            document = {"scores": {self.yamnet_classes[i]: round(float(prediction[i]), 4)
+                                                   for i in np.argsort(prediction)[::-1][:10]},
+                                        "spectrogram": [[round(v, 3) for v in band] for band in
+                                                        spectrogram.numpy().tolist()],
+                                        "leq": leq, "epoch_millisecond": cur_time}
+                            self.socket_out.send_json(document)
+                            tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
+                                            for i in top5_i)
+                            self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
+                            print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio" % (
+                                time.strftime("%Y-%m-%d %H:%M:%S"),
+                                tags, total_process_time,
+                                total_processed_samples / self.config.sample_rate))
                             status = "wait_trigger"
-                            audio_processing_start = time.clock()
-                            # Compress audio samples
-                            output = io.BytesIO()
-                            data, samplerate = sf.read(samples_trigger, format='RAW',
-                                                       channels=1 if self.data['mono'] else 2,
-                                                       samplerate=int(self.sample_rate),
-                                                       subtype=['PCM_16', 'PCM_32'][
-                                                           ['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
-                            data = data[:, 0]
-                            channels = 1
-                            with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
-                                f.write(data)
-                                f.flush()
-                            audio_data_encrypt = self.encrypt(output.getvalue())
-                            print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
-                                samples_trigger.tell(), data.shape[0], len(base64.b64encode(audio_data_encrypt)),
-                                time.clock() - audio_processing_start))
-                            samples_trigger = io.BytesIO()
-                            info = sf.info(io.BytesIO(output.getvalue()))
-                            print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
-                            for f in self.data["callback_encrypted_audio"]:
-                                f(trigger_time, audio_data_encrypt)
-                            self.samples_stack.clear()
-                            time.sleep(self.config["cached_length"])
-                            self.fast.clear()
+                            break
+                            # self.remaining_triggers -= 1
+                            # trigger_time = time.time()
+                            # break  # process recording
+                            # status = "record"
+                    # fetch next packet
+                    audio_data_bytes = self.fetch_audio_data()
+                    unprocessed_samples += len(audio_data_bytes)
+            elif status == "record":
+                while status == "record":
+                    samples = self.samples_stack.popleft()
+                    size = min(self.remaining_samples, len(samples))
+                    samples_trigger.write(samples[:size])
+                    self.remaining_samples -= size
+                    if self.remaining_samples == 0:
+                        status = "wait_trigger"
+                        audio_processing_start = time.clock()
+                        # Compress audio samples
+                        output = io.BytesIO()
+                        data, samplerate = sf.read(samples_trigger, format='RAW',
+                                                   channels=1 if self.data['mono'] else 2,
+                                                   samplerate=int(self.sample_rate),
+                                                   subtype=['PCM_16', 'PCM_32'][
+                                                       ['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
+                        data = data[:, 0]
+                        channels = 1
+                        with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
+                            f.write(data)
+                            f.flush()
+                        audio_data_encrypt = self.encrypt(output.getvalue())
+                        print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
+                            samples_trigger.tell(), data.shape[0], len(base64.b64encode(audio_data_encrypt)),
+                            time.clock() - audio_processing_start))
+                        samples_trigger = io.BytesIO()
+                        info = sf.info(io.BytesIO(output.getvalue()))
+                        print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
+                        for f in self.data["callback_encrypted_audio"]:
+                            f(trigger_time, audio_data_encrypt)
+                        self.samples_stack.clear()
+                        time.sleep(self.config["cached_length"])
+                        self.fast.clear()
             time.sleep(0.125)
 
     def unix_time(self):
@@ -311,7 +355,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and publish noise events',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
-    parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000, type=int)
+    parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000,
+                        type=int)
     parser.add_argument("--trigger_count", help="limit the number of triggers by this count", default=10)
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
     parser.add_argument("--total_length", help="record length total in seconds", default=10, type=float)
@@ -324,10 +369,12 @@ if __name__ == "__main__":
                         default="tcp://127.0.0.1:10002")
     parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
-    parser.add_argument("--yamnet_scan_interval", help="Yamnet delay between audio recognition, default is window size",
-                        default=0.96)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
+    parser.add_argument("--yamnet_sound_event_windows", help="Number of windows to recognise sound source", default=10,
+                        type=int)
+    parser.add_argument("--yamnet_leq_interval", help="Leq period for triggering scan of audio source", default=1.0,
+                        type=float)
     parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34,
                         type=float)
     args = parser.parse_args()
