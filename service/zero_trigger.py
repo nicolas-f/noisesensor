@@ -40,7 +40,6 @@ import array
 import math
 import numpy as np
 from scipy import signal
-import json
 
 try:
     import zmq
