@@ -40,6 +40,7 @@ import array
 import math
 import numpy as np
 from scipy import signal
+import json
 
 try:
     import zmq
@@ -86,6 +87,7 @@ class TriggerProcessor:
         # Cache samples for configured length before trigger
         self.samples_stack = collections.deque()
         self.socket = None
+        self.socket_out = None
         self.yamnet_config = params.Params()
         self.yamnet = yamnet.yamnet_frames_model(self.yamnet_config)
         yamnet_weights = self.config.yamnet_weights
@@ -153,6 +155,8 @@ class TriggerProcessor:
         self.socket = context.socket(zmq.SUB)
         self.socket.connect(self.config.input_address)
         self.socket.subscribe("")
+        self.socket_out = context.socket(zmq.PUB)
+        self.socket_out.bind(self.config.output_address)
 
     def process_tags(self):
         # check for sound recognition tags
@@ -212,6 +216,7 @@ class TriggerProcessor:
                     # Time condition ok
                     # now check audio condition
                     while status == "wait_trigger":
+                        cur_time = time.time() * 1000
                         # fetch next packet
                         audio_data_bytes = array.array('f', self.socket.recv())
                         unprocessed_samples += len(audio_data_bytes)
@@ -235,7 +240,7 @@ class TriggerProcessor:
                                     waveform = waveform[window:]
                                 processed_samples += len(waveform)
                                 sum_samples += np.sum(np.power(np.array(waveform) / reference_pressure, 2.0))
-                            leq = 10 * math.log10(sum_samples / processed_samples) # / (reference_pressure ** 2))
+                            leq = 10 * math.log10(sum_samples / processed_samples)
                             print("Leq: %.2f dB" % leq)
                             unprocessed_samples = 0
                             if leq >= self.config.min_leq:
@@ -248,6 +253,12 @@ class TriggerProcessor:
                                 prediction = np.median(scores, axis=0)
                                 # Report the highest-scoring classes and their scores.
                                 top5_i = np.argsort(prediction)[::-1][:5]
+                                document = {"scores": {self.yamnet_classes[i]: round(float(prediction[i]), 4)
+                                                       for i in np.argsort(prediction)[::-1][:10]},
+                                            "spectrogram": [[round(v, 3) for v in band] for band in
+                                                            spectrogram.numpy().tolist()],
+                                            "leq": leq, "epoch_millisecond": cur_time}
+                                self.socket_out.send_json(document)
                                 tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
                                                 for i in top5_i)
                                 self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
@@ -309,13 +320,16 @@ if __name__ == "__main__":
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
+    parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
+                        default="tcp://127.0.0.1:10002")
     parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
-    parser.add_argument("--yamnet_scan_interval", help="Yamnet delay between audio recogition, default is window size",
+    parser.add_argument("--yamnet_scan_interval", help="Yamnet delay between audio recognition, default is window size",
                         default=0.96)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
-    parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34, type=float)
+    parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34,
+                        type=float)
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     trigger = TriggerProcessor(args)
