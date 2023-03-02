@@ -32,6 +32,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+import os.path
 import sys
 import collections
 import argparse
@@ -40,7 +41,6 @@ import array
 import math
 import numpy as np
 from scipy import signal
-
 try:
     import zmq
 except ImportError as e:
@@ -56,8 +56,9 @@ try:
     from Crypto import Random
     from Crypto.Random import get_random_bytes
     import numpy
+    import base64
 except ImportError:
-    print("Please install PyCryptodome")
+    print("Please install PyCryptodome, base64 and numpy")
     print("pip install pycryptodome")
     print("Audio encryption has been disabled")
 
@@ -67,6 +68,34 @@ import datetime
 from yamnet import yamnet, params
 import resampy
 from importlib.resources import files
+
+
+def encrypt(audio_data, ssh_file):
+    """
+    Encrypt the provided string using the provided ssh public key
+    :param audio_data: Audio data in bytes
+    :param ssh_file: Path of the public key
+    :return: Encrypted data
+    """
+    output_encrypted = io.BytesIO()
+
+    # Open public key to encrypt AES key
+    key = RSA.importKey(open(ssh_file).read())
+    cipher = PKCS1_OAEP.new(key)
+
+    aes_key = get_random_bytes(AES.block_size)
+    iv = Random.new().read(AES.block_size)
+
+    # Write OAEP header
+    output_encrypted.write(cipher.encrypt(aes_key + iv))
+
+    aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    # pad audio data
+    if len(audio_data) % AES.block_size > 0:
+        audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size, b'\0')
+    # Write AES data
+    output_encrypted.write(aes_cipher.encrypt(audio_data))
+    return output_encrypted.getvalue()
 
 
 class TriggerProcessor:
@@ -124,32 +153,6 @@ class TriggerProcessor:
                 end_ok = True
         return start_ok and end_ok
 
-    def encrypt(self, audio_data):
-        output_encrypted = io.BytesIO()
-
-        # Open public key to encrypt AES key
-        key = RSA.importKey(self.config["file"])
-        cipher = PKCS1_OAEP.new(key)
-
-        aes_key = get_random_bytes(AES.block_size)
-        iv = Random.new().read(AES.block_size)
-
-        # Write OAEP header
-        output_encrypted.write(cipher.encrypt(aes_key + iv))
-
-        aes_cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-        # pad audio data
-        if len(audio_data) % AES.block_size > 0:
-            if sys.version_info.major == 2:
-                audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size,
-                                              str('\0'))
-            else:
-                audio_data = audio_data.ljust(len(audio_data) + AES.block_size - len(audio_data) % AES.block_size,
-                                              b'\0')
-        # Write AES data
-        output_encrypted.write(aes_cipher.encrypt(audio_data))
-        return output_encrypted.getvalue()
-
     def init_socket(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
@@ -200,16 +203,18 @@ class TriggerProcessor:
         scores, embeddings, spectrogram = self.yamnet(waveform)
         return scores, embeddings, spectrogram
 
-    def fetch_audio_data(self):
-        if self.samples_stack is None:
-            self.samples_stack = collections.deque()
+    def fetch_audio_data(self, feed_cache=True):
+        if feed_cache:
+            if self.samples_stack is None:
+                self.samples_stack = collections.deque()
         audio_data_bytes = array.array('f', self.socket.recv())
-        self.samples_stack.append(audio_data_bytes)
-        # will keep keep_only_samples samples, and drop older stack elements
-        keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * \
-                            self.config.sample_rate
-        while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
-            self.samples_stack.popleft()
+        if feed_cache:
+            self.samples_stack.append(audio_data_bytes)
+            # will keep keep_only_samples samples, and drop older stack elements
+            keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * \
+                                self.config.sample_rate
+            while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
+                self.samples_stack.popleft()
         return audio_data_bytes
 
     def run(self):
@@ -217,9 +222,9 @@ class TriggerProcessor:
         status = "wait_trigger"
         start_processing = self.unix_time()
         trigger_time = 0
-        samples_trigger = io.BytesIO()
         last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         self.init_socket()
+        document = {}
         while True:
             if last_day_of_year != datetime.datetime.now().timetuple().tm_yday and "trigger_count" in self.config:
                 # reset trigger counter each day
@@ -231,7 +236,6 @@ class TriggerProcessor:
                 if cur_time > self.config.date_end:
                     # Do not cache samples anymore
                     self.samples_stack = collections.deque()
-                    self.socket.disconnect()
                 elif self.remaining_triggers > 0 and cur_time > self.config.date_start and self.check_hour():
                     # Time condition ok
                     # now check audio condition
@@ -293,57 +297,59 @@ class TriggerProcessor:
                                                    for i in np.argsort(prediction)[::-1][:10]},
                                         "spectrogram": [[round(v, 3) for v in band] for band in
                                                         spectrogram.numpy().tolist()],
-                                        "leq": leq, "epoch_millisecond": cur_time}
-                            self.socket_out.send_json(document)
+                                        "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
                             tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
                                             for i in top5_i)
-                            self.remaining_samples = int(self.bytes_per_seconds * self.config.total_length)
                             print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio" % (
                                 time.strftime("%Y-%m-%d %H:%M:%S"),
                                 tags, total_process_time,
                                 total_processed_samples / self.config.sample_rate))
-                            status = "wait_trigger"
+                            status = "record"
+                            self.remaining_triggers -= 1
                             break
-                            # self.remaining_triggers -= 1
-                            # trigger_time = time.time()
-                            # break  # process recording
-                            # status = "record"
                     # fetch next packet
                     audio_data_bytes = self.fetch_audio_data()
                     unprocessed_samples += len(audio_data_bytes)
             elif status == "record":
                 while status == "record":
-                    samples = self.samples_stack.popleft()
-                    size = min(self.remaining_samples, len(samples))
-                    samples_trigger.write(samples[:size])
-                    self.remaining_samples -= size
-                    if self.remaining_samples == 0:
-                        status = "wait_trigger"
-                        audio_processing_start = time.clock()
+                    audio_data_encrypt = ""
+                    ssh_file = os.path.expanduser(self.config.ssh_file)
+                    if "AES" in globals() and os.path.exists(ssh_file):
+                        # empty audio cache
+                        samples_trigger = io.BytesIO()
+                        remaining_samples = int(self.config.total_length * self.config.sample_rate)
+                        while len(self.samples_stack) > 0:
+                            audio_samples = self.samples_stack.popleft()
+                            remaining_samples -= len(audio_samples)
+                            samples_trigger.write(audio_samples)
+                        # read audio samples until remaining_samples reached
+                        while remaining_samples > 0:
+                            audio_samples = self.fetch_audio_data(False)
+                            remaining_samples -= len(audio_samples)
+                            samples_trigger.write(audio_samples)
+                        audio_processing_start = time.time()
                         # Compress audio samples
                         output = io.BytesIO()
                         data, samplerate = sf.read(samples_trigger, format='RAW',
-                                                   channels=1 if self.data['mono'] else 2,
-                                                   samplerate=int(self.sample_rate),
-                                                   subtype=['PCM_16', 'PCM_32'][
-                                                       ['S16_LE', 'S32_LE'].index(self.data["sample_format"])])
-                        data = data[:, 0]
+                                                   channels=1 if self.config.mono else 2,
+                                                   samplerate=int(self.config.sample_rate),
+                                                   subtype=['PCM_16', 'PCM_32', 'PCM_32'][
+                                                       ['S16_LE', 'S32_LE', 'FLOAT_LE']
+                                                       .index(self.config.sample_format)])
                         channels = 1
                         with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
                             f.write(data)
                             f.flush()
-                        audio_data_encrypt = self.encrypt(output.getvalue())
+                        audio_data_encrypt = base64.b64encode(encrypt(output.getvalue(), ssh_file)).decode("UTF-8")
                         print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
-                            samples_trigger.tell(), data.shape[0], len(base64.b64encode(audio_data_encrypt)),
-                            time.clock() - audio_processing_start))
-                        samples_trigger = io.BytesIO()
+                            samples_trigger.tell(), data.shape[0], len(audio_data_encrypt),
+                            time.time() - audio_processing_start))
                         info = sf.info(io.BytesIO(output.getvalue()))
-                        print("duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
-                        for f in self.data["callback_encrypted_audio"]:
-                            f(trigger_time, audio_data_encrypt)
-                        self.samples_stack.clear()
-                        time.sleep(self.config["cached_length"])
-                        self.fast.clear()
+                        print("Audio duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
+                    document["encrypted_audio"] = audio_data_encrypt
+                    self.socket_out.send_json(document)
+                    self.samples_stack.clear()
+                    status = "wait_trigger"
             time.sleep(0.125)
 
     def unix_time(self):
@@ -376,6 +382,8 @@ if __name__ == "__main__":
                         type=float)
     parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34,
                         type=float)
+    parser.add_argument("--mono", help="Mono audio", default=True,
+                        type=bool)
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     trigger = TriggerProcessor(args)
