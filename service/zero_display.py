@@ -12,10 +12,58 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
+
 def display_tags(config):
+    # Raspberry Pi pin configuration:
+    rst = None  # on the PiOLED this pin isnt used
+    i2c_address = 0x3C
+    disp = Adafruit_SSD1306.SSD1306_128_64(rst=rst, i2c_address=i2c_address)
+    # Initialize library.
+    disp.begin()
 
+    # Clear display.
+    disp.clear()
+    disp.display()
 
+    # Create blank image for drawing.
+    # Make sure to create image with mode '1' for 1-bit color.
+    width = disp.width
+    height = disp.height
+    image = Image.new('1', (width, height))
 
+    # Get drawing object to draw on image.
+    draw = ImageDraw.Draw(image)
+
+    # Draw a black filled box to clear the image.
+    draw.rectangle((0, 0, width, height), outline=0, fill=0)
+
+    # Draw some shapes.
+    # First define some constants to allow easy resizing of shapes.
+    padding = -2
+    top = padding
+    bottom = height - padding
+    # Move left to right keeping track of the current x position for drawing shapes.
+    x = 0
+
+    # Load default font.
+    font = ImageFont.load_default()
+    context = zmq.Context()
+    socket = context.socket(zmq.SUB)
+    socket.connect(config.input_address)
+    socket.subscribe("")
+    line_height = 8
+    while True:
+        # Retrieve JSON data from zero_trigger
+        data = socket.recv_json()
+        leq = data["leq"]
+        scores = data["scores"]
+        draw.text((x, top), "leq: %.2f" % leq, font=font, fill=255)
+        for y, key_value in zip(range(len(scores)), sorted(scores.items(), key=lambda item: -item[1])):
+            draw.text((x, top + line_height + line_height * y), '{:12s}: {:.3f}'.format(key_value[0], key_value[1]),
+                      font=font, fill=255)
+        # Display image.
+        disp.image(image)
+        disp.display()
 
 
 if __name__ == "__main__":
@@ -26,4 +74,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     display_tags(args)
-
