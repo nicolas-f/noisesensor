@@ -382,7 +382,7 @@ if __name__ == "__main__":
     parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
     parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000,
                         type=int)
-    parser.add_argument("--trigger_count", help="limit the number of triggers by this count", default=10)
+    parser.add_argument("--trigger_count", help="limit the number of triggers by this count", default=10, type=int)
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
     parser.add_argument("--total_length", help="record length total in seconds", default=10, type=float)
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
