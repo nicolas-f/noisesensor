@@ -55,7 +55,6 @@ try:
     from Crypto.Cipher import AES
     from Crypto import Random
     from Crypto.Random import get_random_bytes
-    import numpy
     import base64
 except ImportError:
     print("Please install PyCryptodome, base64 and numpy")
@@ -195,7 +194,7 @@ class TriggerProcessor:
             waveform = self.butter_highpass_filter(waveform)
         if self.config.yamnet_max_gain > 0:
             # apply gain
-            max_value = float(numpy.max(numpy.abs(waveform)))
+            max_value = float(np.max(np.abs(waveform)))
             gain = 10 * math.log10(1 / max_value)
             gain = min(self.config.yamnet_max_gain, gain)
             waveform *= 10 ** (gain / 10.0)

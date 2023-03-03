@@ -57,10 +57,14 @@ def display_tags(config):
         data = socket.recv_json()
         leq = data["leq"]
         scores = data["scores"]
-        draw.text((x, top), "leq: %.2f" % leq, font=font, fill=255)
+        draw.text((x, top), "leq: %.2f dB" % leq, font=font, fill=255)
+        max_line = 7
         for y, key_value in zip(range(len(scores)), sorted(scores.items(), key=lambda item: -item[1])):
-            draw.text((x, top + line_height + line_height * y), '{:12s}: {:.3f}'.format(key_value[0], key_value[1]),
+            tag = key_value[0][slice(None, 12)]
+            draw.text((x, top + 2 * line_height + line_height * y), '{:12s}: {:.3f}'.format(tag, key_value[1]),
                       font=font, fill=255)
+            if y >= max_line:
+                break
         # Display image.
         disp.image(image)
         disp.display()
