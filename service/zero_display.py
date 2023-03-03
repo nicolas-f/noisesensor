@@ -53,8 +53,13 @@ def display_tags(config):
     socket.subscribe("")
     line_height = 8
     while True:
+
         # Retrieve JSON data from zero_trigger
         data = socket.recv_json()
+
+        # Draw a black filled box to clear the image.
+        draw.rectangle((0, 0, width, height), outline=0, fill=0)
+
         leq = data["leq"]
         scores = data["scores"]
         draw.text((x, top), "leq: %.2f dB" % leq, font=font, fill=255)
