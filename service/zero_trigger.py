@@ -36,11 +36,13 @@ import os.path
 import sys
 import collections
 import argparse
+import threading
 import time
 import array
 import math
 import numpy as np
 from scipy import signal
+
 try:
     import zmq
 except ImportError as e:
@@ -97,6 +99,21 @@ def encrypt(audio_data, ssh_file):
     return output_encrypted.getvalue()
 
 
+class StatusThread(threading.Thread):
+    def __init__(self, trigger_processor, config):
+        threading.Thread.__init__(self)
+        self.trigger_processor = trigger_processor
+        self.config = config
+
+    def run(self):
+        while self.config.running:
+            record_time = str(datetime.timedelta(seconds=
+                                                 round(self.trigger_processor.total_read / self.config.sample_rate)))
+            print("%s samples read: %ld (%s)" % (datetime.datetime.now().replace(microsecond=0).isoformat(),
+                                                 self.trigger_processor.total_read, record_time))
+            time.sleep(self.config.delay_print_samples)
+
+
 class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
@@ -104,6 +121,7 @@ class TriggerProcessor:
 
     def __init__(self, config):
         self.config = config
+        self.total_read = 0  # Total audio samples read
         self.sample_rate = self.config.sample_rate
         format_byte_width = {"S16_LE": 2, "S32_LE": 4, "FLOAT_LE": 4, "S24_3LE": 3, "S24_LE": 4}
         sample_length = format_byte_width[self.config.sample_format]
@@ -207,6 +225,7 @@ class TriggerProcessor:
             if self.samples_stack is None:
                 self.samples_stack = collections.deque()
         audio_data_bytes = array.array('f', self.socket.recv())
+        self.total_read += len(audio_data_bytes)
         if feed_cache:
             self.samples_stack.append(audio_data_bytes)
             # will keep keep_only_samples samples, and drop older stack elements
@@ -299,12 +318,14 @@ class TriggerProcessor:
                                         "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
                             tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
                                             for i in top5_i)
-                            print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio" % (
-                                time.strftime("%Y-%m-%d %H:%M:%S"),
-                                tags, total_process_time,
-                                total_processed_samples / self.config.sample_rate))
-                            status = "record"
                             self.remaining_triggers -= 1
+                            print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio."
+                                  " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                                                                        tags, total_process_time,
+                                                                        total_processed_samples /
+                                                                        self.config.sample_rate,
+                                                                        self.remaining_triggers))
+                            status = "record"
                             break
                     # fetch next packet
                     audio_data_bytes = self.fetch_audio_data()
@@ -334,7 +355,7 @@ class TriggerProcessor:
                                                    samplerate=int(self.config.sample_rate),
                                                    subtype=['PCM_16', 'PCM_32', 'PCM_32'][
                                                        ['S16_LE', 'S32_LE', 'FLOAT_LE']
-                                                       .index(self.config.sample_format)])
+                                                   .index(self.config.sample_format)])
                         channels = 1
                         with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
                             f.write(data)
@@ -383,7 +404,17 @@ if __name__ == "__main__":
                         type=float)
     parser.add_argument("--mono", help="Mono audio", default=True,
                         type=bool)
+    parser.add_argument("--delay_print_samples", help="Delay in second between each print of number of samples read",
+                        default=0, type=float)
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     trigger = TriggerProcessor(args)
-    trigger.run()
+    args.running = True
+    status_thread = StatusThread(trigger, args)
+    if args.delay_print_samples > 0:
+        # run stats thread
+        status_thread.start()
+    try:
+        trigger.run()
+    finally:
+        args.running = False
