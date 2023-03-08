@@ -15,6 +15,17 @@ def uart_data_received(sender, data):
 
 
 async def main(config):
+    address = None
+    while address is None:
+        logger.info("Discover BLE devices..")
+        devices = await BleakScanner.discover()
+        for d in devices:
+            if "Pixl.js" in d.name:
+                address = d.address
+                logger.info("Found Pixl.js " + repr(d))
+                break
+        if address is None:
+            logger.info("Could not find Pixl.js device.")
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
@@ -34,17 +45,6 @@ async def main(config):
             if y >= max_line:
                 break
         c = b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
-        address = None
-        while address is None:
-            logger.info("Discover BLE devices..")
-            devices = await BleakScanner.discover()
-            for d in devices:
-                if "Pixl.js" in d.name:
-                    address = d.address
-                    logger.info("Found Pixl.js " + repr(d))
-                    break
-            if address is None:
-                logger.info("Could not find Pixl.js device.")
         async with BleakClient(address) as client:
             await client.start_notify(UUID_NORDIC_RX, uart_data_received)
             while len(c) > 0:
