@@ -47,6 +47,11 @@ def display_tags(config):
 
     # Load default font.
     font = ImageFont.load_default()
+
+    draw.text((x, top), "Waiting next trigger..", font=font, fill=255)
+    disp.image(image)
+    disp.display()
+
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
