@@ -46,7 +46,7 @@ async def main(config):
                 messages.append('{:12s}: {:.3f}'.format(tag, key_value[1]))
                 if y >= max_line:
                     break
-            c = b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages)
+            c = b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
             while len(c) > 0:
                 await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
                 c = c[20:]
