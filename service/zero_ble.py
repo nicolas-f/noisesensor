@@ -16,7 +16,7 @@ def uart_data_received(sender, data):
 
 def process_message(socket):
     logger.info("Waiting for next zmq message")
-    data = await socket.recv_json()
+    data = socket.recv_json()
 
     leq = data["leq"]
     scores = data["scores"]
