@@ -61,7 +61,7 @@ async def main(config):
                     # Timeout, disconnect
                     break
                 else:
-                    process_message(socket)
+                    c = process_message(socket)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '
