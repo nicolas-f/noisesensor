@@ -391,7 +391,7 @@ if __name__ == "__main__":
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
-                        default="tcp://127.0.0.1:10002")
+                        default="tcp://*:10002")
     parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
