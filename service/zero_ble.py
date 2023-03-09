@@ -16,7 +16,7 @@ def uart_data_received(sender, data):
 
 def process_message(socket):
     logger.info("Waiting for next zmq message")
-    data = socket.recv_json()
+    data = await socket.recv_json()
 
     leq = data["leq"]
     scores = data["scores"]
@@ -54,6 +54,7 @@ async def main(config):
                 while len(c) > 0:
                     await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
                     c = c[20:]
+                await asyncio.sleep(0.125)  # wait for a response
                 event = socket.poll(timeout=config.disconnect_ble_timeout)
                 if event == 0:
                     # Timeout, disconnect
