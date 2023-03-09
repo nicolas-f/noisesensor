@@ -75,9 +75,9 @@ def main():
                                                  python3 -u zero_record.py -p 10001''',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument("-p", "--port", help="Port to publish samples", default=10001)
-    parser.add_argument("-i", "--interface", help="Interface to publish", default="*")
-    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024)
+    parser.add_argument("-p", "--port", help="Port to publish samples", default=10001, type=int)
+    parser.add_argument("-i", "--interface", help="Interface to publish", default="*", type=str)
+    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024, type=int)
     parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
                                                   " second of transfer", default=0, type=int)
     args = parser.parse_args()
