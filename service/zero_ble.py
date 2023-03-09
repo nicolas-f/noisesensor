@@ -48,6 +48,7 @@ async def main(config):
     socket.subscribe("")
     while True:
         c = process_message(socket)
+        logger.info("Reconnect to " + repr(address))
         async with BleakClient(address) as client:
             await client.start_notify(UUID_NORDIC_RX, uart_data_received)
             while True:
