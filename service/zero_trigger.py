@@ -336,8 +336,8 @@ class TriggerProcessor:
                                         "spectrogram": [[round(v, 3) for v in band] for band in
                                                         spectrogram.numpy().tolist()],
                                         "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
-                            tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[0][i], prediction[i])
-                                            for i in classes_threshold_index)
+                            tags = ' '.join('{:s}({:d}%)'.format(k, v)
+                                            for k,v in scores.items())
                             self.remaining_triggers -= 1
                             print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio."
                                   " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
