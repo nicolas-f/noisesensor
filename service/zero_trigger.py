@@ -33,16 +33,16 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import os.path
-import sys
 import collections
 import argparse
 import threading
 import time
 import array
 import math
+import csv
+
 import numpy as np
 from scipy import signal
-
 try:
     import zmq
 except ImportError as e:
@@ -114,6 +114,14 @@ class StatusThread(threading.Thread):
             time.sleep(self.config.delay_print_samples)
 
 
+def read_yamnet_class_and_threshold(class_map_csv):
+    with open(class_map_csv) as csv_file:
+        reader = csv.reader(csv_file)
+        next(reader)  # Skip header
+        names, threshold = zip(*[[display_name.strip(), float(threshold)] for _, _, display_name, threshold in reader])
+        return names, np.array(threshold, dtype=float)
+
+
 class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
@@ -142,8 +150,8 @@ class TriggerProcessor:
         self.yamnet.load_weights(yamnet_weights)
         yamnet_class_map = self.config.yamnet_class_map
         if yamnet_class_map is None:
-            yamnet_class_map = files('yamnet').joinpath('yamnet_class_map.csv')
-        self.yamnet_classes = yamnet.class_names(yamnet_class_map)
+            yamnet_class_map = files('yamnet').joinpath('yamnet_class_threshold_map.csv')
+        self.yamnet_classes = read_yamnet_class_and_threshold(yamnet_class_map)
         self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
                                         self.yamnet_config.sample_rate)
 
@@ -212,7 +220,7 @@ class TriggerProcessor:
             waveform = self.butter_highpass_filter(waveform)
         if self.config.yamnet_max_gain > 0:
             # apply gain
-            max_value = float(np.max(np.abs(waveform)))
+            max_value = max(1e-12, float(np.max(np.abs(waveform))))
             gain = 10 * math.log10(1 / max_value)
             gain = min(self.config.yamnet_max_gain, gain)
             waveform *= 10 ** (gain / 10.0)
@@ -265,7 +273,7 @@ class TriggerProcessor:
                         if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_leq_interval:
                             # compute leq
                             reference_pressure = 1 / 10 ** ((94 - self.config.sensitivity) / 20.0)
-                            sum_samples = 0
+                            sum_samples = 1e-12
                             processed_samples = 0
                             samples_to_process = int(self.config.yamnet_leq_interval * self.config.sample_rate)
                             # retrieve the last samples_to_process samples to a numpy array
@@ -308,16 +316,28 @@ class TriggerProcessor:
                         if remaining_window_count <= 0:
                             # Scores is a matrix of (time_frames, num_classes) classifier scores.
                             # Average them along with time to get an overall classifier output for the clip.
-                            prediction = np.median(scores, axis=0)
-                            # Report the highest-scoring classes and their scores.
-                            top5_i = np.argsort(prediction)[::-1][:5]
-                            document = {"scores": {self.yamnet_classes[i]: round(float(prediction[i]), 4)
-                                                   for i in np.argsort(prediction)[::-1][:10]},
+                            prediction = np.median(all_scores, axis=0)
+                            # filter out classes that are below threshold values
+                            classes_threshold_index = list(map(int, (prediction > self.yamnet_classes[1]).nonzero()[0]))
+                            if len(classes_threshold_index) == 0:
+                                # classifier rejected all known classes
+                                print("No classes found above yamnet threshold")
+                                status = "wait_trigger"
+                                break
+                            # Sort by score
+                            classes_threshold_index = [classes_threshold_index[j] for j in
+                                       np.argsort([prediction[i]-self.yamnet_classes[1][i]
+                                                   for i in classes_threshold_index])[::-1]]
+                            # Compute a score between 0-100% from threshold to 1.0
+                            scores = {self.yamnet_classes[0][i]:
+                                      round(float(((prediction[i]-self.yamnet_classes[1][i]) /
+                                            (1-self.yamnet_classes[1][i])) * 100)) for i in classes_threshold_index}
+                            document = {"scores": scores,
                                         "spectrogram": [[round(v, 3) for v in band] for band in
                                                         spectrogram.numpy().tolist()],
                                         "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
-                            tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[i], prediction[i])
-                                            for i in top5_i)
+                            tags = ' '.join('{:s}({:.3f})'.format(self.yamnet_classes[0][i], prediction[i])
+                                            for i in classes_threshold_index)
                             self.remaining_triggers -= 1
                             print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio."
                                   " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
