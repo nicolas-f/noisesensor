@@ -316,7 +316,7 @@ class TriggerProcessor:
                         if remaining_window_count <= 0:
                             # Scores is a matrix of (time_frames, num_classes) classifier scores.
                             # Average them along with time to get an overall classifier output for the clip.
-                            prediction = np.median(all_scores, axis=0)
+                            prediction = np.max(all_scores, axis=0)
                             # filter out classes that are below threshold values
                             classes_threshold_index = list(map(int, (prediction > self.yamnet_classes[1]).nonzero()[0]))
                             if len(classes_threshold_index) == 0:
