@@ -71,7 +71,7 @@ def display_tags(config):
         max_line = 7
         for y, key_value in zip(range(len(scores)), sorted(scores.items(), key=lambda item: -item[1])):
             tag = key_value[0][slice(None, 12)]
-            draw.text((x, top + 2 * line_height + line_height * y), '{:12s}: {:.3f}'.format(tag, key_value[1]),
+            draw.text((x, top + 2 * line_height + line_height * y), '{:12s} {:d} %'.format(tag, int(key_value[1])),
                       font=font, fill=255)
             if y >= max_line:
                 break
