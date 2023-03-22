@@ -24,7 +24,7 @@ def process_message(socket):
     max_line = 7
     for y, key_value in zip(range(len(scores)), sorted(scores.items(), key=lambda item: -item[1])):
         tag = key_value[0][slice(None, 24)]
-        messages.append('{:24s}: {:.3f}'.format(tag, key_value[1]))
+        messages.append('{:24s}: {:d} %'.format(tag, int(key_value[1])))
         if y >= max_line:
             break
     return b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
