@@ -1,0 +1,10 @@
+
+# Directories #
+###############
+build
+dist
+yamnet.egg-info
+yamnet/ESC-50-master
+
+# Data
+yamnet/yamnet.h5

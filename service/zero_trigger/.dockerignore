@@ -1,7 +1,7 @@
 
 # Directories #
 ###############
-build/
+../../build/
 dist/
 *.egg-info
 .kdev4
@@ -21,7 +21,4 @@ venv
 CMakeLists.txt.user*
 ftpconfig.json
 .atom-dbg.cson
-# dataset of audio
-ESC-50-master
-yamnet.h5
 
