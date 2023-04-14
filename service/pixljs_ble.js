@@ -5,12 +5,19 @@ messages = ["Waiting for sound events.."];
 
 function updateScreen() {
   g.clear();
-  //g.setFont("Vector", 9);
   y=0;
+  // Display date
+  var t = new Date(); // get the current date and time
+  var time = t.toString().replace(/\d\d:.*/,"")+t.getHours()+":"+("0"+t.getMinutes()).substr(-2)+":"+("0"+t.getSeconds()).substr(-2);
+  g.drawString(time, 0, y);
+  y += g.stringMetrics(time).height;
   while(messages.length > 0) {
     text = messages.shift();
     g.drawString(text, 0, y);
     y += g.stringMetrics(text).height;
+    if(y > g.getHeight()) {
+      break;
+    }
   }
   g.flip();
 }
