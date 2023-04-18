@@ -4,6 +4,7 @@ from bleak import BleakScanner
 import logging
 import zmq
 import argparse
+import time
 
 UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -32,7 +33,12 @@ def process_message(socket):
         return b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
     return ""
 
+"""
+How to overwrite Flash:
 
+command:
+"\u0010reset();\n\u0010print()\n\u0010setTime(1681798003.809);E.setTimeZone(2)\n\u0010\u001b[1drequire(\"Storage\").write(\".bootcde\",\"// Disable logging events to screen\\nBluetooth.setConsole(1);\\n\",0,939);\n\u0010\u001b[2dload()\n\n"
+"""
 async def main(config):
     address = None
     while address is None:
@@ -49,12 +55,15 @@ async def main(config):
     socket = context.socket(zmq.SUB)
     socket.connect(config.input_address)
     socket.subscribe("")
+    last_push = time.time()
     while True:
         c = process_message(socket)
         logger.info("Reconnect to " + repr(address))
         async with BleakClient(address) as client:
             await client.start_notify(UUID_NORDIC_RX, uart_data_received)
             while True:
+                if len(c) > 0:
+                    last_push = time.time()
                 while len(c) > 0:
                     await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
                     c = c[20:]
@@ -65,10 +74,14 @@ async def main(config):
                     break
                 else:
                     c = process_message(socket)
+                    if len(c) == 0 and time.time() - last_push > config.disconnect_ble_timeout:
+                        # Timeout, disconnect
+                        break
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '
-                                                 'OLED display',
+                                                 ' pixl.js device',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input_address", help="Address for zero_trigger tags", default="tcp://127.0.0.1:10002")
     parser.add_argument("--disconnect_ble_timeout", help="Disconnect ble if no new message in this delay in"
