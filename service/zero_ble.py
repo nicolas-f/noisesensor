@@ -21,13 +21,16 @@ def process_message(socket):
     leq = data["leq"]
     scores = data["scores"]
     messages = ["leq: %.2f dB" % leq]
-    max_line = 7
-    for y, key_value in zip(range(len(scores)), sorted(scores.items(), key=lambda item: -item[1])):
-        tag = key_value[0][slice(None, 24)]
-        messages.append('{:24s}: {:d} %'.format(tag, int(key_value[1])))
-        if y >= max_line:
-            break
-    return b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
+    sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
+    if len(scores) > 0 and sorted_tags[0][0] != "Silence":
+        max_line = 7
+        for y, key_value in zip(range(len(scores)), sorted_tags):
+            tag = key_value[0][slice(None, 24)]
+            messages.append('{:24s}: {:d} %'.format(tag, int(key_value[1])))
+            if y >= max_line:
+                break
+        return b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
+    return ""
 
 
 async def main(config):
