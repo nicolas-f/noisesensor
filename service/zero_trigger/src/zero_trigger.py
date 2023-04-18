@@ -345,8 +345,16 @@ class TriggerProcessor:
                                                                         total_processed_samples /
                                                                         self.config.sample_rate,
                                                                         self.remaining_triggers))
-                            status = "record"
-                            break
+                            if self.config.total_length > 0:
+                                # requesting audio data into the json file, so now record audio
+                                status = "record"
+                                break
+                            else:
+                                # no audio record, just send the recognized tags
+                                status = "wait_trigger"
+                                self.socket_out.send_json(document)
+                                self.samples_stack.clear()
+                                break
                     # fetch next packet
                     audio_data_bytes = self.fetch_audio_data()
                     unprocessed_samples += len(audio_data_bytes)
