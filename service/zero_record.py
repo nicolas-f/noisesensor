@@ -39,14 +39,35 @@ import argparse
 import time
 import datetime
 
-def publish_samples(interface: str, port: int, block_size: int, byte_rate: int):
+
+def publish_samples(args):
+    interface = args.interface
+    port = args.port
+    block_size = args.block_size
+    byte_rate = args.debug_byte_rate
+
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     address = "tcp://%s:%d" % (interface, port)
     socket.bind(address)
     print("Publishing samples on interface:")
     print(address)
-    input_buffer = sys.stdin.buffer
+    if args.wave == "":
+        input_buffer = sys.stdin.buffer
+    else:
+        import numpy
+        import io
+        import scipy
+        samplerate, data = scipy.io.wavfile.read(args.wave)
+        print("Audio files sample rate is %d Hz" % samplerate)
+        if data.shape[1] > 1:
+            data = data[:, 0]
+        if data.dtype == numpy.int32:
+            data = data.astype(numpy.float32) / 2**31
+        elif data.dtype == numpy.int16:
+            data = data.astype(numpy.float32) / 2**15
+        input_buffer = io.BytesIO(data.tobytes())
+        byte_rate = samplerate * 4
     start = time.time()
     total_bytes_read = 0
     while True:
@@ -80,8 +101,9 @@ def main():
     parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024, type=int)
     parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
                                                   " second of transfer", default=0, type=int)
+    parser.add_argument("-w", "--wave", help="Read this wave file instead of stdin", default="", type=str)
     args = parser.parse_args()
-    publish_samples(args.interface, args.port, args.block_size, args.debug_byte_rate)
+    publish_samples(args)
 
 
 if __name__ == "__main__":

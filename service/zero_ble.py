@@ -5,6 +5,10 @@ import logging
 import zmq
 import argparse
 import time
+import qrcode
+import base64
+import numpy
+
 
 UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -18,22 +22,30 @@ def uart_data_received(sender, data):
 def process_message(socket):
     logger.info("Waiting for next zmq message")
     data = socket.recv_json()
-
     leq = data["leq"]
     scores = data["scores"]
     messages = ["leq: %.2f dB" % leq]
-    sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
-    if len(scores) > 0 and sorted_tags[0][0] != "Silence":
-        max_line = 7
-        for y, key_value in zip(range(len(scores)), sorted_tags):
-            tag = key_value[0][slice(None, 24)]
-            messages.append('{:24s}: {:d} %'.format(tag, int(key_value[1])))
-            if y >= max_line:
-                break
-        offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
-        offset = offset / -3600
-        return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10messages=%s;\n\x10updateScreen();\n"\
-            % (time.time(), offset, repr(messages).encode('UTF-8'))
+    if len(scores) > 0:
+        sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
+        found_tags = sorted_tags[:][0]
+        if "Rail transport" in found_tags or "Train" in found_tags:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=2,
+                border=0,
+            )
+            qr.add_data("https://sv.org/AdKdv?")
+            qr_matrix = numpy.array(qr.get_matrix())
+            qr_bits = numpy.packbits(qr_matrix).tobytes()
+            pixljs_image = "qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
+            qr_matrix.shape[0], qr_matrix.shape[1],
+            base64.b64encode(qr_bits).decode("ascii"))
+            # Set time for sleeping at night
+            offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
+            offset = offset / -3600
+            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10updateScreen();\n"\
+                % (time.time(), offset, pixljs_image)
     return ""
 
 """

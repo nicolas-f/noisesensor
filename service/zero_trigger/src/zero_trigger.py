@@ -427,7 +427,7 @@ if __name__ == "__main__":
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
-    parser.add_argument("--yamnet_sound_event_windows", help="Number of windows to recognise sound source", default=10,
+    parser.add_argument("--yamnet_sound_event_windows", help="Number of windows to recognise sound source", default=5,
                         type=int)
     parser.add_argument("--yamnet_leq_interval", help="Leq period for triggering scan of audio source", default=1.0,
                         type=float)
