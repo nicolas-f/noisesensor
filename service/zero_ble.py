@@ -30,7 +30,10 @@ def process_message(socket):
             messages.append('{:24s}: {:d} %'.format(tag, int(key_value[1])))
             if y >= max_line:
                 break
-        return b"\x03\x10messages=%s;\n\x10updateScreen();\n" % repr(messages).encode('UTF-8')
+        offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
+        offset = offset / -3600
+        return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10messages=%s;\n\x10updateScreen();\n"\
+            % (time.time(), offset, repr(messages).encode('UTF-8'))
     return ""
 
 """
