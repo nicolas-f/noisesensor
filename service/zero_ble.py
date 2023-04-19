@@ -9,7 +9,6 @@ import qrcode
 import base64
 import numpy
 
-
 UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 logger = logging.getLogger(__name__)
@@ -39,14 +38,15 @@ def process_message(socket):
             qr_matrix = numpy.array(qr.get_matrix())
             qr_bits = numpy.packbits(qr_matrix).tobytes()
             pixljs_image = "qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
-            qr_matrix.shape[0], qr_matrix.shape[1],
-            base64.b64encode(qr_bits).decode("ascii"))
+                qr_matrix.shape[0], qr_matrix.shape[1],
+                base64.b64encode(qr_bits).decode("ascii"))
             # Set time for sleeping at night
             offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
             offset = offset / -3600
-            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10updateScreen();\n"\
+            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10updateScreen();\n" \
                 % (time.time(), offset, pixljs_image)
     return ""
+
 
 """
 How to overwrite Flash:
@@ -54,6 +54,8 @@ How to overwrite Flash:
 command:
 "\u0010reset();\n\u0010print()\n\u0010setTime(1681798003.809);E.setTimeZone(2)\n\u0010\u001b[1drequire(\"Storage\").write(\".bootcde\",\"// Disable logging events to screen\\nBluetooth.setConsole(1);\\n\",0,939);\n\u0010\u001b[2dload()\n\n"
 """
+
+
 async def main(config):
     address = None
     while address is None:
@@ -104,4 +106,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main(args))
-
