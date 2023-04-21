@@ -8,6 +8,7 @@ var alarmTimer = 0;
 var turnOffScreenTimer = 0;
 var alarmStopTimer = 0;
 var alarmEnabled = false;
+var alarmOnTime=250;
 var qrcode = { width: 25, height : 25, buffer : atob("/ps/wTEQbovLt0GV26Uq7BFRB/qq/gFsANpzoNQkL5btbS6PKPG1rg3gCEvebT9roi2DY/sAfkW/lCowSXE7rv+d1BMO6S0/BUY3/qaEgA==") };
 var display_refresh_timer = 0;
 function makeColorArray(r,g,b) {
@@ -26,16 +27,17 @@ var ledState3 = makeColorArray(0, 0, 0);
 function buzzerSequence() {
     if(!alarmEnabled) {
         digitalWrite(PIN_BUZZER,0);
+        require("neopixel").write(PIN_NEOPIXEL, ledState3);
     } else {
         if(alarmPos == 0) {
             analogWrite(PIN_BUZZER,0.5,{freq:800});
             require("neopixel").write(PIN_NEOPIXEL, ledState0);
-            setTimeout(buzzerSequence, 250);
+            setTimeout(buzzerSequence, alarmOnTime);
             alarmPos += 1;
         } else if(alarmPos == 1) {
             analogWrite(PIN_BUZZER,0.5,{freq:900});
             require("neopixel").write(PIN_NEOPIXEL, ledState1);
-            setTimeout(buzzerSequence, 250);
+            setTimeout(buzzerSequence, alarmOnTime);
             alarmPos += 1;
         } else {
             digitalWrite(PIN_BUZZER,0);
@@ -101,6 +103,9 @@ function main() {
 
 // Test button
 setWatch(main, BTN, {edge:"rising", debounce:50, repeat:true});
+
+// Stop alarm button
+setWatch(function() {alarmEnabled = false;turnOnOffScreenBacklight(0, 0);}, BTN3, {edge:"rising", debounce:50, repeat:true});
 
 // Update screen text without setting up alarm
 updateScreen();
