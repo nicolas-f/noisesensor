@@ -152,8 +152,12 @@ class TriggerProcessor:
         if yamnet_class_map is None:
             yamnet_class_map = files('yamnet').joinpath('yamnet_class_threshold_map.csv')
         self.yamnet_classes = read_yamnet_class_and_threshold(yamnet_class_map)
-        self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
-                                        self.yamnet_config.sample_rate)
+        if self.config.yamnet_cutoff_frequency > 0:
+            self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
+                                            self.yamnet_config.sample_rate)
+        else:
+            self.sos = None
+
 
     def butter_highpass(self, cutoff, fs, order=4):
         return signal.butter(order, cutoff / (fs / 2.0), btype='high', output='sos')
@@ -425,7 +429,7 @@ if __name__ == "__main__":
                         default="tcp://*:10002")
     parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
     parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
-    parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=100, type=float)
+    parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=0, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
     parser.add_argument("--yamnet_sound_event_windows", help="Number of windows to recognise sound source", default=5,
                         type=int)
