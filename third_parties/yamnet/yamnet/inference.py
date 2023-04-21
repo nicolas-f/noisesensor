@@ -25,7 +25,7 @@ import tensorflow as tf
 
 import params as yamnet_params
 import yamnet as yamnet_model
-
+import math
 
 def main(argv):
   assert argv, 'Usage: inference.py <wav file> <wav file> ...'
@@ -47,12 +47,19 @@ def main(argv):
       waveform = np.mean(waveform, axis=1)
     if sr != params.sample_rate:
       waveform = resampy.resample(waveform, sr, params.sample_rate)
+    # apply gain
+    max_value = max(1e-12, float(np.max(np.abs(waveform))))
+    gain = 10 * math.log10(1 / max_value)
+    max_gain = 20
+    print("Max gain %.2f signal max value gain %.2f " % (max_gain, gain))
+    gain = min(max_gain, gain)
+    waveform *= 10 ** (gain / 10.0)
 
     # Predict YAMNet classes.
     scores, embeddings, spectrogram = yamnet(waveform)
     # Scores is a matrix of (time_frames, num_classes) classifier scores.
     # Average them along time to get an overall classifier output for the clip.
-    prediction = np.mean(scores, axis=0)
+    prediction = np.max(scores, axis=0)
     # Report the highest-scoring classes and their scores.
     top5_i = np.argsort(prediction)[::-1][:5]
     print(file_name, ':\n' +

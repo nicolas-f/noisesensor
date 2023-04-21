@@ -318,7 +318,7 @@ class TriggerProcessor:
                             # Average them along with time to get an overall classifier output for the clip.
                             # You can count the number of trigger events with this line :
                             # np.unique((all_scores > self.yamnet_classes[1]).nonzero()[1], return_counts=True)
-                            prediction = np.average(all_scores, axis=0)
+                            prediction = np.max(all_scores, axis=0)
                             # filter out classes that are below threshold values
                             classes_threshold_index = list(map(int, (prediction > self.yamnet_classes[1]).nonzero()[0]))
                             if len(classes_threshold_index) == 0:

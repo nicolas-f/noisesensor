@@ -43,7 +43,7 @@ def process_message(socket):
             # Set time for sleeping at night
             offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
             offset = offset / -3600
-            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10updateScreen();\n" \
+            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10main();\n" \
                 % (time.time(), offset, pixljs_image)
     return ""
 

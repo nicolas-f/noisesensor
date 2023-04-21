@@ -38,6 +38,44 @@ import zmq
 import argparse
 import time
 import datetime
+import io
+import os
+
+class AudioFolderPlayListBuffer(io.BytesIO):
+    def __init__(self, folder_or_file, sample_rate):
+        super().__init__(b"")
+        self.sample_rate = sample_rate
+        self.playlist = []
+        if os.path.isdir(folder_or_file):
+            self.playlist = [folder_or_file+os.sep+filepath for filepath in os.listdir(folder_or_file) if filepath.lower().endswith(".wav")]
+        else:
+            self.playlist.append(folder_or_file)
+
+    def get_bytes_rate(self):
+        return self.sample_rate * 4
+
+    def read(self, __size: int | None = ...) -> bytes:
+        if len(self.getbuffer()) == self.tell():
+            import soundfile as sf
+            import random
+            import numpy as np
+            # push new data
+            file_name = self.playlist[random.randrange(0, len(self.playlist))]
+            print("Playing " + file_name)
+            wav_data, sr = sf.read(file_name, dtype=np.int16)
+            assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+            waveform = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+            waveform = waveform.astype('float32')
+            # Convert to mono and the sample rate expected by YAMNet.
+            if len(waveform.shape) > 1:
+              waveform = np.mean(waveform, axis=1)
+            if sr != self.sample_rate:
+                import resampy
+                waveform = resampy.resample(waveform, sr, self.sample_rate)
+                super().__init__(b"")
+                self.write(waveform.tobytes())
+                self.seek(0)
+        return super().read(__size)
 
 
 def publish_samples(args):
@@ -55,19 +93,8 @@ def publish_samples(args):
     if args.wave == "":
         input_buffer = sys.stdin.buffer
     else:
-        import numpy
-        import io
-        import scipy
-        samplerate, data = scipy.io.wavfile.read(args.wave)
-        print("Audio files sample rate is %d Hz" % samplerate)
-        if data.shape[1] > 1:
-            data = data[:, 0]
-        if data.dtype == numpy.int32:
-            data = data.astype(numpy.float32) / 2**31
-        elif data.dtype == numpy.int16:
-            data = data.astype(numpy.float32) / 2**15
-        input_buffer = io.BytesIO(data.tobytes())
-        byte_rate = samplerate * 4
+        input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate)
+        byte_rate = input_buffer.get_bytes_rate()
     start = time.time()
     total_bytes_read = 0
     while True:
@@ -98,10 +125,12 @@ def main():
 
     parser.add_argument("-p", "--port", help="Port to publish samples", default=10001, type=int)
     parser.add_argument("-i", "--interface", help="Interface to publish", default="*", type=str)
-    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024, type=int)
+    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=16000, type=int)
+    parser.add_argument("-r", "--sample_rate", help="Set frequency of debug file", default=16000, type=int)
     parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
                                                   " second of transfer", default=0, type=int)
-    parser.add_argument("-w", "--wave", help="Read this wave file instead of stdin", default="", type=str)
+    parser.add_argument("-w", "--wave", help="File name or folder containing wave file(s), will be used instead of"
+                                             " stdin", default="", type=str)
     args = parser.parse_args()
     publish_samples(args)
 
