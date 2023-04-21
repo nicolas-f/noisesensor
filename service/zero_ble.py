@@ -26,7 +26,7 @@ def process_message(socket):
     messages = ["leq: %.2f dB" % leq]
     if len(scores) > 0:
         sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
-        found_tags = sorted_tags[:][0]
+        found_tags = [v[0] for v in sorted_tags]
         if "Rail transport" in found_tags or "Train" in found_tags:
             qr = qrcode.QRCode(
                 version=1,
@@ -37,9 +37,9 @@ def process_message(socket):
             qr.add_data("https://sv.org/AdKdv?")
             qr_matrix = numpy.array(qr.get_matrix())
             qr_bits = numpy.packbits(qr_matrix).tobytes()
-            pixljs_image = "qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
+            pixljs_image = b"qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
                 qr_matrix.shape[0], qr_matrix.shape[1],
-                base64.b64encode(qr_bits).decode("ascii"))
+                base64.b64encode(qr_bits))
             # Set time for sleeping at night
             offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
             offset = offset / -3600
