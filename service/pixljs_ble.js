@@ -4,12 +4,18 @@ backlight = 0;
 var PIN_BUZZER = D3; // Pin Buzzer is connected to
 var PIN_NEOPIXEL = D8; // Pin Addressable Led is connected to
 var alarmPos = 0;
+var lightPos = 0;
 var alarmTimer = 0;
 var turnOffScreenTimer = 0;
 var alarmStopTimer = 0;
 var alarmEnabled = false;
 var alarmOnTime=250;
-var qrcode = { width: 25, height : 25, buffer : atob("/ps/wTEQbovLt0GV26Uq7BFRB/qq/gFsANpzoNQkL5btbS6PKPG1rg3gCEvebT9roi2DY/sAfkW/lCowSXE7rv+d1BMO6S0/BUY3/qaEgA==") };
+var lightLongPauseOff=5000;    // Stop blinking this time in ms
+var lightShortPauseOn = 10;    // led on time while blinking
+var lightShortPauseOff = 100; // led off time while blinking
+var lightCountSequence = 10; // Number of blink for each sequence
+
+var qrcode = { width: 21, height : 21, buffer : atob("/tP8ERBuqrt1tduvrsEJB/qv4A8A8rzpbD/AzReIoqPr7IB/Q/lCEEO8unCt1Vgup0kFvx/sLgA=") };
 var display_refresh_timer = 0;
 function makeColorArray(r,g,b) {
     c = new Uint8ClampedArray(10*3);
@@ -20,29 +26,44 @@ function makeColorArray(r,g,b) {
     }
    return c;
 }
-var ledState0 = makeColorArray(130, 200, 0);
-var ledState1 = makeColorArray(50, 0, 200);
-var ledState3 = makeColorArray(0, 0, 0);
+var ledState0 = makeColorArray(0, 0, 0);
+var ledState1 = makeColorArray(255, 255, 255);
 
 function buzzerSequence() {
     if(!alarmEnabled) {
         digitalWrite(PIN_BUZZER,0);
-        require("neopixel").write(PIN_NEOPIXEL, ledState3);
     } else {
         if(alarmPos == 0) {
             analogWrite(PIN_BUZZER,0.5,{freq:800});
-            require("neopixel").write(PIN_NEOPIXEL, ledState0);
             setTimeout(buzzerSequence, alarmOnTime);
             alarmPos += 1;
         } else if(alarmPos == 1) {
             analogWrite(PIN_BUZZER,0.5,{freq:900});
-            require("neopixel").write(PIN_NEOPIXEL, ledState1);
             setTimeout(buzzerSequence, alarmOnTime);
             alarmPos += 1;
         } else {
             digitalWrite(PIN_BUZZER,0);
-            require("neopixel").write(PIN_NEOPIXEL, ledState3);
-            setTimeout(buzzerSequence, 10000);
+            setTimeout(buzzerSequence, 20000);
+            alarmPos = 0;
+        }
+    }
+}
+
+function lightSequence() {
+    if(!alarmEnabled) {
+        require("neopixel").write(PIN_NEOPIXEL, ledState0);  // blinking off state
+        alarmPos = 0;
+    } else {
+        if(alarmPos % 2 == 0 && alarmPos < lightCountSequence * 2) {
+            require("neopixel").write(PIN_NEOPIXEL, ledState1); // blinking on state
+            setTimeout(lightSequence, lightShortPauseOn);
+            alarmPos += 1;
+        } else if(alarmPos % 2 != 0 && alarmPos < lightCountSequence * 2) {
+            require("neopixel").write(PIN_NEOPIXEL, ledState0);  // blinking off state
+            setTimeout(lightSequence, lightShortPauseOff);
+            alarmPos += 1;
+        } else {
+            setTimeout(lightSequence, lightLongPauseOff);
             alarmPos = 0;
         }
     }
@@ -98,6 +119,7 @@ function main() {
         turnOnOffScreenBacklight(1, 300000);
         alarmEnabled = true;
         alarmTimer = setTimeout(buzzerDelay, 5000);
+        lightSequence();
     }
 }
 
