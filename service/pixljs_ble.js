@@ -10,12 +10,17 @@ var turnOffScreenTimer = 0;
 var alarmStopTimer = 0;
 var alarmEnabled = false;
 var alarmOnTime=250;
+var buzzerTimeDelay=20000;
 var lightLongPauseOff=5000;    // Stop blinking this time in ms
 var lightShortPauseOn = 10;    // led on time while blinking
 var lightShortPauseOff = 100; // led off time while blinking
 var lightCountSequence = 10; // Number of blink for each sequence
 
 var qrcode = { width: 21, height : 21, buffer : atob("/tP8ERBuqrt1tduvrsEJB/qv4A8A8rzpbD/AzReIoqPr7IB/Q/lCEEO8unCt1Vgup0kFvx/sLgA=") };
+var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
+var checkImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAABAAA4AAfAAPgQHwOD4Hx8A++AH/AA/gAHwAA4AAEAAAAAAAAAAAA=")};
+var demoImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAAAAAAAAAAOdt6UVSl1UpRFLnReAAAAAAAAAAAAAAAAAAAAAAAAAAA=")};
+
 var display_refresh_timer = 0;
 function makeColorArray(r,g,b) {
     c = new Uint8ClampedArray(10*3);
@@ -43,7 +48,7 @@ function buzzerSequence() {
             alarmPos += 1;
         } else {
             digitalWrite(PIN_BUZZER,0);
-            setTimeout(buzzerSequence, 20000);
+            setTimeout(buzzerSequence, buzzerTimeDelay);
             alarmPos = 0;
         }
     }
@@ -90,12 +95,20 @@ function turnOnOffScreenBacklight(newState, delay_turn_off) {
 
 function updateScreen() {
   g.clear();
+  // Display button icons
+  // button 1 BTN1
+  g.drawImage(zzImage, 0, 0);
+  // button 3
+  g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
+  // button 2
+  g.drawImage(checkImage, g.getWidth() - checkImage.width, 0);
   y=0;
   // Display date
   var t = new Date(); // get the current date and time
-  var time = t.toString().replace(/\d\d:.*/,"")+t.getHours()+":"+("0"+t.getMinutes()).substr(-2)+":"+("0"+t.getSeconds()).substr(-2);
-  g.drawString(time, 0, y);
+  var time = t.getHours()+":"+("0"+t.getMinutes()).substr(-2)+":"+("0"+t.getSeconds()).substr(-2);
+  g.drawString(time, g.getWidth() / 2 - g.stringMetrics(time).width / 2, y);
   y += g.stringMetrics(time).height;
+  // Resize qrcode if qrcode size is smaller than 2x screen size
   if(qrcode.height * 2 <= g.getHeight()) {
     g.drawImage(qrcode, g.getWidth() / 2 - qrcode.width, g.getHeight() / 2 - qrcode.height, options = {scale: 2});
   } else {
@@ -119,16 +132,16 @@ function main() {
     if(!alarmEnabled) {
         turnOnOffScreenBacklight(1, 300000);
         alarmEnabled = true;
-        alarmTimer = setTimeout(buzzerDelay, 5000);
+        alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
         lightSequence();
     }
 }
 
 // Test button
-setWatch(main, BTN, {edge:"rising", debounce:50, repeat:true});
+setWatch(main, BTN4, {edge:"rising", debounce:50, repeat:true});
 
 // Stop alarm button
-setWatch(function() {alarmEnabled = false;turnOnOffScreenBacklight(0, 0);}, BTN3, {edge:"rising", debounce:50, repeat:true});
+setWatch(function() {alarmEnabled = false;turnOnOffScreenBacklight(0, 0);}, BTN2, {edge:"rising", debounce:50, repeat:true});
 
 // Update screen text without setting up alarm
 updateScreen();
