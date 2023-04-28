@@ -289,7 +289,7 @@ class TriggerProcessor(threading.Thread):
                     print("Download trigger information")
                     res = urlopen("https://dashboard.raw.noise-planet.org/get-trigger",
                                   context=ssl._create_unverified_context() if self.data["debug"] else None)
-                    jsondata = res.read()
+                    jsondata = res.read(0.)
                     jsonsha = hashlib.sha256(jsondata).digest()
                     self.last_fetch_trigger_info = time.time()
                     if trigger_sha != jsonsha:

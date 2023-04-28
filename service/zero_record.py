@@ -54,7 +54,7 @@ class AudioFolderPlayListBuffer(io.BytesIO):
     def get_bytes_rate(self):
         return self.sample_rate * 4
 
-    def read(self, __size: int | None = ...) -> bytes:
+    def read(self, __size: int = ...) -> bytes:
         if len(self.getbuffer()) == self.tell():
             import soundfile as sf
             import random
