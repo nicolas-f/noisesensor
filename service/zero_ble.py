@@ -35,7 +35,8 @@ def process_message(socket):
                 box_size=2,
                 border=0,
             )
-            qr.add_data("https://sv.org/AdKdv?")
+            qr.add_data("https://surveys.ifsttar.fr/limesurvey/index.php/273522?newtest=Y&QUE1=%.1f%%20dB"
+                        % data["leq"])
             qr_matrix = numpy.array(qr.get_matrix())
             qr_bits = numpy.packbits(qr_matrix).tobytes()
             pixljs_image = b"qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
