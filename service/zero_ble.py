@@ -28,7 +28,7 @@ def process_message(socket):
         sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
         found_tags = [v[0] for v in sorted_tags]
         # if "Rail transport" in found_tags or "Train" in found_tags:
-        if "Finger snapping" in found_tags:
+        if "Whistling" in found_tags:
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
