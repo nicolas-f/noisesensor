@@ -1,5 +1,5 @@
 import asyncio
-from bleak import BleakClient
+from bleak import BleakClient, BleakError
 from bleak import BleakScanner
 import logging
 import zmq
@@ -73,29 +73,39 @@ async def main(config):
     socket.connect(config.input_address)
     socket.subscribe("")
     last_push = time.time()
+    tries = 0
     while True:
         c = process_message(socket)
         logger.info("Reconnect to " + repr(address))
-        async with BleakClient(address) as client:
-            await client.start_notify(UUID_NORDIC_RX, uart_data_received)
-            while True:
-                if len(c) > 0:
-                    last_push = time.time()
-                while len(c) > 0:
-                    await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
-                    c = c[20:]
-                await asyncio.sleep(0.125)  # wait for a response
-                event = socket.poll(timeout=config.disconnect_ble_timeout)
-                if event == 0:
-                    # Timeout, disconnect
-                    break
-                else:
-                    c = process_message(socket)
-                    if len(c) == 0 and time.time() - last_push > config.disconnect_ble_timeout:
+        try:
+            async with BleakClient(address) as client:
+                await client.start_notify(UUID_NORDIC_RX, uart_data_received)
+                while True:
+                    if len(c) > 0:
+                        last_push = time.time()
+                    while len(c) > 0:
+                        await client.write_gatt_char(UUID_NORDIC_TX, bytearray(c[0:20]), True)
+                        c = c[20:]
+                    await asyncio.sleep(0.125)  # wait for a response
+                    tries = 0
+                    event = socket.poll(timeout=config.disconnect_ble_timeout)
+                    if event == 0:
                         # Timeout, disconnect
-                        print("Disconnect bluetooth..")
                         break
-
+                    else:
+                        c = process_message(socket)
+                        if len(c) == 0 and time.time() - last_push > config.disconnect_ble_timeout:
+                            # Timeout, disconnect
+                            print("Disconnect bluetooth..")
+                            break
+        except BleakError as e:
+            tries += 1
+            # try to reconnect if Bleak throw an error
+            if tries < 10:
+                await asyncio.sleep(0.125)  # wait for a response
+            else:
+                print(repr(e))
+                break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read trigger tags from zeromq and display summary on '

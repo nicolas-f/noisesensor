@@ -63,6 +63,7 @@ function lightSequence() {
             setTimeout(lightSequence, lightShortPauseOff);
             alarmPos += 1;
         } else {
+            require("neopixel").write(PIN_NEOPIXEL, ledState0);  // blinking off state
             setTimeout(lightSequence, lightLongPauseOff);
             alarmPos = 0;
         }
