@@ -3,6 +3,7 @@ Bluetooth.setConsole(1);
 backlight = 0;
 var PIN_BUZZER = D3; // Pin Buzzer is connected to
 var PIN_NEOPIXEL = D8; // Pin Addressable Led is connected to
+var FLASH_EN_PIN = D4;
 var alarmPos = 0;
 var lightPos = 0;
 var alarmTimer = 0;
@@ -71,6 +72,27 @@ function lightSequence() {
             require("neopixel").write(PIN_NEOPIXEL, ledState0);  // blinking off state
             setTimeout(lightSequence, lightLongPauseOff);
             alarmPos = 0;
+        }
+    }
+}
+
+function flashLightSequence() {
+    if(!alarmEnabled) {
+        digitalWrite(FLASH_EN_PIN, 0);  // blinking off state
+        lightPos = 0;
+    } else {
+        if(lightPos % 2 == 0 && lightPos < lightCountSequence * 2) {
+            analogWrite(FLASH_EN_PIN,0.5,{ freq : 250000 }); // blinking on state
+            setTimeout(lightSequence, lightShortPauseOn);
+            lightPos += 1;
+        } else if(lightPos % 2 != 0 && lightPos < lightCountSequence * 2) {
+            digitalWrite(FLASH_EN_PIN, 0);  // blinking off state  // blinking off state
+            setTimeout(lightSequence, lightShortPauseOff);
+            lightPos += 1;
+        } else {
+            digitalWrite(FLASH_EN_PIN, 0);  // blinking off state
+            setTimeout(lightSequence, lightLongPauseOff);
+            lightPos = 0;
         }
     }
 }
