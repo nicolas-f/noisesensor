@@ -1,7 +1,7 @@
 // Disable logging events to screen
 Bluetooth.setConsole(1);
 backlight = 0;
-var PIN_BUZZER = D3; // Pin Buzzer is connected to
+var PIN_BUZZER = D6; // Pin Buzzer is connected to
 var PIN_NEOPIXEL = D8; // Pin Addressable Led is connected to
 var FLASH_EN_PIN = D4;
 var alarmPos = 0;
@@ -83,15 +83,15 @@ function flashLightSequence() {
     } else {
         if(lightPos % 2 == 0 && lightPos < lightCountSequence * 2) {
             analogWrite(FLASH_EN_PIN,0.5,{ freq : 250000 }); // blinking on state
-            setTimeout(lightSequence, lightShortPauseOn);
+            setTimeout(flashLightSequence, lightShortPauseOn);
             lightPos += 1;
         } else if(lightPos % 2 != 0 && lightPos < lightCountSequence * 2) {
             digitalWrite(FLASH_EN_PIN, 0);  // blinking off state  // blinking off state
-            setTimeout(lightSequence, lightShortPauseOff);
+            setTimeout(flashLightSequence, lightShortPauseOff);
             lightPos += 1;
         } else {
             digitalWrite(FLASH_EN_PIN, 0);  // blinking off state
-            setTimeout(lightSequence, lightLongPauseOff);
+            setTimeout(flashLightSequence, lightLongPauseOff);
             lightPos = 0;
         }
     }
@@ -155,7 +155,7 @@ function main() {
         turnOnOffScreenBacklight(1, 300000);
         alarmEnabled = true;
         alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
-        lightSequence();
+        flashLightSequence();
     }
 }
 
