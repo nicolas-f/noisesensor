@@ -16,6 +16,7 @@ var lightLongPauseOff=5000;    // Stop blinking this time in ms
 var lightShortPauseOn = 10;    // led on time while blinking
 var lightShortPauseOff = 100; // led off time while blinking
 var lightCountSequence = 10; // Number of blink for each sequence
+var alarmLength = 300000; // alarm time in ms
 
 var qrcode = { width: 21, height : 21, buffer : atob("/tP8ERBuqrt1tduvrsEJB/qv4A8A8rzpbD/AzReIoqPr7IB/Q/lCEEO8unCt1Vgup0kFvx/sLgA=") };
 var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
@@ -99,7 +100,7 @@ function flashLightSequence() {
 
 function buzzerDelay() {
   buzzerSequence();
-  alarmStopTimer = setTimeout(function() {alarmEnabled = false;}, 240000);
+  alarmStopTimer = setTimeout(function() {alarmEnabled = false;}, alarmLength-buzzerTimeDelay);
 }
 
 function turnOnOffScreenBacklight(newState, delay_turn_off) {
@@ -148,11 +149,11 @@ function stopScreenRefresh() {
 function main() {
     stopScreenRefresh();
     display_refresh_timer = setInterval(updateScreen, 1000);
-    setTimeout(stopScreenRefresh, 300000);
+    setTimeout(stopScreenRefresh, alarmLength);
     updateScreen();
     // Turn on backlight
     if(!alarmEnabled) {
-        turnOnOffScreenBacklight(1, 300000);
+        turnOnOffScreenBacklight(1, alarmLength);
         alarmEnabled = true;
         alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
         flashLightSequence();
