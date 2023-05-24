@@ -7,7 +7,7 @@ VERSION = "1.0.0"
 DESCR = "YAMNet is a pretrained deep net that predicts 521 audio event classes based on the AudioSet-YouTube corpus," \
         " and employing the Mobilenet_v1 depthwise-separable convolution architecture."
 URL = "https://github.com/tensorflow/models/tree/master/research/audioset/yamnet"
-REQUIRES = ["tensorflow"]
+REQUIRES = ["tensorflow", "resampy", "soundfile"]
 
 AUTHOR = "Manoj Plakal and Dan Ellis."
 EMAIL = "dan.ellis - at - gmail.com"
