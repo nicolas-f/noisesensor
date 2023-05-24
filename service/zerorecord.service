@@ -1,0 +1,24 @@
+[Unit]
+Description=zerotrigger service
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c '/usr/bin/arecord --disable-softvol -D plughw:CARD=Audio,DEV=0 -r 16000 -f FLOAT_LE -c 1 -t raw | /usr/bin/python3.9 -u /home/pi/noisesensor/service/zero_record.py -p 10001'
+WorkingDirectory=/home/pi/noisesensor/
+Restart=always
+RestartSec=5s
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+
+
+
+
+
