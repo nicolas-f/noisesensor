@@ -32,8 +32,8 @@ def main(argv):
 
   params = yamnet_params.Params()
   yamnet = yamnet_model.yamnet_frames_model(params)
-  yamnet.load_weights('yamnet.h5')
-  yamnet_classes = yamnet_model.class_names('yamnet_class_map.csv')
+  yamnet.load_weights('yamnet/yamnet.h5')
+  yamnet_classes = yamnet_model.class_names('yamnet/yamnet_class_map.csv')
 
   for file_name in argv:
     # Decode the WAV file.
