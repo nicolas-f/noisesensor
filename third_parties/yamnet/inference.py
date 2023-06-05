@@ -17,14 +17,14 @@
 from __future__ import division, print_function
 
 import sys
-
+import time
 import numpy as np
 import resampy
 import soundfile as sf
 import tensorflow as tf
 
-import params as yamnet_params
-import yamnet as yamnet_model
+import yamnet.params as yamnet_params
+from yamnet import yamnet as yamnet_model
 import math
 
 def main(argv):
@@ -56,7 +56,9 @@ def main(argv):
     waveform *= 10 ** (gain / 10.0)
 
     # Predict YAMNet classes.
+    deb = time.time()
     scores, embeddings, spectrogram = yamnet(waveform)
+    print("Computed in %.3f seconds" % (time.time() - deb))
     # Scores is a matrix of (time_frames, num_classes) classifier scores.
     # Average them along time to get an overall classifier output for the clip.
     prediction = np.max(scores, axis=0)
