@@ -1,4 +1,10 @@
-import scipy.signal as signal
+try:
+    import scipy.signal as signal
+except ImportError as e:
+    print("This optional module is requiring development dependencies."
+          " $ pip install noisesensor[dev]")
+    raise e
+
 """
 Create Filters parameters according to provided audio signal characteristics
  and wanted noise indicators.
@@ -46,6 +52,7 @@ THIRD_FREQUENCIES = [10.0, 12.5, 16.0, 20.0, 25.0, 31.5, 40.0, 50.0, 63.0,
                      500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0,
                      2500.0, 3150.0, 4000.0, 5000.0, 6300.0, 8000.0, 10000.0,
                      12500.0, 16000.0, 20000.0]
+
 
 class FilterDesign:
     """

@@ -2,8 +2,8 @@ import os.path
 import time
 import unittest
 import numpy
-from sonomkr.filterdesign import FilterDesign
-from sonomkr.spectrumchannel import SpectrumChannel, compute_leq
+from noisesensor.filterdesign import FilterDesign
+from noisesensor.spectrumchannel import SpectrumChannel, compute_leq
 import acoustics
 
 UNIT_TEST_PATH = os.path.dirname(os.path.abspath(__file__))
