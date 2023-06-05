@@ -24,4 +24,5 @@ ftpconfig.json
 # dataset of audio
 ESC-50-master
 yamnet.h5
+.tox
 
