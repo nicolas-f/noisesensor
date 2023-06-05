@@ -25,4 +25,5 @@ ftpconfig.json
 ESC-50-master
 yamnet.h5
 .tox
+*.tflite
 
