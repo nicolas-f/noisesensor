@@ -20,8 +20,7 @@ import csv
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers
-
-import .features as features_lib
+from .features import *
 
 
 def _batch_norm(name, params):
@@ -118,8 +117,8 @@ def yamnet_frames_model(params):
     - log_mel_spectrogram: (num_spectrogram_frames, num_mel_bins) spectrogram feature matrix
   """
   waveform = layers.Input(batch_shape=(None,), dtype=tf.float32)
-  waveform_padded = features_lib.pad_waveform(waveform, params)
-  log_mel_spectrogram, features = features_lib.waveform_to_log_mel_spectrogram_patches(
+  waveform_padded = pad_waveform(waveform, params)
+  log_mel_spectrogram, features = waveform_to_log_mel_spectrogram_patches(
       waveform_padded, params)
   predictions, embeddings = yamnet(features, params)
   frames_model = Model(
