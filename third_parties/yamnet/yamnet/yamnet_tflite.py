@@ -47,7 +47,7 @@ def main(argv):
     if len(waveform.shape) > 1:
       waveform = np.mean(waveform, axis=1)
 
-    sample_rate=16000
+    sample_rate = 16000
     if sr != sample_rate:
       waveform = resampy.resample(waveform, sr, sample_rate)
     # apply gain
@@ -68,6 +68,7 @@ def main(argv):
         interpreter.get_tensor(scores_output_index),
         interpreter.get_tensor(embeddings_output_index),
         interpreter.get_tensor(spectrogram_output_index))
+    print(scores.shape, embeddings.shape, spectrogram.shape)
     print("Computed in %.3f seconds" % (time.time() - deb))
     # Scores is a matrix of (time_frames, num_classes) classifier scores.
     # Average them along time to get an overall classifier output for the clip.

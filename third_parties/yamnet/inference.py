@@ -49,7 +49,7 @@ def main(argv):
       waveform = resampy.resample(waveform, sr, params.sample_rate)
     # apply gain
     max_value = max(1e-12, float(np.max(np.abs(waveform))))
-    gain = 10 * math.log10(1 / max_value)
+    gain = int(10 * math.log10(1 / max_value))
     max_gain = 20
     print("Max gain %.2f signal max value gain %.2f " % (max_gain, gain))
     gain = min(max_gain, gain)
@@ -58,6 +58,7 @@ def main(argv):
     # Predict YAMNet classes.
     deb = time.time()
     scores, embeddings, spectrogram = yamnet(waveform)
+    print(scores.shape, embeddings.shape, spectrogram.shape)
     print("Computed in %.3f seconds" % (time.time() - deb))
     # Scores is a matrix of (time_frames, num_classes) classifier scores.
     # Average them along time to get an overall classifier output for the clip.

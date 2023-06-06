@@ -12,7 +12,6 @@ def main():
 
     parser.add_argument("-p", "--port", help="Port to publish samples", default=10001, type=int)
     parser.add_argument("-i", "--interface", help="Interface to publish", default="127.0.0.1", type=str)
-    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=1024, type=int)
 
     args = parser.parse_args()
 

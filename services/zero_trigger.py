@@ -66,9 +66,32 @@ except ImportError:
 import soundfile as sf
 import io
 import datetime
-from yamnet import yamnet, params
+import tensorflow as tf
 import resampy
 from importlib.resources import files
+
+
+class Params:
+    """
+      Yamnet settings
+    """
+    sample_rate: float = 16000.0
+    stft_window_seconds: float = 0.025
+    stft_hop_seconds: float = 0.010
+    mel_bands: int = 64
+    mel_min_hz: float = 125.0
+    mel_max_hz: float = 7500.0
+    log_offset: float = 0.001
+    patch_window_seconds: float = 0.96
+    patch_hop_seconds: float = 0.48
+
+
+class Tensors:
+    cores_output_index = None
+    embeddings_output_index = None
+    spectrogram_output_index = None
+    waveform_input_index = None
+    scores_output_index = None
 
 
 def encrypt(audio_data, ssh_file):
@@ -142,12 +165,22 @@ class TriggerProcessor:
         self.samples_stack = collections.deque()
         self.socket = None
         self.socket_out = None
-        self.yamnet_config = params.Params()
-        self.yamnet = yamnet.yamnet_frames_model(self.yamnet_config)
-        yamnet_weights = self.config.yamnet_weights
-        if yamnet_weights is None:
-            yamnet_weights = files('yamnet').joinpath('yamnet.h5')
-        self.yamnet.load_weights(yamnet_weights)
+        self.yamnet_config = Params()
+        tflite_path = self.config.yamnet_weights
+        self.yamnet_interpreter = tf.lite.Interpreter(tflite_path)
+        self.tensors = Tensors()
+
+        input_details = self.yamnet_interpreter.get_input_details()
+        self.tensors.waveform_input_index = input_details[0]['index']
+        output_details = self.yamnet_interpreter.get_output_details()
+        self.tensors.scores_output_index = output_details[0]['index']
+        self.tensors.embeddings_output_index = output_details[1]['index']
+        self.tensors.spectrogram_output_index = output_details[2]['index']
+        self.yamnet_samples = np.zeros((int(config.yamnet_window_time *
+                                 self.yamnet_config.sample_rate)),
+                                       dtype=np.float32)
+        # where to place new samples
+        self.yamnet_samples_index = 0
         yamnet_class_map = self.config.yamnet_class_map
         if yamnet_class_map is None:
             yamnet_class_map = files('yamnet').joinpath('yamnet_class_threshold_map.csv')
@@ -190,53 +223,36 @@ class TriggerProcessor:
         self.socket_out = context.socket(zmq.PUB)
         self.socket_out.bind(self.config.output_address)
 
-    def process_tags(self, samples_to_process: int):
+    def process_tags(self):
         # check for sound recognition tags
-        waveform = np.zeros((int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)),
-                            dtype=np.float32)
-        total_samples = sum([len(s) for s in self.samples_stack])
-        first_index = max(0, total_samples - samples_to_process)
-        # copy from older samples to newer samples (using only the last samples_to_process of the stack)
-        cursor = 0
-        for samples in self.samples_stack:
-            if cursor + len(samples) <= first_index:
-                # We have already processed those samples (not marked as to process)
-                cursor += len(samples)
-                continue
-            if cursor < first_index:
-                # only some samples from this array have to be processed
-                samples_slice = samples[first_index - cursor:]
-                waveform[0:len(samples_slice)] = samples_slice
-                cursor += len(samples_slice)
-            else:
-                copy_from = cursor - first_index
-                copy_to = min(len(samples), first_index + len(waveform) - cursor)
-                if copy_to > 0:
-                    waveform[copy_from:copy_from + copy_to] = samples[:copy_to]
-                    cursor += copy_to
-                else:
-                    break
-        # resample if necessary
-        if self.config.sample_rate != self.yamnet_config.sample_rate:
-            waveform = resampy.resample(waveform, self.config.sample_rate, self.yamnet_config.sample_rate)
         # filter and normalize signal
         if self.config.yamnet_cutoff_frequency > 0:
-            waveform = self.butter_highpass_filter(waveform)
+            waveform = self.butter_highpass_filter(self.yamnet_samples)
         if self.config.yamnet_max_gain > 0:
             # apply gain
-            max_value = max(1e-12, float(np.max(np.abs(waveform))))
+            max_value = max(1e-12, float(np.max(np.abs(self.yamnet_samples))))
             gain = 10 * math.log10(1 / max_value)
             gain = min(self.config.yamnet_max_gain, gain)
-            waveform *= 10 ** (gain / 10.0)
+            self.yamnet_samples *= 10 ** (gain / 10.0)
         # Predict YAMNet classes.
-        scores, embeddings, spectrogram = self.yamnet(waveform)
+        self.yamnet_interpreter.resize_tensor_input(
+            self.tensors.waveform_input_index,
+            [len(self.yamnet_samples)], strict=True)
+        self.yamnet_interpreter.allocate_tensors()
+        self.yamnet_interpreter.set_tensor(self.tensors.waveform_input_index,
+                                           self.yamnet_samples)
+        self.yamnet_interpreter.invoke()
+        scores, embeddings, spectrogram = (
+            self.yamnet_interpreter.get_tensor(self.tensors.scores_output_index),
+            self.yamnet_interpreter.get_tensor(self.tensors.embeddings_output_index),
+            self.yamnet_interpreter.get_tensor(self.tensors.spectrogram_output_index))
         return scores, embeddings, spectrogram
 
     def fetch_audio_data(self, feed_cache=True):
         if feed_cache:
             if self.samples_stack is None:
                 self.samples_stack = collections.deque()
-        audio_data_bytes = array.array('f', self.socket.recv())
+        audio_data_bytes = np.frombuffer(self.socket.recv(), dtype=np.single)
         self.total_read += len(audio_data_bytes)
         if feed_cache:
             self.samples_stack.append(audio_data_bytes)
@@ -248,123 +264,92 @@ class TriggerProcessor:
         return audio_data_bytes
 
     def run(self):
-        trigger_sha = str("")
+        reference_pressure = 1 / 10 ** (
+                    (94 - self.config.sensitivity) / 20.0)
         status = "wait_trigger"
-        start_processing = self.unix_time()
-        trigger_time = 0
         last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         self.init_socket()
         document = {}
         while True:
-            if last_day_of_year != datetime.datetime.now().timetuple().tm_yday and "trigger_count" in self.config:
+            cur_time = time.time()
+            if last_day_of_year != datetime.datetime.now().timetuple().tm_yday\
+                    and "trigger_count" in self.config:
                 # reset trigger counter each day
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config.trigger_count
-            if self.config is not None and status == "wait_trigger":
-                cur_time = time.time() * 1000
-                if cur_time > self.config.date_end:
-                    # Do not cache samples anymore
-                    self.samples_stack = collections.deque()
-                elif self.remaining_triggers > 0 and cur_time > self.config.date_start and self.check_hour():
-                    # Time condition ok
-                    # now check audio condition
-                    unprocessed_samples = 0
-                    while status == "wait_trigger":
-                        # fetch next packet
-                        audio_data_bytes = self.fetch_audio_data()
-                        unprocessed_samples += len(audio_data_bytes)
-                        if unprocessed_samples / self.config.sample_rate >= self.config.yamnet_leq_interval:
-                            # compute leq
-                            reference_pressure = 1 / 10 ** ((94 - self.config.sensitivity) / 20.0)
-                            sum_samples = 1e-12
-                            processed_samples = 0
-                            samples_to_process = int(self.config.yamnet_leq_interval * self.config.sample_rate)
-                            # retrieve the last samples_to_process samples to a numpy array
-                            for samples in reversed(self.samples_stack):
-                                if processed_samples >= samples_to_process:
-                                    break
-                                waveform = samples
-                                if len(waveform) + processed_samples > samples_to_process:
-                                    window = len(waveform) - (samples_to_process - processed_samples)
-                                    waveform = waveform[window:]
-                                processed_samples += len(waveform)
-                                sum_samples += np.sum(np.power(np.array(waveform) / reference_pressure, 2.0))
-                            leq = 10 * math.log10(sum_samples / processed_samples)
-                            if leq >= self.config.min_leq:
-                                print("Leq: %.2f dB > %.2f dB, so now try to recognize sound source "
-                                      % (leq, self.config.min_leq))
-                                status = "sound_event_detection"
-                                break
-            if status == "sound_event_detection":
-                # Samples pushed to samples_stack but not processed in sound recognition algorithm
-                unprocessed_samples = sum([len(s) for s in self.samples_stack])
-                remaining_window_count = self.config.yamnet_sound_event_windows
-                all_scores = None
-                total_process_time = 0
-                total_processed_samples = 0
-                while status == "sound_event_detection":
-                    while unprocessed_samples / self.config.sample_rate >= self.yamnet_config.patch_window_seconds:
-                        # leq condition ok
-                        deb_process = time.time()
-                        scores, embeddings, spectrogram = self.process_tags(unprocessed_samples)
-                        unprocessed_samples -= int(self.yamnet_config.patch_window_seconds * self.config.sample_rate)
-                        total_processed_samples += int(
-                            self.yamnet_config.patch_window_seconds * self.config.sample_rate)
-                        if all_scores is None:
-                            all_scores = scores
-                        else:
-                            all_scores = np.concatenate((all_scores, scores))
-                        total_process_time += time.time() - deb_process
-                        remaining_window_count -= 1
-                        if remaining_window_count <= 0:
-                            # Scores is a matrix of (time_frames, num_classes) classifier scores.
-                            # Average them along with time to get an overall classifier output for the clip.
-                            # You can count the number of trigger events with this line :
-                            # np.unique((all_scores > self.yamnet_classes[1]).nonzero()[1], return_counts=True)
-                            prediction = np.max(all_scores, axis=0)
-                            # filter out classes that are below threshold values
-                            classes_threshold_index = list(map(int, (prediction > self.yamnet_classes[1]).nonzero()[0]))
-                            if len(classes_threshold_index) == 0:
-                                # classifier rejected all known classes
-                                print("No classes found above yamnet threshold")
-                                self.samples_stack.clear()
-                                status = "wait_trigger"
-                                break
-                            # Sort by score
-                            classes_threshold_index = [classes_threshold_index[j] for j in
-                                       np.argsort([prediction[i]-self.yamnet_classes[1][i]
-                                                   for i in classes_threshold_index])[::-1]]
-                            # Compute a score between 0-100% from threshold to 1.0
-                            scores = {self.yamnet_classes[0][i]:
-                                      round(float(((prediction[i]-self.yamnet_classes[1][i]) /
-                                            (1-self.yamnet_classes[1][i])) * 100)) for i in classes_threshold_index}
-                            document = {"scores": scores,
-                                        "spectrogram": [[round(v, 3) for v in band] for band in
-                                                        spectrogram.numpy().tolist()],
-                                        "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
-                            tags = ' '.join('{:s}({:d}%)'.format(k, v)
-                                            for k,v in scores.items())
-                            self.remaining_triggers -= 1
-                            print("%s tags:%s processed in %.3f seconds for %.1f seconds of audio."
-                                  " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
-                                                                        tags, total_process_time,
-                                                                        total_processed_samples /
-                                                                        self.config.sample_rate,
-                                                                        self.remaining_triggers))
-                            if self.config.total_length > 0:
-                                # requesting audio data into the json file, so now record audio
-                                status = "record"
-                                break
-                            else:
-                                # no audio record, just send the recognized tags
-                                status = "wait_trigger"
-                                self.socket_out.send_json(document)
-                                self.samples_stack.clear()
-                                break
-                    # fetch next packet
-                    audio_data_bytes = self.fetch_audio_data()
-                    unprocessed_samples += len(audio_data_bytes)
+            if self.config is not None and status == "wait_trigger" and \
+                    (self.remaining_triggers > 0 or
+                     self.remaining_triggers == -1) and \
+                    cur_time > self.config.date_start and self.check_hour():
+                waveform = self.fetch_audio_data()
+                if self.config.sample_rate != self.yamnet_config.sample_rate:
+                    # resample if necessary
+                    waveform = resampy.resample(waveform,
+                                                self.config.sample_rate,
+                                                self.yamnet_config.sample_rate)
+                len_to_extract = min(len(waveform), len(self.yamnet_samples) -
+                                     self.yamnet_samples_index)
+                start_index = self.yamnet_samples_index
+                end_index = self.yamnet_samples_index + len_to_extract
+                if len_to_extract < len(waveform):
+                    waveform = waveform[:len_to_extract]
+                self.yamnet_samples[start_index:end_index] = waveform
+                self.yamnet_samples_index += len_to_extract
+                if self.yamnet_samples_index < len(self.yamnet_samples):
+                    # window is not complete so wait for more samples
+                    continue
+                self.yamnet_samples_index = 0 # reset index
+                sum_samples = np.sum(
+                    np.power(waveform / reference_pressure, 2.0))
+                leq = 10 * math.log10(sum_samples / len(waveform))
+                if leq >= self.config.min_leq:
+                    print("Leq: %.2f dB > %.2f dB, so now try to recognize"
+                          " sound source " % (leq, self.config.min_leq))
+                    deb = time.time()
+                    scores, embeddings, spectrogram = self.process_tags()
+                    total_process_time = time.time() - deb
+                    # Take maximum found prediction (was avg in the ref)
+                    prediction = np.max(scores, axis=0)
+                    # filter out classes that are below threshold values
+                    filter_pred = (prediction > self.yamnet_classes[1])
+                    filter_pred = filter_pred.nonzero()[0]
+                    classes_threshold_index = list(map(int, filter_pred))
+                    if len(classes_threshold_index) == 0:
+                        # classifier rejected all known classes
+                        print("No classes found above yamnet threshold")
+                        self.samples_stack.clear()
+                        status = "wait_trigger"
+                        continue
+                    # Sort by score
+                    classes_threshold_index = [classes_threshold_index[j] for j in
+                               np.argsort([prediction[i]-self.yamnet_classes[1][i]
+                                           for i in classes_threshold_index])[::-1]]
+                    # Compute a score between 0-100% from threshold to 1.0
+                    scores = {self.yamnet_classes[0][i]:
+                              round(float(((prediction[i]-self.yamnet_classes[1][i]) /
+                                    (1-self.yamnet_classes[1][i])) * 100)) for i in classes_threshold_index}
+                    document = {"scores": scores,
+                                "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
+                    tags = ' '.join('{:s}({:d}%)'.format(k, v)
+                                    for k,v in scores.items())
+                    if self.remaining_triggers > 0:
+                        self.remaining_triggers -= 1
+                    print("%s tags:%s \n processed in %.3f seconds for %.1f seconds of audio.\n"
+                          " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                                                                tags, total_process_time,
+                                                                len(self.yamnet_samples) /
+                                                                self.yamnet_config.sample_rate,
+                                                                self.remaining_triggers))
+                    if self.config.total_length > 0:
+                        # requesting audio data into the json file, so now record audio
+                        status = "record"
+                        continue
+                    else:
+                        # no audio record, just send the recognized tags
+                        status = "wait_trigger"
+                        self.socket_out.send_json(document)
+                        continue
             elif status == "record":
                 while status == "record":
                     audio_data_encrypt = ""
@@ -405,7 +390,7 @@ class TriggerProcessor:
                     self.socket_out.send_json(document)
                     self.samples_stack.clear()
                     status = "wait_trigger"
-            time.sleep(0.125)
+            time.sleep(0.05)
 
     def unix_time(self):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
@@ -417,9 +402,9 @@ if __name__ == "__main__":
     parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
     parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000,
                         type=int)
-    parser.add_argument("--trigger_count", help="limit the number of triggers by this count", default=10, type=int)
+    parser.add_argument("--trigger_count", help="limit the number of noise event recognition by day (-1 unlimited)", default=-1, type=int)
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
-    parser.add_argument("--total_length", help="record length total in seconds", default=10, type=float)
+    parser.add_argument("--total_length", help="record length total in seconds to be embedded into the output json", default=10, type=float)
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
     parser.add_argument("--sample_rate", help="audio sample rate", default=48000, type=int)
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
@@ -427,11 +412,11 @@ if __name__ == "__main__":
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
                         default="tcp://*:10002")
-    parser.add_argument("--yamnet_class_map", help="Yamnet HDF5 class csv file path", default=None)
-    parser.add_argument("--yamnet_weights", help="Yamnet HDF5 weight file path", default=None)
+    parser.add_argument("--yamnet_class_map", help="Yamnet CSV path yamnet_class_threshold_map.csv", required=True, type=str)
+    parser.add_argument("--yamnet_weights", help="Yamnet .tflite model download at https://tfhub.dev/google/lite-model/yamnet/tflite/1", type=str,required=True)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=0, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
-    parser.add_argument("--yamnet_sound_event_windows", help="Number of windows to recognise sound source", default=5,
+    parser.add_argument("--yamnet_window_time", help="Sound source recognition time in seconds", default=5.0,
                         type=int)
     parser.add_argument("--yamnet_leq_interval", help="Leq period for triggering scan of audio source", default=1.0,
                         type=float)
