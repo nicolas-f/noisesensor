@@ -361,21 +361,19 @@ class TriggerProcessor:
                         while len(self.samples_stack) > 0:
                             audio_samples = self.samples_stack.popleft()
                             remaining_samples -= len(audio_samples)
-                            samples_trigger.write(audio_samples)
+                            samples_trigger.write(audio_samples.tobytes())
                         # read audio samples until remaining_samples reached
                         while remaining_samples > 0:
                             audio_samples = self.fetch_audio_data(False)
                             remaining_samples -= len(audio_samples)
-                            samples_trigger.write(audio_samples)
+                            samples_trigger.write(audio_samples.tobytes())
                         audio_processing_start = time.time()
                         # Compress audio samples
                         output = io.BytesIO()
                         data, samplerate = sf.read(samples_trigger, format='RAW',
                                                    channels=1 if self.config.mono else 2,
                                                    samplerate=int(self.config.sample_rate),
-                                                   subtype=['PCM_16', 'PCM_32', 'PCM_32'][
-                                                       ['S16_LE', 'S32_LE', 'FLOAT_LE']
-                                                   .index(self.config.sample_format)])
+                                                   subtype='PCM_32')
                         channels = 1
                         with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
                             f.write(data)
