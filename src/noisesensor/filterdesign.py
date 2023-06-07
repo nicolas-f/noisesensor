@@ -152,12 +152,13 @@ class FilterDesign:
             subsampling_depth = 0
             data = self.get_filter(x)
             frequency_mid = data["center_frequency"]
+            frequency_high = data["max_frequency"]
             ds_factor = 10 if self.down_sampling == self.G10\
                 else 2
             while self.sample_rate % \
                     ds_factor ** (subsampling_depth+1) == 0\
                     and self.sample_rate / ds_factor **\
-                    (subsampling_depth+1) >= frequency_mid * 2:
+                    (subsampling_depth+1) >= frequency_high * 2:
                 subsampling_depth += 1
             data["subsampling_depth"] = subsampling_depth
             # compute the target frequency index for the used down-sampling

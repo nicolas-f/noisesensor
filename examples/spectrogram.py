@@ -20,10 +20,6 @@ def test_sinus(configuration):
 
     sc = SpectrumChannel(configuration, use_scipy=False, use_cascade=True)
 
-    # heat up process (numba compilation time)
-    sc.process_samples(samples)
-
-    deb = time.time()
     # find appropriate sampling
     stride = int(sample_rate)
     stride = round(stride / sc.minimum_samples_length) *\
@@ -40,8 +36,15 @@ def test_sinus(configuration):
     print("t, "+", ".join(fields))
     for t, spectrum in spectrogram:
         print(t+", "+spectrum)
-    print("Done in %.3f" % (time.time() - deb))
 
+    # timings
+
+    deb = time.time()
+    sc.process_samples(samples)
+    end_process = time.time()
+    process_time_per_second = (end_process - deb) / (len(samples) / sample_rate)
+    print("Process time per second of audio %.3f ms" %
+          (process_time_per_second * 1000.0))
 
 config = json.load(open("config_48000_third_octave.json", "r"))
 test_sinus(config)
