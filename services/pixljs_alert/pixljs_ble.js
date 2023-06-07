@@ -1,6 +1,3 @@
-// Disable logging events to screen
-Bluetooth.setConsole(1);
-backlight = 0;
 var PIN_BUZZER = D6; // Pin Buzzer is connected to
 var PIN_NEOPIXEL = D8; // Pin Addressable Led is connected to
 var FLASH_EN_PIN = D4;
@@ -17,6 +14,26 @@ var lightShortPauseOn = 10;    // led on time while blinking
 var lightShortPauseOff = 100; // led off time while blinking
 var lightCountSequence = 10; // Number of blink for each sequence
 var alarmLength = 300000; // alarm time in ms
+
+// Disable logging events to screen
+Bluetooth.setConsole(1);
+backlight = 0;
+
+// force timezone to UTC+0200
+E.setTimeZone(2);
+
+const allowed_periods = [
+    { start: "8h00", end: "12h00" },
+    { start: "14h00", end: "18h00" }
+];
+
+const calendar = [
+    { start: "8h00",end: "09h30" },
+    { start: "9h00",end: "12h30" },
+    { start: "12h30", end: "18h35" },
+    { start: "18h45", end: "23h10" },
+];
+
 
 var qrcode = { width: 21, height : 21, buffer : atob("/tP8ERBuqrt1tduvrsEJB/qv4A8A8rzpbD/AzReIoqPr7IB/Q/lCEEO8unCt1Vgup0kFvx/sLgA=") };
 var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
@@ -35,6 +52,88 @@ function makeColorArray(r,g,b) {
 }
 var ledState0 = makeColorArray(0, 0, 0);
 var ledState1 = makeColorArray(255, 255, 255);
+
+class SimpleTime {
+    constructor(hour, minute) {
+        this.hour = hour;
+        this.minute = minute;
+    }
+    static now() {
+        var date = new Date();
+        return new SimpleTime(date.getHours(), date.getMinutes());
+    }
+    toSeconds() {
+        return this.hour * 3600 + this.minute * 60;
+    }
+    valueOf() {
+        return this.toSeconds();
+    }
+    toString() {
+        return this.hour + "h" + this.minute.toString().padStart(2, '0');
+    }
+    isBetween(start, end) {
+        return (this >= start && this < end);
+    }
+}
+
+
+var parse_element = function(element) {
+    var start, end;
+    var start_result = element.start.split("h");
+    if (start_result && start_result.length == 2) {
+        start = new SimpleTime(parseInt(start_result[0],10), parseInt(start_result[1],10));
+    } 
+    else {
+        return null;
+    }
+    var end_result = element.end.split("h");
+    if (end_result && end_result.length == 2) {
+        end = new SimpleTime(parseInt(end_result[0],10), parseInt(end_result[1],10));
+    } 
+    else {
+        return null;
+    }
+    return { start: start, end: end };
+};
+
+var parsed_calendar = calendar.map(calendar_element => {
+    var result = parse_element(calendar_element);
+    if (result) {
+        result = Object.assign(result, { alarm_sent: false });
+    }
+    return result;
+});
+var parsed_periods = allowed_periods.map(parse_element);
+
+function handle_train_event(now) {
+    var is_allowed = false;
+    parsed_periods.forEach(period => {
+        if (now.isBetween(period.start, period.end)) {
+            is_allowed = true;
+        }
+    });
+    var should_send = function(cal_el) {
+        if (now.isBetween(cal_el.start, cal_el.end)) {
+            if (cal_el.alarm_sent === true) {
+                return false;
+            }
+            cal_el.alarm_sent = true;
+            return true;
+        }
+        if (now >= cal_el.end) {
+            cal_el.alarm_sent = false;
+        }
+        if (now < cal_el.start) {
+            cal_el.alarm_sent = false;
+        }
+        return false;
+    };
+
+    if (parsed_calendar.some(should_send)) {
+        return is_allowed;
+    }
+    return false;
+}
 
 function buzzerSequence() {
     if(!alarmEnabled) {
@@ -147,16 +246,43 @@ function stopScreenRefresh() {
 }
 
 function main() {
-    stopScreenRefresh();
-    display_refresh_timer = setInterval(updateScreen, 1000);
-    setTimeout(stopScreenRefresh, alarmLength);
-    updateScreen();
-    // Turn on backlight
-    if(!alarmEnabled) {
-        turnOnOffScreenBacklight(1, alarmLength);
-        alarmEnabled = true;
-        alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
-        flashLightSequence();
+    const now = SimpleTime.now();
+    if (handle_train_event(now)) {
+      print("train trigger at : " + now.toString());
+      stopScreenRefresh();
+      display_refresh_timer = setInterval(updateScreen, 1000);
+      setTimeout(stopScreenRefresh, alarmLength);
+      updateScreen();
+      // Turn on backlight
+      if(!alarmEnabled) {
+          turnOnOffScreenBacklight(1, alarmLength);
+          alarmEnabled = true;
+          alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
+          flashLightSequence();
+      }
+    }
+    else {
+      print("train ignored at : " + now.toString());
+    }
+}
+
+function test(now) {
+    if (handle_train_event(now)) {
+      print("train trigger at : " + now.toString());
+      stopScreenRefresh();
+      display_refresh_timer = setInterval(updateScreen, 1000);
+      setTimeout(stopScreenRefresh, alarmLength);
+      updateScreen();
+      // Turn on backlight
+      if(!alarmEnabled) {
+          turnOnOffScreenBacklight(1, alarmLength);
+          alarmEnabled = true;
+          alarmTimer = setTimeout(buzzerDelay, buzzerTimeDelay);
+          flashLightSequence();
+      }
+    }
+    else {
+      print("train ignored at : " + now.toString());
     }
 }
 
@@ -167,4 +293,5 @@ setWatch(main, BTN4, {edge:"rising", debounce:50, repeat:true});
 setWatch(function() {alarmEnabled = false;turnOnOffScreenBacklight(0, 0);}, BTN2, {edge:"rising", debounce:50, repeat:true});
 
 // Update screen text without setting up alarm
+display_refresh_timer = setInterval(updateScreen, 1000);
 updateScreen();
