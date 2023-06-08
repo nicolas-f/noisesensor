@@ -54,7 +54,7 @@ spec = [
 ]
 
 
-@jitclass(spec)
+#@jitclass(spec)
 class DigitalFilter:
     def __init__(self, numerator, denominator):
         assert len(numerator) == len(denominator)
@@ -76,12 +76,13 @@ class DigitalFilter:
         samples_len = len(samples_in)
         for i in range(samples_len):
             input_acc = 0
+            self.delay_2[self.circular_index] = samples_in[i]
             for j in range(self.order):
-                if i - j < 0:
+                input_acc += self.numerator[j] * self.delay_2[(i-j) % self.order]
+                if j == 0:
                     continue
-                input_acc += self.numerator[j] * samples_in[i-j]
-            for j in range(1, self.order):
-                input_acc -= self.denominator[j] * self.delay_1[(self.order-j+self.circular_index) % self.order]
+                input_acc -= self.denominator[j] * self.delay_1[
+                    (self.order - j + self.circular_index) % self.order]
             input_acc /= self.denominator[0]
             self.delay_1[self.circular_index] = input_acc
             self.circular_index = self.circular_index + 1
@@ -89,34 +90,34 @@ class DigitalFilter:
                 self.circular_index = 0
             samples_out[i] = input_acc
 
-            def filter(self, samples_in: float64[:], samples_out: float64[:]):
-                """
-                Direct form II transposed filter
-                @param samples_in: Input samples
-                @param samples_out: Output samples (must be same length as input)
-                @see Adapted & Converted from
-                https://rosettacode.org/wiki/Apply_a_digital_filter_(
-                direct_form_II_transposed)#Java
-                """
-                samples_len = len(samples_in)
-                circular_index = 0
-                for i in range(samples_len):
-                    input_acc = 0
-                    for j in range(self.order):
-                        if i - j < 0:
-                            continue
-                        input_acc += self.numerator[j] * samples_in[i - j]
-                    for j in range(1, self.order):
-                        if i - j < 0:
-                            continue
-                        input_acc -= self.denominator[j] * self.delay[
-                            (self.order - j + circular_index) % self.order]
-                    input_acc /= self.denominator[0]
-                    self.delay[circular_index] = input_acc
-                    circular_index = circular_index + 1
-                    if circular_index == self.order:
-                        circular_index = 0
-                    samples_out[i] = input_acc
+        def filter(self, samples_in: float64[:], samples_out: float64[:]):
+            """
+            Direct form II transposed filter
+            @param samples_in: Input samples
+            @param samples_out: Output samples (must be same length as input)
+            @see Adapted & Converted from
+            https://rosettacode.org/wiki/Apply_a_digital_filter_(
+            direct_form_II_transposed)#Java
+            """
+            samples_len = len(samples_in)
+            circular_index = 0
+            for i in range(samples_len):
+                input_acc = 0
+                for j in range(self.order):
+                    if i - j < 0:
+                        continue
+                    input_acc += self.numerator[j] * samples_in[i - j]
+                for j in range(1, self.order):
+                    if i - j < 0:
+                        continue
+                    input_acc -= self.denominator[j] * self.delay[
+                        (self.order - j + circular_index) % self.order]
+                input_acc /= self.denominator[0]
+                self.delay[circular_index] = input_acc
+                circular_index = circular_index + 1
+                if circular_index == self.order:
+                    circular_index = 0
+                samples_out[i] = input_acc
 
     def filter_leq(self, samples_in: float64[:]):
         """
