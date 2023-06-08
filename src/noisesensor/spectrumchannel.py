@@ -1,4 +1,5 @@
 from .biquadfilter import BiquadFilter
+from .digitalfilter import DigitalFilter
 import numpy
 import math
 
