@@ -114,12 +114,33 @@ class SpectrumChannel:
                     .append((id_frequency, iir_filter))
             else:
                 self.iir_filters[0].append((id_frequency, iir_filter))
+        # weighting filters
+        self.a_numerator = numpy.array(
+            configuration["a_weighting"]["filter_numerator"])
+        self.a_denominator = numpy.array(
+            configuration["a_weighting"]["filter_denominator"])
+        self.a_filter = DigitalFilter(self.a_numerator, self.a_denominator)
+        self.c_numerator = numpy.array(
+            configuration["c_weighting"]["filter_numerator"])
+        self.c_denominator = numpy.array(
+            configuration["c_weighting"]["filter_denominator"])
+        self.c_filter = DigitalFilter(self.c_numerator, self.c_denominator)
 
     def process_samples_weight_a(self, samples):
-        pass
+        if not self.use_scipy:
+            return self.a_filter.filter_leq(samples)
+        else:
+            from scipy import signal
+            signal.lfilter(self.a_numerator, self.a_denominator, samples)
+            return compute_leq(samples)
 
     def process_samples_weight_c(self, samples):
-        pass
+        if not self.use_scipy:
+            return self.c_filter.filter_leq(samples)
+        else:
+            from scipy import signal
+            signal.lfilter(self.c_numerator, self.c_denominator, samples)
+            return compute_leq(samples)
 
     def process_samples(self, samples):
         """

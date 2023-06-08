@@ -11,7 +11,7 @@ def generate_signal(sample_rate, duration, signal_frequency):
     return samples
 
 
-def test_sinus(configuration):
+def demo_sinus(configuration):
 
     sample_rate = configuration["configuration"]["sample_rate"]
     # generate signal
@@ -27,14 +27,16 @@ def test_sinus(configuration):
     spectrogram = []
     for sample_index in range(0, len(samples), stride):
         sub_samples = samples[sample_index:sample_index+stride]
-        spectrum_dictionary = sc.process_samples(sub_samples)
-        import scipy
-        scipy.signal.filtfilt()
+        spectrum_list = sc.process_samples(sub_samples)
+        spectrum_list.insert(0, sc.process_samples_weight_a(sub_samples))
+        spectrum_list.insert(1, sc.process_samples_weight_c(sub_samples))
         spectrogram.append(("%g" % ((sample_index + stride) / sample_rate)
                             , ",".join(
-            ["%g" % spl for spl in spectrum_dictionary])))
+            ["%g" % spl for spl in spectrum_list])))
     fields = ["%g Hz" % bp["nominal_frequency"]
               for bp in configuration["bandpass"]]
+    fields.insert(0, "LAeq")
+    fields.insert(1, "LCeq")
     print("t, "+", ".join(fields))
     for t, spectrum in spectrogram:
         print(t+", "+spectrum)
@@ -43,13 +45,15 @@ def test_sinus(configuration):
 
     deb = time.time()
     sc.process_samples(samples)
+    sc.process_samples_weight_a(samples)
+    sc.process_samples_weight_c(samples)
     end_process = time.time()
     process_time_per_second = (end_process - deb) / (len(samples) / sample_rate)
     print("Process time per second of audio %.3f ms" %
           (process_time_per_second * 1000.0))
 
 config = json.load(open("config_48000_third_octave.json", "r"))
-test_sinus(config)
+demo_sinus(config)
 
 
 
