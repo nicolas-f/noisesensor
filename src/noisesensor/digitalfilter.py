@@ -54,7 +54,7 @@ spec = [
 ]
 
 
-#@jitclass(spec)
+@jitclass(spec)
 class DigitalFilter:
     def __init__(self, numerator, denominator):
         assert len(numerator) == len(denominator)
@@ -72,7 +72,8 @@ class DigitalFilter:
 
     def filter(self, samples_in: float64[:], samples_out: float64[:]):
         """
-        Direct form II transposed filter @param samples_in: Input samples
+        Direct form II transposed filter
+        @param samples_in: Input samples
         @param samples_out: Output samples (must be same length as input)
         @see Adapted & Converted from
         https://rosettacode.org/wiki/Apply_a_digital_filter_(
@@ -83,7 +84,8 @@ class DigitalFilter:
             input_acc = 0
             self.delay_2[self.circular_index] = samples_in[i]
             for j in range(self.order):
-                input_acc += self.numerator[j] * self.delay_2[(i-j) % self.order]
+                input_acc += self.numerator[j] * self.delay_2[
+                    (i - j) % self.order]
                 if j == 0:
                     continue
                 input_acc -= self.denominator[j] * self.delay_1[
@@ -110,7 +112,8 @@ class DigitalFilter:
             input_acc = 0
             self.delay_2[self.circular_index] = samples_in[i]
             for j in range(self.order):
-                input_acc += self.numerator[j] * self.delay_2[(i-j) % self.order]
+                input_acc += self.numerator[j] * self.delay_2[
+                    (i - j) % self.order]
                 if j == 0:
                     continue
                 input_acc -= self.denominator[j] * self.delay_1[
@@ -123,29 +126,3 @@ class DigitalFilter:
             square_sum += input_acc * input_acc
         return 10 * math.log10(square_sum / samples_len)
 
-def main():
-    numerator = numpy.array([0.23430179229951348, -0.46860358459902696,
-                            -0.23430179229951348, 0.9372071691980539,
-                            -0.23430179229951348, -0.46860358459902696,
-                            0.23430179229951348])
-    denominator = numpy.array([1.0, -4.113043408775871, 6.553121752655046,
-                              -4.990849294163378, 1.785737302937571,
-                              -0.2461905953194862, 0.011224250033231168])
-    df = DigitalFilter(numerator, denominator)
-    rng = numpy.random.default_rng(seed=7355608)
-    signal = rng.normal(0, 0.7, size=20)
-    result = numpy.zeros(signal.shape)
-    df.filter(signal, result)
-    import scipy
-    result2 = scipy.signal.lfilter(numerator, denominator, signal)
-    print(result)
-    print(result2)
-    print()
-    # deb = time.time()
-    # df.filter(signal, result)
-    # print("Done in %.3f seconds" % (time.time() - deb))
-
-
-
-if __name__ == "__main__":
-    main()
