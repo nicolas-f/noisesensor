@@ -1,5 +1,3 @@
-import time
-
 import numpy
 from numba.experimental import jitclass
 from numba import float64, int32     # import the types
@@ -85,7 +83,7 @@ class DigitalFilter:
             self.delay_2[self.circular_index] = samples_in[i]
             for j in range(self.order):
                 input_acc += self.numerator[j] * self.delay_2[
-                    (i - j) % self.order]
+                    (self.circular_index - j) % self.order]
                 if j == 0:
                     continue
                 input_acc -= self.denominator[j] * self.delay_1[
@@ -113,7 +111,7 @@ class DigitalFilter:
             self.delay_2[self.circular_index] = samples_in[i]
             for j in range(self.order):
                 input_acc += self.numerator[j] * self.delay_2[
-                    (i - j) % self.order]
+                    (self.circular_index - j) % self.order]
                 if j == 0:
                     continue
                 input_acc -= self.denominator[j] * self.delay_1[
