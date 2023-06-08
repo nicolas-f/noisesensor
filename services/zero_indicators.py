@@ -1,5 +1,5 @@
 import datetime
-import noisepy
+import noisesensor
 import sys
 import argparse
 import zmq

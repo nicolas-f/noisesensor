@@ -270,6 +270,7 @@ class TriggerProcessor:
         last_day_of_year = datetime.datetime.now().timetuple().tm_yday
         self.init_socket()
         document = {}
+        processing_time = 0
         while True:
             cur_time = time.time()
             if last_day_of_year != datetime.datetime.now().timetuple().tm_yday\
@@ -283,11 +284,14 @@ class TriggerProcessor:
                      self.remaining_triggers == -1) and \
                     cur_time > self.config.date_start and self.check_hour():
                 waveform = self.fetch_audio_data()
+                deb = time.time()
                 if self.config.sample_rate != self.yamnet_config.sample_rate:
                     # resample if necessary
                     waveform = resampy.resample(waveform,
                                                 self.config.sample_rate,
-                                                self.yamnet_config.sample_rate)
+                                                self.yamnet_config.sample_rate,
+                                                filter=self.config.
+                                                resample_method)
                 len_to_extract = min(len(waveform), len(self.yamnet_samples) -
                                      self.yamnet_samples_index)
                 start_index = self.yamnet_samples_index
@@ -296,6 +300,7 @@ class TriggerProcessor:
                     waveform = waveform[:len_to_extract]
                 self.yamnet_samples[start_index:end_index] = waveform
                 self.yamnet_samples_index += len_to_extract
+                processing_time += time.time() - deb
                 if self.yamnet_samples_index < len(self.yamnet_samples):
                     # window is not complete so wait for more samples
                     continue
@@ -308,7 +313,7 @@ class TriggerProcessor:
                           " sound source " % (leq, self.config.min_leq))
                     deb = time.time()
                     scores, embeddings, spectrogram = self.process_tags()
-                    total_process_time = time.time() - deb
+                    processing_time += time.time() - deb
                     # Take maximum found prediction (was avg in the ref)
                     prediction = np.max(scores, axis=0)
                     # filter out classes that are below threshold values
@@ -335,12 +340,16 @@ class TriggerProcessor:
                                     for k,v in scores.items())
                     if self.remaining_triggers > 0:
                         self.remaining_triggers -= 1
-                    print("%s tags:%s \n processed in %.3f seconds for %.1f seconds of audio.\n"
-                          " Remaining triggers for today %d" % (time.strftime("%Y-%m-%d %H:%M:%S"),
-                                                                tags, total_process_time,
-                                                                len(self.yamnet_samples) /
-                                                                self.yamnet_config.sample_rate,
-                                                                self.remaining_triggers))
+                    print("%s tags:%s \n processed in %.3f seconds for "
+                          "%.1f seconds of audio." %
+                          (time.strftime("%Y-%m-%d %H:%M:%S"),
+                           tags, processing_time,
+                           len(self.yamnet_samples) /
+                           self.yamnet_config.sample_rate))
+                    processing_time = 0
+                    if self.remaining_triggers >= 0:
+                        print(" Remaining triggers for today %d" %
+                              self.remaining_triggers)
                     if self.config.total_length > 0:
                         # requesting audio data into the json file, so now record audio
                         status = "record"
@@ -405,6 +414,7 @@ if __name__ == "__main__":
     parser.add_argument("--total_length", help="record length total in seconds to be embedded into the output json", default=10, type=float)
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
     parser.add_argument("--sample_rate", help="audio sample rate", default=48000, type=int)
+    parser.add_argument("--resample_method", help="Resampling method as Yamnet is requiring 16 KHz", default='kaiser_fast', type=str)
     parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")

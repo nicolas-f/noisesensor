@@ -1,8 +1,9 @@
 try:
     import scipy.signal as signal
+    from acoustics.standards.iec_61672_1_2013 import WEIGHTING_SYSTEMS
 except ImportError as e:
-    print("This optional module is requiring development dependencies."
-          " $ pip install noisesensor[dev]")
+    print("This optional module is requiring test dependencies."
+          "pip install noisesensor[test]")
     raise e
 
 """
@@ -177,8 +178,24 @@ class FilterDesign:
                          "b2": [sos[2] for sos in aliasing_sos],
                          "a1": [sos[4] for sos in aliasing_sos],
                          "a2": [sos[5] for sos in aliasing_sos]}
+        # compute weighting filters coefficients
+        num, den = WEIGHTING_SYSTEMS['A']()
+        b, a = signal.bilinear(num, den, self.sample_rate)
+        a_weighting = {"filter_denominator": list(a),
+                       "filter_numerator": list(b)}
+
+        num, den = WEIGHTING_SYSTEMS['C']()
+        b, a = signal.bilinear(num, den, self.sample_rate)
+        c_weighting = {"filter_denominator": list(a),
+                       "filter_numerator": list(b)}
+        # output sample ratio
         anti_aliasing["sample_ratio"] = 10 if self.down_sampling == self.G10 \
             else 2
         return {"bandpass": frequencies, "anti_aliasing": anti_aliasing,
-                "configuration": {"sample_rate": self.sample_rate}}
+                "configuration": {"sample_rate": self.sample_rate},
+                "a_weighting": a_weighting, "c_weighting": c_weighting}
 
+
+if __name__ == "__main__":
+    cfg = FilterDesign()
+    cfg.generate_configuration()

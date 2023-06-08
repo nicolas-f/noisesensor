@@ -114,6 +114,12 @@ class SpectrumChannel:
             else:
                 self.iir_filters[0].append((id_frequency, iir_filter))
 
+    def process_samples_weight_a(self, samples):
+        pass
+
+    def process_samples_weight_c(self, samples):
+        pass
+
     def process_samples(self, samples):
         """
         Compute the leq for provided samples

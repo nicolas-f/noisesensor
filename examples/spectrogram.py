@@ -28,6 +28,8 @@ def test_sinus(configuration):
     for sample_index in range(0, len(samples), stride):
         sub_samples = samples[sample_index:sample_index+stride]
         spectrum_dictionary = sc.process_samples(sub_samples)
+        import scipy
+        scipy.signal.filtfilt()
         spectrogram.append(("%g" % ((sample_index + stride) / sample_rate)
                             , ",".join(
             ["%g" % spl for spl in spectrum_dictionary])))
