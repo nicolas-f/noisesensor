@@ -73,7 +73,7 @@ class BiquadFilter:
         self._delay_1 = numpy.zeros(shape=len(self.b0), dtype=float)
         self._delay_2 = numpy.zeros(shape=len(self.b0), dtype=float)
 
-    def filter_then_leq(self, samples: float64[:]):
+    def filter_then_leq(self, samples):
         samples_len = len(samples)
         filter_length = len(self.b0)
         square_sum = 0.0
@@ -93,7 +93,7 @@ class BiquadFilter:
             square_sum += input_acc * input_acc
         return 10 * math.log10(square_sum / samples_len)
 
-    def filter_slice(self, samples_in: float64[:], samples_out: float64[:],
+    def filter_slice(self, samples_in, samples_out,
                      subsampling_factor: int):
         samples_len = len(samples_in)
         filter_length = len(self.b0)

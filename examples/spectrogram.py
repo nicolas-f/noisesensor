@@ -7,7 +7,8 @@ import json
 def generate_signal(sample_rate, duration, signal_frequency):
     samples_time = numpy.arange(
         int(sample_rate * duration)) / sample_rate
-    samples = numpy.sin(2.0 * numpy.pi * signal_frequency * samples_time)
+    samples = numpy.sin(2.0 * numpy.pi * signal_frequency * samples_time,
+                        dtype=numpy.single)
     return samples
 
 

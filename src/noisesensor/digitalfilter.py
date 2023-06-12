@@ -68,7 +68,7 @@ class DigitalFilter:
         self.delay_1 = numpy.zeros(shape=self.order, dtype=float)
         self.delay_2 = numpy.zeros(shape=self.order, dtype=float)
 
-    def filter(self, samples_in: float64[:], samples_out: float64[:]):
+    def filter(self, samples_in, samples_out):
         """
         Direct form II transposed filter
         @param samples_in: Input samples
@@ -95,7 +95,7 @@ class DigitalFilter:
                 self.circular_index = 0
             samples_out[i] = input_acc
 
-    def filter_leq(self, samples_in: float64[:]):
+    def filter_leq(self, samples_in):
         """
         Direct form II transposed filter
         @param samples_in: Input samples
