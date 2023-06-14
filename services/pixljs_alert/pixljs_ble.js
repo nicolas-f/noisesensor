@@ -22,18 +22,51 @@ backlight = 0;
 // force timezone to UTC+0200
 E.setTimeZone(2);
 
-const allowed_periods = [
-    { start: "8h00", end: "12h00" },
-    { start: "14h00", end: "18h00" }
-];
+var user_id = '007';
 
-const calendar = [
-    { start: "8h00",end: "09h30" },
-    { start: "9h00",end: "12h30" },
-    { start: "12h30", end: "18h35" },
-    { start: "18h45", end: "23h10" },
-];
+var train_crossing = `
+15h00
+16h00
+16h30
+18h00
+`;
 
+var disponibility = `
+12/06/2023 14h30 15h00
+12/06/2023 15h00 16h00
+12/06/2023 16h00 16h30
+12/06/2023 17h00 18h00
+`;
+
+var mode2_activation = '12/06/2023 14h30 15h00'
+
+function construct_date(date_list) {
+  let d = Date();
+  d.setFullYear(date_list[0], date_list[1], date_list[2]);
+  d.setHours(date_list[3], date_list[4], date_list[5], date_list[6]);
+  return d;
+}
+
+function parse_interval(string_line) {
+  let space_split = string_line.trim().split(" ");
+  let date_split = space_split[0].split("/");
+  let start_split = space_split[1].split("h");
+  let end_split = space_split[2].split("h");
+  let year=parseInt(date_split[2]);
+  let month=parseInt(date_split[1]);
+  let day=parseInt(date_split[0]);
+  return [construct_date([year, month, day, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]),
+          construct_date([year, month, day, parseInt(end_split[0]), parseInt(end_split[1]), 0, 0])];
+}
+
+function parse_event(string_line) {
+  let start_split = string_line.split("h");
+  return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
+}
+
+var parsed_train_crossing = train_crossing.trim().split("\n").map(parse_event);
+var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
+var parsed_activation = parse_interval(mode2_activation);
 
 var qrcode = { width: 21, height : 21, buffer : atob("/tP8ERBuqrt1tduvrsEJB/qv4A8A8rzpbD/AzReIoqPr7IB/Q/lCEEO8unCt1Vgup0kFvx/sLgA=") };
 var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
@@ -53,63 +86,12 @@ function makeColorArray(r,g,b) {
 var ledState0 = makeColorArray(0, 0, 0);
 var ledState1 = makeColorArray(255, 255, 255);
 
-class SimpleTime {
-    constructor(hour, minute) {
-        this.hour = hour;
-        this.minute = minute;
-    }
-    static now() {
-        var date = new Date();
-        return new SimpleTime(date.getHours(), date.getMinutes());
-    }
-    toSeconds() {
-        return this.hour * 3600 + this.minute * 60;
-    }
-    valueOf() {
-        return this.toSeconds();
-    }
-    toString() {
-        return this.hour + "h" + this.minute.toString().padStart(2, '0');
-    }
-    isBetween(start, end) {
-        return (this >= start && this < end);
-    }
-}
-
-
-var parse_element = function(element) {
-    var start, end;
-    var start_result = element.start.split("h");
-    if (start_result && start_result.length == 2) {
-        start = new SimpleTime(parseInt(start_result[0],10), parseInt(start_result[1],10));
-    } 
-    else {
-        return null;
-    }
-    var end_result = element.end.split("h");
-    if (end_result && end_result.length == 2) {
-        end = new SimpleTime(parseInt(end_result[0],10), parseInt(end_result[1],10));
-    } 
-    else {
-        return null;
-    }
-    return { start: start, end: end };
-};
-
-var parsed_calendar = calendar.map(calendar_element => {
-    var result = parse_element(calendar_element);
-    if (result) {
-        result = Object.assign(result, { alarm_sent: false });
-    }
-    return result;
-});
-var parsed_periods = allowed_periods.map(parse_element);
-
 function handle_train_event(now) {
     var is_allowed = false;
     parsed_periods.forEach(period => {
         if (now.isBetween(period.start, period.end)) {
             is_allowed = true;
+            break;
         }
     });
     var should_send = function(cal_el) {
