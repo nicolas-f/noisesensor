@@ -1,7 +1,7 @@
 var user_id = '007';
 var DEMO_MODE = 1;
 var FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY = 3;
-var train_crossing = `
+var train_event_slots = `
 6h45
 7h40
 8h20
@@ -68,6 +68,7 @@ var lightShortPauseOn = 10;    // led on time while blinking
 var lightShortPauseOff = 100; // led off time while blinking
 var lightCountSequence = 10; // Number of blink for each sequence
 var snooze_time = 0;
+var ignore_train_time = 0;
 var next_event = null;
 
 Bluetooth.setConsole(1);
@@ -182,7 +183,7 @@ function parse_event(string_line) {
   return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
 }
 
-var parsed_train_crossing = train_crossing.trim().split("\n").map(parse_event);
+var parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
 var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
 var parsed_activation = parse_interval(mode2_activation);
 
@@ -245,7 +246,7 @@ function onMode1() {
 function onMode2() {
   timeout_id_mode2 = 0;
   if (timeout_next_forced_train_event > 0) {
-    print("Cleared forced event "+timeout_next_forced_train_event)
+    print("Cleared forced event "+timeout_next_forced_train_event);
     clearTimeout(timeout_next_forced_train_event);
     timeout_next_forced_train_event = 0;
   }
@@ -270,15 +271,19 @@ function isUserAvailable() {
 }
 
 function onTrainCrossing(forced) {
-  if(Date() < snooze_time) {
+  let now = Date();
+  if(now < snooze_time || now < ignore_train_time) {
     return 0;
   }
-  last_active_train_event = Date();
   print((forced ? "Forced" : "BT") + " train crossing event");
   now = Date();
   match_disponibility = isUserAvailable();
   if(match_disponibility) {
     fp.write(Date().getTime()+",onTrainCrossing,"+forced+"\n");
+    if(!forced && next_event > now) {
+      // ignore new trains events until next event slot
+      ignore_train_time = next_event;
+    }
     onMode1();
   }
   installTimeouts(!forced);
@@ -287,7 +292,7 @@ function onTrainCrossing(forced) {
 function getNextTrainEvent(hour, minute, skipSlot) {
   let match_time = construct_date([1970, 1, 1, hour, minute, 0, 0]);
   last_valid_event = null;
-  parsed_train_crossing.every(event => {
+  parsed_train_event_slots.every(event => {
     if (event > match_time) {
       pass = last_valid_event == null && skipSlot;
       last_valid_event = event;
@@ -301,7 +306,7 @@ function getNextTrainEvent(hour, minute, skipSlot) {
 function installTimeouts(skipNext) {
   if (timeout_next_forced_train_event > 0) {
     clearTimeout(timeout_next_forced_train_event);
-    print("Cleaned next_forced_train_event " + timeout_next_forced_train_event)
+    print("Cleaned next_forced_train_event " + timeout_next_forced_train_event);
     timeout_next_forced_train_event = 0;
   }
   let now = Date();
@@ -323,11 +328,11 @@ function installTimeouts(skipNext) {
   if (now < parsed_activation[0]) {
     let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
     next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
-    last_valid_event = getNextTrainEvent(now.getHours(), now.getMinutes(), skipNext);
+    last_valid_event = getNextTrainEvent(next_event_start.getHours(), next_event_start.getMinutes(), skipNext);
     next_event = Date();
     if (!last_valid_event) {
       // tomorrow
-      last_valid_event = train_crossing[0];
+      last_valid_event = train_event_slots[0];
       next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
       next_event.setMilliseconds(next_event.valueOf()+24*3600*1000);
     } else {
@@ -340,11 +345,13 @@ function installTimeouts(skipNext) {
       print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000).toString()+")");
       timeout_next_forced_train_event = setTimeout(onTrainCrossing, next_event_millis, true);
     } else {
-      print("Oups next_event_millis <= 0 =>" + next_event_millis)
+      print("Oups next_event_millis <= 0 =>" + next_event_millis);
     }
   }
 }
-
+function leadZero(value) {
+  return ("0"+value.toString()).substr(-2);
+}
 function disabledScreen() {
   if(!DEMO_MODE && !isUserAvailable()) {
     g.clear();
@@ -360,8 +367,8 @@ function disabledScreen() {
     g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
     g.setFontAlign(0.5, 1);
     g.setFontPixeloidSans(1);
-    let next_event_alert = Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000)
-    g.drawString("Next: "+next_event_alert.getHours()+"h"+next_event_alert.getMinutes(), g.getWidth() / 2, g.getHeight());
+    let next_event_alert = Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000);
+    g.drawString("Next: "+leadZero(next_event_alert.getHours())+"h"+leadZero(next_event_alert.getMinutes()), g.getWidth() / 2, g.getHeight());
     g.setFontAlign(-1, -1);
   }
   if(snooze_time > 0) {
