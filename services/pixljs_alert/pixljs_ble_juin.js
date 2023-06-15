@@ -95,6 +95,10 @@ var button_watch = [0,0,0,0];
 // force timezone to UTC+0200
 E.setTimeZone(2);
 
+var parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
+var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
+var parsed_activation = parse_interval(mode2_activation);
+
 fp = require("Storage").open(user_id + ".csv", 'a');
 
 function buzzerSequence() {
@@ -183,10 +187,6 @@ function parse_event(string_line) {
   return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
 }
 
-var parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
-var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
-var parsed_activation = parse_interval(mode2_activation);
-
 function turnOnOffScreenBacklight(newState, delay_turn_off) {
   Pixl.setLCDPower(newState);
   LED.write(newState);
@@ -260,7 +260,7 @@ function isUserAvailable() {
   let now = Date();
   match_disponibility = false;
   parsed_disponibility.every(interval => {
-    if(interval[0] < now < interval[1]) {
+    if(interval[0] < now && now < interval[1]) {
       match_disponibility = true;
       return false;
     } else {
