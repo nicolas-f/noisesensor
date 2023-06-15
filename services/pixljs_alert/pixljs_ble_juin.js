@@ -36,12 +36,10 @@ var train_event_slots = `
 21h40
 `;
 var disponibility = `
-14/06/2023 9h00 11h45
-14/06/2023 14h00 18h00
-15/06/2023 9h00 11h45
-15/06/2023 14h00 18h00
-15/06/2023 9h00 11h45
-15/06/2023 14h00 18h00
+14/05/2023 9h00 11h45
+14/05/2023 14h00 18h00
+15/05/2023 9h00 11h45
+15/05/2023 14h00 18h00
 `;
 var mode2_activation = '12/06/2023 14h30 15h00';
 
@@ -86,7 +84,7 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 
-var qrcode = { width: 33, height : 33, buffer : atob("/ncqP8EMoRBunKlLt1Zqtduq8ZrsEzVFB/qqqv4AmFcAx2tCDD7RO4WK1gm7QyZ1ZEluYZoeBXDJjm2emoQRXWLF4utzyWSgfdrIm6TqMCJwdkfvByWXpWSK6pseOHUiGjXs390p+QBAqUV/pmprUFYBccunH6/V0njW/uhHQi8FGFKc/srjlQA=") };
+var qrcode = { width: 25, height : 25, buffer : atob("/vI/wQxQbpWrt0eV26Pq7BLVB/qq/gGbANpQoLTbz5KVUy4SRvInCg9BnEuahz9iQy2GDfsAccW/lSowSLEbqr+V1L8O6cg/BcK3/vCkgA==") };
 var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
 var checkImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAABAAA4AAfAAPgQHwOD4Hx8A++AH/AA/gAHwAA4AAEAAAAAAAAAAAA=")};
 var demoImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAAAAAAAAAAOdt6UVSl1UpRFLnReAAAAAAAAAAAAAAAAAAAAAAAAAAA=")};
@@ -94,6 +92,32 @@ var button_watch = [0,0,0,0];
 
 // force timezone to UTC+0200
 E.setTimeZone(2);
+
+
+function construct_date(date_list) {
+  let d = Date();
+  d.setFullYear(date_list[0], date_list[1], date_list[2]);
+  d.setHours(date_list[3], date_list[4], date_list[5], date_list[6]);
+  return d;
+}
+
+function parse_interval(string_line) {
+  let space_split = string_line.trim().split(" ");
+  let date_split = space_split[0].split("/");
+  let start_split = space_split[1].split("h");
+  let end_split = space_split[2].split("h");
+  let year = parseInt(date_split[2]);
+  let month = parseInt(date_split[1]);
+  let day = parseInt(date_split[0]);
+  return [construct_date([year, month, day, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]),
+    construct_date([year, month, day, parseInt(end_split[0]), parseInt(end_split[1]), 0, 0])
+  ];
+}
+
+function parse_event(string_line) {
+  let start_split = string_line.split("h");
+  return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
+}
 
 var parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
 var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
@@ -151,40 +175,12 @@ function Mode1Screen() {
   // button 2
   g.drawImage(checkImage, g.getWidth() - checkImage.width, 0);
   // Resize qrcode if qrcode size is smaller than 2x screen size
-  if(qrcode.height * 2 <= g.getHeight()) {
-    g.drawImage(qrcode, g.getWidth() / 2 - qrcode.width, g.getHeight() / 2 - qrcode.height, options = {scale: 2});
-  } else {
-    g.drawImage(qrcode, g.getWidth() / 2 - qrcode.width / 2, g.getHeight() / 2 - qrcode.height / 2);
-  }
+  let scale = parseInt(g.getHeight() / qrcode.height)
+  g.drawImage(qrcode, g.getWidth() / 2 - (qrcode.width * scale) / 2, g.getHeight() / 2 - (qrcode.height * scale) / 2, options = {scale: scale});
   g.flip();
   disableButtons();
   button_watch[1] = setWatch(onClickStopAlarm, BTN2, {edge:"rising", debounce:50, repeat:true});
   button_watch[0]  = setWatch(onClickSnooze, BTN1, {edge:"rising", debounce:50, repeat:true});
-}
-
-function construct_date(date_list) {
-  let d = Date();
-  d.setFullYear(date_list[0], date_list[1], date_list[2]);
-  d.setHours(date_list[3], date_list[4], date_list[5], date_list[6]);
-  return d;
-}
-
-function parse_interval(string_line) {
-  let space_split = string_line.trim().split(" ");
-  let date_split = space_split[0].split("/");
-  let start_split = space_split[1].split("h");
-  let end_split = space_split[2].split("h");
-  let year = parseInt(date_split[2]);
-  let month = parseInt(date_split[1]);
-  let day = parseInt(date_split[0]);
-  return [construct_date([year, month, day, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]),
-    construct_date([year, month, day, parseInt(end_split[0]), parseInt(end_split[1]), 0, 0])
-  ];
-}
-
-function parse_event(string_line) {
-  let start_split = string_line.split("h");
-  return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
 }
 
 function turnOnOffScreenBacklight(newState, delay_turn_off) {
@@ -289,8 +285,10 @@ function onTrainCrossing(forced) {
       ignore_train_time = next_event;
     }
     onMode1();
+    installTimeouts(!forced);
+  } else {
+    installTimeouts(false); // could not ask user so do not skip time slot
   }
-  installTimeouts(!forced);
 }
 
 function getNextTrainEvent(hour, minute, skipSlot) {
@@ -349,7 +347,8 @@ function installTimeouts(skipNext) {
       print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000).toString()+")");
       timeout_next_forced_train_event = setTimeout(onTrainCrossing, next_event_millis, true);
     } else {
-      print("Oups next_event_millis <= 0 =>" + next_event_millis);
+      print("Oups next_event_millis <= 0 :" + next_event_millis);
+      fp.write(parseInt(Date().getTime()/1000)+",issue,"+next_event+"\n");
     }
   }
 }

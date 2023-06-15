@@ -3,6 +3,10 @@ g.clear();
 Bluetooth.setConsole(1);
 LED.write(false);
 
+function leadZero(value) {
+  return ("0"+value.toString()).substr(-2);
+}
+
 Graphics.prototype.setFontPixeloidSans = function(scale) {
   // Actual height 9 (8 - 0)
   // Generated with https://www.espruino.com/Font+Converter
@@ -21,29 +25,38 @@ var sliderWidth = 100;
 var sliderHeight = 10;
 var sliderYPosition = 40;
 var knobHeight = 15;
-var countdown = 30;
-var answerTime = 1;
+var time_end_question = Date() + 15 * 60 * 1000;
+var intervalId = 0;
 var intervalId1 = 0;
 var intervalId2 = 0;
+var button_watch = [0,0,0,0];
 
-// Function to handle button press
-function handleButtonPress(e) {
-  if (e === BTN2 && sliderValue < 10 && answerTime == 1) {
-    // Increment slider value on Button 1 press
-    sliderValue++;
-    drawSlider();
-  } else if (e === BTN1 && sliderValue > 0 && answerTime == 1) {
-    // Decrement slider value on Button 2 press
-    sliderValue--;
-    drawSlider();
-  } else if (e === BTN3) {
-    drawNextMessage();
+function disableButtons() {
+  for(id=0;id<4;id++) {
+    if(button_watch[id] > 0) {
+      clearWatch(button_watch[id]);
+    }
+    button_watch[id] = 0;
   }
+}
+
+function screenQuestion() {
+  if(intervalId > 0) {
+    clearInterval(intervalId);
+  }
+
+  intervalId = setInterval(refreshCountdown, 1000);
+  answerTime = 1;
+  drawSlider();
+  disableButtons();
+  // Attach the button press event listener
+  button_watch[0]=setWatch(e => {sliderValue--;drawSlider();}, BTN1, {repeat: true, edge: 'rising'}, BTN1);
+  button_watch[1]=setWatch(e => {sliderValue++;drawSlider();}, BTN2, {repeat: true, edge: 'rising'}, BTN2);
+  button_watch[2]=setWatch(e => {clearInterval(intervalId); disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
 }
 
 function drawNextMessage() {
   clearInterval(intervalId2);
-  answerTime = 0;
   // Clear the display
   g.clear();
   g.setFontAlign(0.5, 0.5);
@@ -54,15 +67,10 @@ function drawNextMessage() {
     "Merci pour\n votre réponse. \n Attendez le \n prochain passage !", x, y);
   g.flip();
   sliderValue = 5;
-  setTimeout(function() {
-    drawSlider();
-    answerTime = 1;
-    intervalId2 = setInterval(drawSlider, 1000);
-  }, 10000); // 30,000 milliseconds = 30 seconds
+  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
 }
 
 function drawExitMessage() {
-  answerTime = 0;
   // Clear the display
   g.clear();
   g.setFontAlign(0.5, 0.5);
@@ -72,12 +80,7 @@ function drawExitMessage() {
   g.drawString("Merci pour\n vos réponses. \n A demain !", x, y);
   g.flip();
   sliderValue = 5;
-  setTimeout(function() {
-    answerTime = 1;
-    countdown = 30;
-    intervalId = setInterval(updateCountdown, 1000);
-    intervalId2 = setInterval(drawSlider, 1000);
-  }, 10000); // 30,000 milliseconds = 30 seconds
+  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
   // Update the display
 }
 // Function to draw the slider
@@ -94,11 +97,7 @@ function drawSlider() {
   var knobY = sliderYPosition;
   // Draw the slider knob as a triple vertical line
   var knobYPosition = knobY - (knobHeight - sliderHeight) / 2;
-  g.drawLine(knobX, knobYPosition, knobX, knobYPosition + knobHeight);
-  g.drawLine(knobX + 1, knobYPosition, knobX + 1, knobYPosition + knobHeight);
-  g.drawLine(knobX - 1, knobYPosition, knobX - 1, knobYPosition + knobHeight);
-  g.drawLine(knobX + 2, knobYPosition, knobX + 2, knobYPosition + knobHeight);
-  g.drawLine(knobX - 2, knobYPosition, knobX - 2, knobYPosition + knobHeight);
+  g.fillRect(knobX-2, knobYPosition, knobX+2, knobYPosition + knobHeight);
   g.setFontAlign(-1, -1);
   g.setFontPixeloidSans(2);
   g.drawString("-", 0, 0);
@@ -128,41 +127,19 @@ function drawSlider() {
   }
   // Start the countdown timer
   g.setFontAlign(0.5, 0.5); // Center text horizontally and vertically
-  g.drawString(countdown, 20, 60);
+  let timeRemaining = parseInt((time_end_question-Date())/1000);
+  g.drawString(parseInt(timeRemaining / 60)+"m"+leadZero(timeRemaining % 60), 20, 60);
   // Update the display
   g.flip();
 }
 // Function to update and display the countdown timer
-function updateCountdown() {
-  if(answerTime != 1) {
-    return 0;
-  }
-  if (countdown > 0) {
-    countdown--; // Decrease the countdown value by 1 second
+function refreshCountdown() {
+  if (Date() < time_end_question) {
     drawSlider();
   } else {
     clearInterval(intervalId);
     drawExitMessage(); // Stop the interval
   }
 }
-var intervalId = setInterval(updateCountdown, 1000);
 
-// Attach the button press event listener
-setWatch(function() {
-  handleButtonPress(BTN1);
-}, BTN1, {
-  repeat: true,
-  edge: 'rising'
-});
-setWatch(function() {
-  handleButtonPress(BTN2);
-}, BTN2, {
-  repeat: true,
-  edge: 'rising'
-});
-setWatch(function() {
-  handleButtonPress(BTN3);
-}, BTN3, {
-  repeat: true,
-  edge: 'rising'
-});
+screenQuestion();
