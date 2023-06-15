@@ -227,13 +227,13 @@ function stopAlarm() {
 
 function onClickStopAlarm() {
   stopAlarm();
-  fp.write(Date().getTime()+",onClickStopAlarm,0"+"\n");
+  fp.write(parseInt(Date().getTime()/1000)+",onClickStopAlarm,0"+"\n");
 }
 
 function onClickSnooze() {
   stopAlarm();
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
-  fp.write(Date().getTime()+",onClickSnooze,0"+"\n");
+  fp.write(parseInt(Date().getTime()/1000)+",onClickSnooze,0"+"\n");
 }
 
 function onMode1() {
@@ -273,13 +273,17 @@ function isUserAvailable() {
 function onTrainCrossing(forced) {
   let now = Date();
   if(now < snooze_time || now < ignore_train_time) {
+    if(forced) {
+      installTimeouts(false);
+    }
+    print("Ignored train event");
     return 0;
   }
   print((forced ? "Forced" : "BT") + " train crossing event");
   now = Date();
   match_disponibility = isUserAvailable();
   if(match_disponibility) {
-    fp.write(Date().getTime()+",onTrainCrossing,"+forced+"\n");
+    fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
     if(!forced && next_event > now) {
       // ignore new trains events until next event slot
       ignore_train_time = next_event;
@@ -379,7 +383,7 @@ function disabledScreen() {
   disableButtons();
   button_watch[0] = setWatch(function() { if(snooze_time==0) {snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;}else{snooze_time = 0;} disabledScreen();}, BTN1, {  repeat: true,  edge: 'rising'});
   if(DEMO_MODE) {
-    button_watch[3] = setWatch(function() { onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
+    button_watch[3] = setWatch(function() { ignore_train_time=0;onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
   }
 }
 
