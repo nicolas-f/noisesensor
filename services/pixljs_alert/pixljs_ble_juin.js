@@ -1,4 +1,5 @@
 var user_id = '007';
+var DEMO_MODE = 1;
 var FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY = 3;
 var train_crossing = `
 6h45
@@ -54,7 +55,7 @@ var timeout_id_mode2 = 0;
 var timeout_next_forced_train_event = 0;
 var timeout_stop_alarm = 0;
 var timeout_turn_off_screen = 0;
-var next_forced_train_event = null;
+var timeout_buzzer = 0;
 var current_active_train_slot = null;
 var alarmEnabled = false;
 var alarmLength = 300000;
@@ -67,6 +68,7 @@ var lightShortPauseOn = 10;    // led on time while blinking
 var lightShortPauseOff = 100; // led off time while blinking
 var lightCountSequence = 10; // Number of blink for each sequence
 var snooze_time = 0;
+var next_event = null;
 
 Bluetooth.setConsole(1);
 backlight = 0;
@@ -100,15 +102,15 @@ function buzzerSequence() {
     } else {
         if(state_buzzer == 0) {
             analogWrite(PIN_BUZZER,0.5,{freq:800});
-            setTimeout(buzzerSequence, buzzer_buz_time_ms);
+            timeout_buzzer = setTimeout(buzzerSequence, buzzer_buz_time_ms);
             state_buzzer += 1;
         } else if(state_buzzer == 1) {
             analogWrite(PIN_BUZZER,0.5,{freq:900});
-            setTimeout(buzzerSequence, buzzer_buz_time_ms);
+            timeout_buzzer = setTimeout(buzzerSequence, buzzer_buz_time_ms);
             state_buzzer += 1;
         } else {
             digitalWrite(PIN_BUZZER,0);
-            setTimeout(buzzerSequence, buzzer_off_time_ms);
+            timeout_buzzer = setTimeout(buzzerSequence, buzzer_off_time_ms);
             state_buzzer = 0;
         }
     }
@@ -151,8 +153,8 @@ function Mode1Screen() {
   }
   g.flip();
   disableButtons();
-  button2_watch = setWatch(onClickStopAlarm, BTN2, {edge:"rising", debounce:50, repeat:true});
-  button1_watch = setWatch(onClickSnooze, BTN1, {edge:"rising", debounce:50, repeat:true});
+  button_watch[1] = setWatch(onClickStopAlarm, BTN2, {edge:"rising", debounce:50, repeat:true});
+  button_watch[0]  = setWatch(onClickSnooze, BTN1, {edge:"rising", debounce:50, repeat:true});
 }
 
 function construct_date(date_list) {
@@ -200,10 +202,7 @@ function turnOnOffScreenBacklight(newState, delay_turn_off) {
 function buzzerDelay() {
   alarmEnabled = true;
   buzzerSequence();
-  timeout_stop_alarm = setTimeout(function() {
-    alarmEnabled = false;
-
-  }, alarmLength);
+  timeout_stop_alarm = setTimeout(stopAlarm, alarmLength);
 }
 
 function disableButtons() {
@@ -217,20 +216,23 @@ function disableButtons() {
 
 function stopAlarm() {
   alarmEnabled = false;
+  if(timeout_buzzer > 0) {
+    clearTimeout(timeout_buzzer);
+    timeout_buzzer = 0;
+  }
   turnOnOffScreenBacklight(0, 0);
   disabledScreen();
 }
 
 function onClickStopAlarm() {
   stopAlarm();
-  fp.write(Date().toString()+",onClickStopAlarm,0"+"\n");
+  fp.write(Date().getTime()+",onClickStopAlarm,0"+"\n");
 }
 
 function onClickSnooze() {
   stopAlarm();
-  onClickStopAlarm();
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
-  fp.write(Date().toString()+",onClickSnooze,0"+"\n");
+  fp.write(Date().getTime()+",onClickSnooze,0"+"\n");
 }
 
 function onMode1() {
@@ -253,14 +255,8 @@ function onMode2() {
 
 }
 
-function onTrainCrossing(forced) {
-  if (timeout_next_forced_train_event > 0) {
-    clearTimeout(timeout_next_forced_train_event);
-    timeout_next_forced_train_event = 0;
-  }
-  last_active_train_event = Date();
-  print((forced ? "Forced" : "BT") + " train crossing event");
-  now = Date();
+function isUserAvailable() {
+  let now = Date();
   match_disponibility = false;
   parsed_disponibility.every(interval => {
     if(interval[0] < now < interval[1]) {
@@ -270,11 +266,22 @@ function onTrainCrossing(forced) {
       return true;
     }
   });
+  return match_disponibility;
+}
+
+function onTrainCrossing(forced) {
+  if(Date() < snooze_time) {
+    return 0;
+  }
+  last_active_train_event = Date();
+  print((forced ? "Forced" : "BT") + " train crossing event");
+  now = Date();
+  match_disponibility = isUserAvailable();
   if(match_disponibility) {
-    fp.write(Date().toString()+",onTrainCrossing,"+forced+"\n");
+    fp.write(Date().getTime()+",onTrainCrossing,"+forced+"\n");
     onMode1();
   }
-  installTimeouts();
+  installTimeouts(!forced);
 }
 
 function getNextTrainEvent(hour, minute, skipSlot) {
@@ -291,7 +298,12 @@ function getNextTrainEvent(hour, minute, skipSlot) {
   return last_valid_event;
 }
 
-function installTimeouts() {
+function installTimeouts(skipNext) {
+  if (timeout_next_forced_train_event > 0) {
+    clearTimeout(timeout_next_forced_train_event);
+    print("Cleaned next_forced_train_event " + timeout_next_forced_train_event)
+    timeout_next_forced_train_event = 0;
+  }
   let now = Date();
   g.setFontPixeloidSans(1);
   if (now.getFullYear() < 2023) {
@@ -310,11 +322,8 @@ function installTimeouts() {
   }
   if (now < parsed_activation[0]) {
     let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
-    if(next_forced_train_event == 0 || match_time > next_forced_train_event) {
-      last_valid_event = getNextTrainEvent(now.getHours(), now.getMinutes(), true);
-    } else {
-      last_valid_event = getNextTrainEvent(next_forced_train_event, now.getMinutes(), true);
-    }
+    next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
+    last_valid_event = getNextTrainEvent(now.getHours(), now.getMinutes(), skipNext);
     next_event = Date();
     if (!last_valid_event) {
       // tomorrow
@@ -327,29 +336,45 @@ function installTimeouts() {
     next_event_millis = parseInt(next_event - Date());
     let millidelay = FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000;
     next_event_millis -= millidelay; // alert x minutes before next event
-    next_forced_train_event = last_valid_event;
     if (next_event_millis > 0) {
-      print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+next_event.toString()+")");
+      print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000).toString()+")");
       timeout_next_forced_train_event = setTimeout(onTrainCrossing, next_event_millis, true);
+    } else {
+      print("Oups next_event_millis <= 0 =>" + next_event_millis)
     }
   }
 }
 
 function disabledScreen() {
+  if(!DEMO_MODE && !isUserAvailable()) {
+    g.clear();
+    Pixl.setLCDPower(false);
+    LED.write(0);
+    return 0;
+  }
   Pixl.setLCDPower(true);
   LED.write(0);
   g.clear();
   // Display button icons
-  // button 1 BTN1
-  g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
+  if(DEMO_MODE) {
+    g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
+    g.setFontAlign(0.5, 1);
+    g.setFontPixeloidSans(1);
+    let next_event_alert = Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000)
+    g.drawString("Next: "+next_event_alert.getHours()+"h"+next_event_alert.getMinutes(), g.getWidth() / 2, g.getHeight());
+    g.setFontAlign(-1, -1);
+  }
   if(snooze_time > 0) {
     g.drawImage(zzImage, 0, 0);
   }
   g.flip();
   // test train crossing
   disableButtons();
-  button_watch[3] = setWatch(function() { onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
+  button_watch[0] = setWatch(function() { if(snooze_time==0) {snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;}else{snooze_time = 0;} disabledScreen();}, BTN1, {  repeat: true,  edge: 'rising'});
+  if(DEMO_MODE) {
+    button_watch[3] = setWatch(function() { onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
+  }
 }
 
-installTimeouts();
+installTimeouts(false);
 disabledScreen();

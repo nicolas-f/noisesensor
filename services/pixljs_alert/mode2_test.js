@@ -85,9 +85,9 @@ function drawSlider() {
   // Clear the display
   g.clear();
   // Draw the slider track
+  var sliderXPosition = (g.getWidth() - sliderWidth) / 2;
   g.drawRect(sliderXPosition, sliderYPosition, sliderXPosition + sliderWidth,
     sliderYPosition + sliderHeight);
-  var sliderXPosition = (g.getWidth() - sliderWidth) / 2;
   // Calculate the position of the slider knob
   var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
   // Calculate the position of the slider knob vertically
