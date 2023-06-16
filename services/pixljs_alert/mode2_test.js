@@ -29,9 +29,7 @@ var sliderHeight = 10;
 var sliderYPosition = 40;
 var knobHeight = 15;
 var time_end_question = Date() + 15 * 60 * 1000;
-var intervalId = 0;
-var intervalId1 = 0;
-var intervalId2 = 0;
+var idRefreshInterval = 0;
 var button_watch = [0,0,0,0];
 
 function disableButtons() {
@@ -44,22 +42,21 @@ function disableButtons() {
 }
 
 function screenQuestion() {
-  if(intervalId > 0) {
-    clearInterval(intervalId);
+  if(idRefreshInterval > 0) {
+    clearInterval(idRefreshInterval);
+    idRefreshInterval = 0;
   }
-
-  intervalId = setInterval(refreshCountdown, 1000);
+  idRefreshInterval = setInterval(refreshCountdown, 1000);
   answerTime = 1;
   drawSlider();
   disableButtons();
   // Attach the button press event listener
   button_watch[0]=setWatch(e => {sliderValue=Math.max(0,sliderValue-1);drawSlider();}, BTN1, {repeat: true, edge: 'rising'}, BTN1);
   button_watch[1]=setWatch(e => {sliderValue=Math.min(10,sliderValue+1);drawSlider();}, BTN2, {repeat: true, edge: 'rising'}, BTN2);
-  button_watch[2]=setWatch(e => {clearInterval(intervalId); disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
+  button_watch[2]=setWatch(e => {clearInterval(idRefreshInterval);idRefreshInterval=0; disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
 }
 
 function drawNextMessage() {
-  clearInterval(intervalId2);
   // Clear the display
   g.clear();
   g.setFontAlign(0.5, 0.5);
@@ -70,7 +67,6 @@ function drawNextMessage() {
     "Merci pour\n votre réponse. \n Attendez le \n prochain passage !", x, y);
   g.flip();
   sliderValue = 5;
-  time_end_question = Date() + 15 * 60 * 1000;
   setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
 }
 
@@ -84,6 +80,7 @@ function drawExitMessage() {
   g.drawString("Merci pour\n vos réponses. \n A demain !", x, y);
   g.flip();
   sliderValue = 5;
+  time_end_question = Date() + 15 * 60 * 1000;
   setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
   // Update the display
 }
@@ -141,8 +138,10 @@ function refreshCountdown() {
   if (Date() < time_end_question) {
     drawSlider();
   } else {
-    clearInterval(intervalId);
-    drawExitMessage(); // Stop the interval
+    // Stop the interval
+    clearInterval(idRefreshInterval);
+    idRefreshInterval = 0;
+    drawExitMessage();
   }
 }
 

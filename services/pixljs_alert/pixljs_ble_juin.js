@@ -1,6 +1,12 @@
 var user_id = '007';
-var DEMO_MODE = 1;
+var DEMO_MODE = 0;
 var FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY = 3;
+
+var parsed_train_event_slots = null;
+var parsed_disponibility = null;
+var parsed_activation = null;
+
+function load_parameters() {
 var train_event_slots = `
 6h45
 7h40
@@ -36,13 +42,25 @@ var train_event_slots = `
 21h40
 `;
 var disponibility = `
-14/05/2023 9h00 11h45
-14/05/2023 14h00 18h00
-15/05/2023 9h00 11h45
-15/05/2023 14h00 18h00
+16/05/2023 08h00 18h00
+19/05/2023 08h00 18h00
+20/05/2023 08h00 18h00
+21/05/2023 08h00 18h00
+22/05/2023 08h00 18h00
+23/05/2023 08h00 18h00
+24/05/2023 08h00 18h00
 `;
-var mode2_activation = '12/06/2023 14h30 15h00';
 
+var mode2_activation = `
+16/05/2023 14h30 23h59
+17/06/2023 14h30 23h59
+18/06/2023 14h30 23h59`;
+
+parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
+parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
+parsed_activation = mode2_activation.trim().split("\n").map(parse_interval);
+
+}
 ///////////////
 // Actual code
 // Disable logging events to screen
@@ -73,13 +91,16 @@ Bluetooth.setConsole(1);
 backlight = 0;
 Pixl.setLCDPower(false);
 
+const bitmap_font = E.toString(require('heatshrink').decompress(atob('AAUfoEGgEBwEAkU/xGP8UggFkpN/6VE4EGmcgkEmscAhuJkdQiEUgFggEHwkkhEBgVCj0AikEgoxBkE4hAEBCgOAoAuBgIIB4GAwGBHwM+kGSpEj8EBgmCv4XCgUSjMUyUxgEIxEkCgPYgEMhUJh/goEB9GSpMkyOAgfiAoOSk0AiFIolCoPAgE2BYNJkZJB5AaCx+AgMQgFGGYMKhAIBoGgqCPBhUCgECgUBimQmChB5ElEAPkgEPjURg2A+EB/gsCxpHChJrBkQaCkkRiFwgF/I4UkiAaByFIAoMADQQOBh4aB4KJBoP8gFBn+QoCsBhEEBIM/wUCGIK5B/yzBXIUD/GAkEIAAKYBgf5DoMMgMf4BQEnw1B5IFBoCYBZwORpFD6BQCpklhlAgciWYsIg/yd4V+HwUndIPAjEDg0cgEHAwMwHwWfgEGmGgkEoscAjggB+DXCociyVKkyPB/2BoGAjDGBNIMMgDSBr4zBAAIHBT4MAkBJBAgIUBAYIAB8GIokUj6qCoMQxE4gEOhGEoUhD4M4kURgqPBDQOoqkqhsAgkP8olBCIORopyBg/woC3Ba4MXDQMQgkC3zOBwMBGoKhBHgLbBgPhJwM8BAMECwJ9BHwcIweADANQokih0AgeCKANQv4aBgQABIwNIKAMVhMAgRHBxEAniJBwFDMYUIC4IkC4EQiEwIgJaBgUgYgUigEMkOQagIcBk0VhWFoalBsH8YoUf8EEhUE/kYRwImBYQNAXIYACgN8d4MRj/EoQjBpH8ySLBwEEfIOguFEgElhWD8WiqEA88AjVSzNM0ssFg/xgm6qsqyFHK4NBqDZBjwQBwGg1BrCWQMB4AaDrMiDQYAFg0EwVABYMJhwFBglCsNQpEEgERRANC0GgDIUIhAECv4yBgGHwEDgfB/2Av+AawS2BAgb0Bw/AkEQfo0AokUisFEoMFoegq0JgvAisOwNQl0RgFUnUdsGQrjdBhMowDCCn1o4kafAMA+OjiVofAMD62UougnkAh9aqMWyHwCYOhiATCgH10sRAwU/kkSg/kyVIgF8oNg6FEGwP/pNkBgMggf5kuTpMgwEP9mapckwUA/1JkgTCgWC/4RBhEv/UIgODv9gwEgz/IEoQcBkUOLgP7gVgxmBj/AgfqhbYBnxkBxEsjUI/B/BJwNYkfggH5wZXB55IBxBlBCYUihTKBwUggH4xVJlGPwEB/UCwMAz+Ag/ghUGgV+gEfyEwikJ/EB/D7CCYMB4EQx+EjgTB4lCkMQuChBkESo2gGoMcyMowWDKANwomixUPEIPFimJlBrBg8UqUk0hXBnGiiMlg7rBuNFsVKDQMDwQ0B/FUlUJS4OClMYxFEEYMlpWhqFoHwMVlWloOgEYNVlVVgwjBxWhqWomkAr8AhfoSIN8wBpBkEB4JQBot8XgOSiUFgl4NYeEoJQBNYWRg8ANYdERoJrCksURoJrClGDGIOBqCRBh0JwtDkCRBnmBkGAoYsB+D8BwMPOgPEYwMEnkAjwSBpEhDQMwg0g8ODHIP4qFEkUOgEGjHIjUwsEAA=')));
+const police_heights = atob("AwIEBgYGBgIEBAQEAgQCBgYGBgYGBgYGBgYCAgQEBAYGBgYGBgYGBgYEBQYGCAcGBgYGBgYGBggGBgYEBgQGBAYGBgYGBgQGBgIFBQIIBgYGBgUGBAYGCAYGBgUCBQYAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAgYGBgYCBgYIBgYEAAgGBQQGBgYGBgIGBgYGBgYGBgYGBgYGBgcGBgYGBgQEBAQGBwYGBgYGBgYGBgYGBgYGBgYGBgYGCAYGBgYGAgIEAgYGBgYGBgYEBgYGBgYGBgY=");
+
 Graphics.prototype.setFontPixeloidSans = function(scale) {
   // Actual height 9 (8 - 0)
   // Generated with https://www.espruino.com/Font+Converter
   return this.setFontCustom(
-    E.toString(require('heatshrink').decompress(atob('AAUfoEGgEBwEAkU/xGP8UggFkpN/6VE4EGmcgkEmscAhuJkdQiEUgFggEHwkkhEBgVCj0AikEgoxBkE4hAEBCgOAoAuBgIIB4GAwGBHwM+kGSpEj8EBgmCv4XCgUSjMUyUxgEIxEkCgPYgEMhUJh/goEB9GSpMkyOAgfiAoOSk0AiFIolCoPAgE2BYNJkZJB5AaCx+AgMQgFGGYMKhAIBoGgqCPBhUCgECgUBimQmChB5ElEAPkgEPjURg2A+EB/gsCxpHChJrBkQaCkkRiFwgF/I4UkiAaByFIAoMADQQOBh4aB4KJBoP8gFBn+QoCsBhEEBIM/wUCGIK5B/yzBXIUD/GAkEIAAKYBgf5DoMMgMf4BQEnw1B5IFBoCYBZwORpFD6BQCpklhlAgciWYsIg/yd4V+HwUndIPAjEDg0cgEHAwMwHwWfgEGmGgkEoscAjggB+DXCociyVKkyPB/2BoGAjDGBNIMMgDSBr4zBAAIHBT4MAkBJBAgIUBAYIAB8GIokUj6qCoMQxE4gEOhGEoUhD4M4kURgqPBDQOoqkqhsAgkP8olBCIORopyBg/woC3Ba4MXDQMQgkC3zOBwMBGoKhBHgLbBgPhJwM8BAMECwJ9BHwcIweADANQokih0AgeCKANQv4aBgQABIwNIKAMVhMAgRHBxEAniJBwFDMYUIC4IkC4EQiEwIgJaBgUgYgUigEMkOQagIcBk0VhWFoalBsH8YoUf8EEhUE/kYRwImBYQNAXIYACgN8d4MRj/EoQjBpH8ySLBwEEfIOguFEgElhWD8WiqEA88AjVSzNM0ssFg/xgm6qsqyFHK4NBqDZBjwQBwGg1BrCWQMB4AaDrMiDQYAFg0EwVABYMJhwFBglCsNQpEEgERRANC0GgDIUIhAECv4yBgGHwEDgfB/2Av+AawS2BAgb0Bw/AkEQfo0AokUisFEoMFoegq0JgvAisOwNQl0RgFUnUdsGQrjdBhMowDCCn1o4kafAMA+OjiVofAMD62UougnkAh9aqMWyHwCYOhiATCgH10sRAwU/kkSg/kyVIgF8oNg6FEGwP/pNkBgMggf5kuTpMgwEP9mapckwUA/1JkgTCgWC/4RBhEv/UIgODv9gwEgz/IEoQcBkUOLgP7gVgxmBj/AgfqhbYBnxkBxEsjUI/B/BJwNYkfggH5wZXB55IBxBlBCYUihTKBwUggH4xVJlGPwEB/UCwMAz+Ag/ghUGgV+gEfyEwikJ/EB/D7CCYMB4EQx+EjgTB4lCkMQuChBkESo2gGoMcyMowWDKANwomixUPEIPFimJlBrBg8UqUk0hXBnGiiMlg7rBuNFsVKDQMDwQ0B/FUlUJS4OClMYxFEEYMlpWhqFoHwMVlWloOgEYNVlVVgwjBxWhqWomkAr8AhfoSIN8wBpBkEB4JQBot8XgOSiUFgl4NYeEoJQBNYWRg8ANYdERoJrCksURoJrClGDGIOBqCRBh0JwtDkCRBnmBkGAoYsB+D8BwMPOgPEYwMEnkAjwSBpEhDQMwg0g8ODHIP4qFEkUOgEGjHIjUwsEAA='))),
+    bitmap_font,
     32,
-    atob("AwIEBgYGBgIEBAQEAgQCBgYGBgYGBgYGBgYCAgQEBAYGBgYGBgYGBgYEBQYGCAcGBgYGBgYGBggGBgYEBgQGBAYGBgYGBgQGBgIFBQIIBgYGBgUGBAYGCAYGBgUCBQYAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAgYGBgYCBgYIBgYEAAgGBQQGBgYGBgIGBgYGBgYGBgYGBgYGBgcGBgYGBgQEBAQGBwYGBgYGBgYGBgYGBgYGBgYGBgYGCAYGBgYGAgIEAgYGBgYGBgYEBgYGBgYGBgY="),
+    police_heights,
     9 | 65536 | scale << 8
   );
 };
@@ -118,10 +139,6 @@ function parse_event(string_line) {
   let start_split = string_line.split("h");
   return construct_date([1970, 1, 1, parseInt(start_split[0]), parseInt(start_split[1]), 0, 0]);
 }
-
-var parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
-var parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
-var parsed_activation = parse_interval(mode2_activation);
 
 fp = require("Storage").open(user_id + ".csv", 'a');
 
@@ -175,7 +192,7 @@ function Mode1Screen() {
   // button 2
   g.drawImage(checkImage, g.getWidth() - checkImage.width, 0);
   // Resize qrcode if qrcode size is smaller than 2x screen size
-  let scale = parseInt(g.getHeight() / qrcode.height)
+  let scale = parseInt(g.getHeight() / qrcode.height);
   g.drawImage(qrcode, g.getWidth() / 2 - (qrcode.width * scale) / 2, g.getHeight() / 2 - (qrcode.height * scale) / 2, options = {scale: scale});
   g.flip();
   disableButtons();
@@ -278,7 +295,7 @@ function onTrainCrossing(forced) {
   print((forced ? "Forced" : "BT") + " train crossing event");
   now = Date();
   match_disponibility = isUserAvailable();
-  if(match_disponibility) {
+  if(match_disponibility || DEMO_MODE) {
     fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
     if(!forced && next_event > now) {
       // ignore new trains events until next event slot
@@ -287,6 +304,7 @@ function onTrainCrossing(forced) {
     onMode1();
     installTimeouts(!forced);
   } else {
+    print("User is not available, reset timeouts")
     installTimeouts(false); // could not ask user so do not skip time slot
   }
 }
@@ -327,30 +345,29 @@ function installTimeouts(skipNext) {
     print("Mode 2 programmed to activate on " + parsed_activation[0]);
     timeout_id_mode2 = setTimeout(onMode2, parsed_activation[0] - Date());
   }
-  if (now < parsed_activation[0]) {
-    let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
-    next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
-    last_valid_event = getNextTrainEvent(next_event_start.getHours(), next_event_start.getMinutes(), skipNext);
-    next_event = Date();
-    if (!last_valid_event) {
-      // tomorrow
-      last_valid_event = train_event_slots[0];
-      next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
-      next_event.setMilliseconds(next_event.valueOf()+24*3600*1000);
-    } else {
-      next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
-    }
-    next_event_millis = parseInt(next_event - Date());
-    let millidelay = FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000;
-    next_event_millis -= millidelay; // alert x minutes before next event
-    if (next_event_millis > 0) {
-      print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000).toString()+")");
-      timeout_next_forced_train_event = setTimeout(onTrainCrossing, next_event_millis, true);
-    } else {
-      print("Oups next_event_millis <= 0 :" + next_event_millis);
-      fp.write(parseInt(Date().getTime()/1000)+",issue,"+next_event+"\n");
-    }
+  let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
+  next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
+  last_valid_event = getNextTrainEvent(next_event_start.getHours(), next_event_start.getMinutes(), skipNext);
+  next_event = Date();
+  if (!last_valid_event) {
+    // tomorrow
+    last_valid_event = train_event_slots[0];
+    next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
+    next_event.setMilliseconds(next_event.valueOf()+24*3600*1000);
+  } else {
+    next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
   }
+  next_event_millis = parseInt(next_event - Date());
+  let millidelay = FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000;
+  next_event_millis -= millidelay; // alert x minutes before next event
+  if (next_event_millis > 0) {
+    print("Next forced train event in " + parseInt(next_event_millis/60000) + " minutes ("+Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000).toString()+")");
+    timeout_next_forced_train_event = setTimeout(onTrainCrossing, next_event_millis, true);
+  } else {
+    print("Oups next_event_millis <= 0 :" + next_event_millis);
+    fp.write(parseInt(Date().getTime()/1000)+",issue,"+next_event+"\n");
+  }
+
 }
 function leadZero(value) {
   return ("0"+value.toString()).substr(-2);
@@ -386,5 +403,6 @@ function disabledScreen() {
   }
 }
 
+load_parameters();
 installTimeouts(false);
 disabledScreen();
