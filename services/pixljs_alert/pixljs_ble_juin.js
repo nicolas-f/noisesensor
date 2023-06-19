@@ -84,6 +84,10 @@ var lightCountSequence = 10; // Number of blink for each sequence
 var snooze_time = 0;
 var ignore_train_time = 0;
 var next_event = null;
+// Variables to track the slider position
+var sliderValue = 5;
+var time_end_question = Date() + 15 * 60 * 1000;
+var idRefreshInterval = 0;
 
 Bluetooth.setConsole(1);
 backlight = 0;
@@ -181,6 +185,118 @@ function flashLightSequence() {
     }
 }
 
+
+function screenQuestion() {
+  if(idRefreshInterval > 0) {
+    clearInterval(idRefreshInterval);
+    idRefreshInterval = 0;
+  }
+  idRefreshInterval = setInterval(refreshCountdown, 1000);
+  answerTime = 1;
+  drawSlider();
+  disableButtons();
+  // Attach the button press event listener
+  button_watch[0]=setWatch(e => {sliderValue=Math.max(0,sliderValue-1);drawSlider();}, BTN1, {repeat: true, edge: 'rising'}, BTN1);
+  button_watch[1]=setWatch(e => {sliderValue=Math.min(10,sliderValue+1);drawSlider();}, BTN2, {repeat: true, edge: 'rising'}, BTN2);
+  button_watch[2]=setWatch(e => {clearInterval(idRefreshInterval);idRefreshInterval=0; disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
+}
+
+function drawNextMessage() {
+  // Clear the display
+  g.clear();
+  g.setFontAlign(0.5, 0.5);
+  x = g.getWidth() / 2; // Calculate the center x-coordinate
+  y = g.getHeight() / 2; // Calculate the center y-coordinate
+  g.setFontPixeloidSans(1);
+  g.drawString(
+    "Merci pour\n votre réponse. \n Attendez le \n prochain passage !", x, y);
+  g.flip();
+  fp.write(parseInt(Date().getTime()/1000)+",mode2,"+sliderValue+"\n");
+  sliderValue = 5;
+  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
+}
+
+function drawExitMessage() {
+  // Clear the display
+  g.clear();
+  g.setFontAlign(0.5, 0.5);
+  x = g.getWidth() / 2; // Calculate the center x-coordinate
+  y = g.getHeight() / 2; // Calculate the center y-coordinate
+  g.setFontPixeloidSans(1);
+  fp.write(parseInt(Date().getTime()/1000)+",mode2_timeout,0"+"\n");
+  g.drawString("Merci pour\n vos réponses. \n A demain !", x, y);
+  g.flip();
+  sliderValue = 5;
+  time_end_question = Date() + 15 * 60 * 1000;
+  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
+  // Update the display
+}
+// Function to draw the slider
+function drawSlider() {
+  let sliderWidth = 100;
+  let sliderHeight = 10;
+  let knobHeight = 15;
+  let sliderYPosition = 40;
+  // Clear the display
+  g.clear();
+  // Draw the slider track
+  var sliderXPosition = (g.getWidth() - sliderWidth) / 2;
+  g.drawRect(sliderXPosition, sliderYPosition, sliderXPosition + sliderWidth,
+    sliderYPosition + sliderHeight);
+  // Calculate the position of the slider knob
+  var knobX = Math.round(sliderValue / 10 * sliderWidth) + sliderXPosition;
+  // Calculate the position of the slider knob vertically
+  var knobY = sliderYPosition;
+  // Draw the slider knob as a triple vertical line
+  var knobYPosition = knobY - (knobHeight - sliderHeight) / 2;
+  g.fillRect(knobX-2, knobYPosition, knobX+2, knobYPosition + knobHeight);
+  g.setFontAlign(-1, -1);
+  g.setFontPixeloidSans(2);
+  g.drawString("-", 0, 0);
+  f_metrics = g.stringMetrics("+");
+  g.drawString("+", g.getWidth() - f_metrics.width, 0);
+  g.setFontPixeloidSans(1);
+  g.setFontAlign(0.5, 0.5);
+  var x = g.getWidth() / 2; // Calculate the center x-coordinate
+  var y = 13 + 15 / 2; // Calculate the center y-coordinate
+  g.drawString(sliderValue, x, y);
+  g.setFontAlign(0.0, -1);
+  x = g.getWidth() / 2; // Calculate the center x-coordinate
+  g.drawString("Gêne au passage", x, 0);
+  g.setFontAlign(0.0, 0.0);
+  x = g.getWidth() - 30; // Calculate the center x-coordinate
+  y = 60; // Calculate the center y-coordinate
+  g.drawString("Suivant > ", x, y);
+  g.setFontAlign(0.5, 0.5);
+  x = g.getWidth() / 2; // Calculate the center x-coordinate
+  y = 33; // Calculate the center y-coordinate
+  if (sliderValue < 2) {
+    g.drawString("Pas du tout Gênant", x, y);
+  } else if (sliderValue > 7) {
+    g.drawString("Extrêment Gênant", x, y);
+  } else {
+    g.drawString("Assez Gênant", x, y);
+  }
+  // Start the countdown timer
+  g.setFontAlign(0.5, 0.5); // Center text horizontally and vertically
+  let timeRemaining = parseInt((time_end_question-Date())/1000);
+  g.drawString(parseInt(timeRemaining / 60)+"m"+leadZero(timeRemaining % 60), 20, 60);
+  // Update the display
+  g.flip();
+}
+
+// Function to update and display the countdown timer
+function refreshCountdown() {
+  if (Date() < time_end_question) {
+    drawSlider();
+  } else {
+    // Stop the interval
+    clearInterval(idRefreshInterval);
+    idRefreshInterval = 0;
+    drawExitMessage();
+  }
+}
+
 function Mode1Screen() {
   Pixl.setLCDPower(true);
   g.clear();
@@ -255,7 +371,10 @@ function onMode1() {
 }
 
 function onMode2() {
-  print("Mode 2 enabled !")
+  // set next mode 2 time if exists
+  setTimeout(installTimeouts, 5*60000, false);
+  print("Mode 2 enabled !");
+  screenQuestion();
 }
 
 function isUserAvailable() {
@@ -288,13 +407,13 @@ function onTrainCrossing(forced) {
     fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
     if(!forced && next_event > now) {
       // ignore new trains events until next event slot
-      print("Will ignore all train events until " + next_event.toString())
+      print("Will ignore all train events until " + next_event.toString());
       ignore_train_time = next_event;
     }
     onMode1();
     installTimeouts(!forced);
   } else {
-    print("User is not available, reset timeouts")
+    print("User is not available, reset timeouts");
     installTimeouts(false); // could not ask user so do not skip time slot
   }
 }
@@ -348,11 +467,11 @@ function installTimeouts(skipNext) {
     clearTimeout(timeout_id_mode2);
   }
   let next_mode_2 = getNextMode2();
-  if(next_mode_2) {
+  if(next_mode_2 && next_mode_2 > now) {
     print("Mode 2 programmed to activate on " + next_mode_2.toString());
-    timeout_id_mode2 = setTimeout(onMode2, next_mode_2 - Date());
+    timeout_id_mode2 = setTimeout(onMode2, next_mode_2 - now);
   } else {
-    print("No mode 2 programmed in the future")
+    print("No mode 2 programmed in the future");
   }
   let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
   next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
@@ -415,3 +534,5 @@ function disabledScreen() {
 load_parameters();
 installTimeouts(false);
 disabledScreen();
+
+onMode2();

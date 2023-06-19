@@ -24,10 +24,6 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
 
 // Variables to track the slider position
 var sliderValue = 5;
-var sliderWidth = 100;
-var sliderHeight = 10;
-var sliderYPosition = 40;
-var knobHeight = 15;
 var time_end_question = Date() + 15 * 60 * 1000;
 var idRefreshInterval = 0;
 var button_watch = [0,0,0,0];
@@ -86,6 +82,10 @@ function drawExitMessage() {
 }
 // Function to draw the slider
 function drawSlider() {
+  let sliderWidth = 100;
+  let sliderHeight = 10;
+  let knobHeight = 15;
+  let sliderYPosition = 40;
   // Clear the display
   g.clear();
   // Draw the slider track
