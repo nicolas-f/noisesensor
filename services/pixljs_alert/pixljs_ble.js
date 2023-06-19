@@ -119,7 +119,7 @@ E.setTimeZone(2);
 
 function construct_date(date_list) {
   let d = Date();
-  d.setFullYear(date_list[0], date_list[1] - 1, date_list[2] - 1);
+  d.setFullYear(date_list[0], date_list[1] - 1, date_list[2]);
   d.setHours(date_list[3], date_list[4], date_list[5], date_list[6]);
   return d;
 }
@@ -404,7 +404,7 @@ function onTrainCrossing(forced) {
   now = Date();
   match_disponibility = isUserAvailable();
   if(match_disponibility || DEMO_MODE) {
-    fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
+    //fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
     if(!forced && next_event > now) {
       // ignore new trains events until next event slot
       print("Will ignore all train events until " + next_event.toString());
