@@ -7,7 +7,7 @@ var parsed_disponibility = null;
 var parsed_activation = null;
 
 function load_parameters() {
-var train_event_slots = `
+let train_event_slots = `
 6h45
 7h40
 8h20
@@ -41,20 +41,18 @@ var train_event_slots = `
 21h05
 21h40
 `;
-var disponibility = `
-16/05/2023 08h00 18h00
-19/05/2023 08h00 18h00
-20/05/2023 08h00 18h00
-21/05/2023 08h00 18h00
-22/05/2023 08h00 18h00
-23/05/2023 08h00 18h00
-24/05/2023 08h00 18h00
+let disponibility = `
+20/06/2023 08h00 18h00
+21/06/2023 08h00 18h00
+22/06/2023 08h00 18h00
+23/06/2023 08h00 18h00
+24/06/2023 08h00 18h00
 `;
 
-var mode2_activation = `
-16/05/2023 14h30 23h59
-17/06/2023 14h30 23h59
-18/06/2023 14h30 23h59`;
+let mode2_activation = `
+19/06/2023 16h39 23h59
+20/06/2023 16h39 23h59
+21/06/2023 16h39 23h59`;
 
 parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
 parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
@@ -117,7 +115,7 @@ E.setTimeZone(2);
 
 function construct_date(date_list) {
   let d = Date();
-  d.setFullYear(date_list[0], date_list[1], date_list[2]);
+  d.setFullYear(date_list[0], date_list[1] - 1, date_list[2] - 1);
   d.setHours(date_list[3], date_list[4], date_list[5], date_list[6]);
   return d;
 }
@@ -244,8 +242,8 @@ function onClickStopAlarm() {
 }
 
 function onClickSnooze() {
-  stopAlarm();
   snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;
+  stopAlarm();
   fp.write(parseInt(Date().getTime()/1000)+",onClickSnooze,0"+"\n");
 }
 
@@ -257,16 +255,7 @@ function onMode1() {
 }
 
 function onMode2() {
-  timeout_id_mode2 = 0;
-  if (timeout_next_forced_train_event > 0) {
-    print("Cleared forced event "+timeout_next_forced_train_event);
-    clearTimeout(timeout_next_forced_train_event);
-    timeout_next_forced_train_event = 0;
-  }
-  turnOnOffScreenBacklight(true, 25000);
-  buzzerDelay();
-  flashLightSequence();
-
+  print("Mode 2 enabled !")
 }
 
 function isUserAvailable() {
@@ -299,6 +288,7 @@ function onTrainCrossing(forced) {
     fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
     if(!forced && next_event > now) {
       // ignore new trains events until next event slot
+      print("Will ignore all train events until " + next_event.toString())
       ignore_train_time = next_event;
     }
     onMode1();
@@ -323,6 +313,19 @@ function getNextTrainEvent(hour, minute, skipSlot) {
   return last_valid_event;
 }
 
+function getNextMode2() {
+  let now = Date();
+  last_valid_event = null;
+  parsed_activation.every(event => {
+    if (event[0] > now) {
+      last_valid_event = event[0];
+      return false;
+    }
+    return true;
+  });
+  return last_valid_event;
+}
+
 function installTimeouts(skipNext) {
   if (timeout_next_forced_train_event > 0) {
     clearTimeout(timeout_next_forced_train_event);
@@ -341,9 +344,15 @@ function installTimeouts(skipNext) {
     g.flip();
     return;
   }
-  if (timeout_id_mode2 == 0 && parsed_activation[0] > now && parsed_activation[1] < now) {
-    print("Mode 2 programmed to activate on " + parsed_activation[0]);
-    timeout_id_mode2 = setTimeout(onMode2, parsed_activation[0] - Date());
+  if (timeout_id_mode2 != 0) {
+    clearTimeout(timeout_id_mode2);
+  }
+  let next_mode_2 = getNextMode2();
+  if(next_mode_2) {
+    print("Mode 2 programmed to activate on " + next_mode_2.toString());
+    timeout_id_mode2 = setTimeout(onMode2, next_mode_2 - Date());
+  } else {
+    print("No mode 2 programmed in the future")
   }
   let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
   next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
