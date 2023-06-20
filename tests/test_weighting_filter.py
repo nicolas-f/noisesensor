@@ -1,9 +1,7 @@
 import os.path
-import time
 import unittest
 import numpy
 from noisesensor.filterdesign import FilterDesign
-from noisesensor.spectrumchannel import SpectrumChannel, compute_leq
 from noisesensor.digitalfilter import DigitalFilter
 import acoustics
 import scipy
@@ -85,5 +83,7 @@ class TestWeightingFilter(unittest.TestCase):
                                    delta=1e-12,
                                    msg="%f != %f" %
                                        (expected, got))
+
+
 if __name__ == '__main__':
     unittest.main()

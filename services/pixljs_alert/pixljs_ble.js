@@ -42,17 +42,18 @@ let train_event_slots = `
 21h40
 `;
 let disponibility = `
-20/06/2023 08h00 18h00
-21/06/2023 08h00 18h00
-22/06/2023 08h00 18h00
-23/06/2023 08h00 18h00
-24/06/2023 08h00 18h00
+10/06/2023 08h00 18h00
+11/06/2023 08h00 18h00
+12/06/2023 08h00 18h00
+13/06/2023 08h00 18h00
+14/06/2023 08h00 18h00
 `;
 
 let mode2_activation = `
-19/06/2023 16h39 23h59
-20/06/2023 16h39 23h59
-21/06/2023 16h39 23h59`;
+20/06/2023 15h10 23h59
+21/06/2023 15h10 23h59
+22/06/2023 15h10 23h59;
+`;
 
 parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
 parsed_disponibility = disponibility.trim().split("\n").map(parse_interval);
@@ -70,6 +71,7 @@ var timeout_next_forced_train_event = 0;
 var timeout_stop_alarm = 0;
 var timeout_turn_off_screen = 0;
 var timeout_buzzer = 0;
+var timeout_next_question = 0;
 var current_active_train_slot = null;
 var alarmEnabled = false;
 var alarmLength = 300000;
@@ -86,7 +88,8 @@ var ignore_train_time = 0;
 var next_event = null;
 // Variables to track the slider position
 var sliderValue = 5;
-var time_end_question = Date() + 15 * 60 * 1000;
+var total_time_question = 15 * 60 * 1000;
+var time_end_question = Date() + total_time_question;
 var idRefreshInterval = 0;
 
 Bluetooth.setConsole(1);
@@ -187,18 +190,19 @@ function flashLightSequence() {
 
 
 function screenQuestion() {
+  timeout_next_question = 0;
+  sliderValue = 5;
   if(idRefreshInterval > 0) {
     clearInterval(idRefreshInterval);
     idRefreshInterval = 0;
   }
   idRefreshInterval = setInterval(refreshCountdown, 1000);
-  answerTime = 1;
   drawSlider();
   disableButtons();
   // Attach the button press event listener
-  button_watch[0]=setWatch(e => {sliderValue=Math.max(0,sliderValue-1);drawSlider();}, BTN1, {repeat: true, edge: 'rising'}, BTN1);
-  button_watch[1]=setWatch(e => {sliderValue=Math.min(10,sliderValue+1);drawSlider();}, BTN2, {repeat: true, edge: 'rising'}, BTN2);
-  button_watch[2]=setWatch(e => {clearInterval(idRefreshInterval);idRefreshInterval=0; disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
+  button_watch[0]=setWatch(e => {alarmEnabled = false; sliderValue=Math.max(0,sliderValue-1);drawSlider();}, BTN1, {repeat: true, edge: 'rising'}, BTN1);
+  button_watch[1]=setWatch(e => {alarmEnabled = false; sliderValue=Math.min(10,sliderValue+1);drawSlider();}, BTN2, {repeat: true, edge: 'rising'}, BTN2);
+  button_watch[2]=setWatch(e => {alarmEnabled = false; clearInterval(idRefreshInterval);idRefreshInterval=0; disableButtons();drawNextMessage();}, BTN3, {repeat: true, edge: 'rising'}, BTN3);
 }
 
 function drawNextMessage() {
@@ -212,8 +216,11 @@ function drawNextMessage() {
     "Merci pour\n votre réponse. \n Attendez le \n prochain passage !", x, y);
   g.flip();
   fp.write(parseInt(Date().getTime()/1000)+",mode2,"+sliderValue+"\n");
-  sliderValue = 5;
-  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
+  if(timeout_next_question > 0) {
+    clearTimeout(timeout_next_question);
+    timeout_next_question = 0;
+  }
+  timeout_next_question = setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
 }
 
 function drawExitMessage() {
@@ -226,13 +233,10 @@ function drawExitMessage() {
   fp.write(parseInt(Date().getTime()/1000)+",mode2_timeout,0"+"\n");
   g.drawString("Merci pour\n vos réponses. \n A demain !", x, y);
   g.flip();
-  sliderValue = 5;
-  time_end_question = Date() + 15 * 60 * 1000;
-  setTimeout(screenQuestion, 10000); // 30,000 milliseconds = 30 seconds
-  // Update the display
 }
 // Function to draw the slider
 function drawSlider() {
+  Pixl.setLCDPower(true);
   let sliderWidth = 100;
   let sliderHeight = 10;
   let knobHeight = 15;
@@ -364,7 +368,6 @@ function onClickSnooze() {
 }
 
 function onMode1() {
-  turnOnOffScreenBacklight(true, alarmLength);
   Mode1Screen();
   buzzerDelay();
   flashLightSequence();
@@ -372,8 +375,11 @@ function onMode1() {
 
 function onMode2() {
   // set next mode 2 time if exists
+  turnOnOffScreenBacklight(true, total_time_question);
   setTimeout(installTimeouts, 5*60000, false);
   print("Mode 2 enabled !");
+  buzzerDelay();
+  flashLightSequence();
   screenQuestion();
 }
 
@@ -391,27 +397,36 @@ function isUserAvailable() {
   return match_disponibility;
 }
 
-function onTrainCrossing(forced) {
+function onTrainCrossing(fromTimer) {
+  if(timeout_next_question > 0) {
+    // currently waiting for next question
+    // cancel timeout and ask next question now
+    clearTimeout(timeout_next_question);
+    timeout_next_question = 0;
+    buzzerDelay();
+    flashLightSequence();
+    screenQuestion();
+  }
   let now = Date();
   if(now < snooze_time || now < ignore_train_time) {
-    if(forced) {
+    if(fromTimer) {
       installTimeouts(false);
     }
     print("Ignored train event");
     return 0;
   }
-  print((forced ? "Forced" : "BT") + " train crossing event");
+  print((fromTimer ? "fromTimer" : "BT") + " train crossing event");
   now = Date();
   match_disponibility = isUserAvailable();
   if(match_disponibility || DEMO_MODE) {
-    //fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+forced+"\n");
-    if(!forced && next_event > now) {
+    //fp.write(parseInt(Date().getTime()/1000)+",onTrainCrossing,"+fromTimer+"\n");
+    if(!fromTimer && next_event > now) {
       // ignore new trains events until next event slot
       print("Will ignore all train events until " + next_event.toString());
       ignore_train_time = next_event;
     }
     onMode1();
-    installTimeouts(!forced);
+    installTimeouts(!fromTimer);
   } else {
     print("User is not available, reset timeouts");
     installTimeouts(false); // could not ask user so do not skip time slot
@@ -420,7 +435,7 @@ function onTrainCrossing(forced) {
 
 function getNextTrainEvent(hour, minute, skipSlot) {
   let match_time = construct_date([1970, 1, 1, hour, minute, 0, 0]);
-  last_valid_event = null;
+  let last_valid_event = null;
   parsed_train_event_slots.every(event => {
     if (event > match_time) {
       pass = last_valid_event == null && skipSlot;
@@ -434,7 +449,7 @@ function getNextTrainEvent(hour, minute, skipSlot) {
 
 function getNextMode2() {
   let now = Date();
-  last_valid_event = null;
+  let last_valid_event = null;
   parsed_activation.every(event => {
     if (event[0] > now) {
       last_valid_event = event[0];
@@ -468,20 +483,20 @@ function installTimeouts(skipNext) {
   }
   let next_mode_2 = getNextMode2();
   if(next_mode_2 && next_mode_2 > now) {
-    print("Mode 2 programmed to activate on " + next_mode_2.toString());
+    print("Mode 2 programmed to activate on " + next_mode_2.toString()+ " in "+parseInt((next_mode_2 - now)/60000)+" minutes");
     timeout_id_mode2 = setTimeout(onMode2, next_mode_2 - now);
   } else {
     print("No mode 2 programmed in the future");
   }
   let match_time = construct_date([1970, 1, 1, now.getHours(), now.getMinutes(), 0, 0]);
   next_event_start = Date(now+FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000+5000);
-  last_valid_event = getNextTrainEvent(next_event_start.getHours(), next_event_start.getMinutes(), skipNext);
+  let last_valid_event = getNextTrainEvent(next_event_start.getHours(), next_event_start.getMinutes(), skipNext);
   next_event = Date();
   if (!last_valid_event) {
     // tomorrow
-    last_valid_event = train_event_slots[0];
+    last_valid_event = parsed_train_event_slots[1];
     next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
-    next_event.setMilliseconds(next_event.valueOf()+24*3600*1000);
+    next_event=Date(next_event.valueOf()+24*3600*1000);
   } else {
     next_event.setHours(last_valid_event.getHours(), last_valid_event.getMinutes(), 0, 0);
   }
@@ -495,11 +510,12 @@ function installTimeouts(skipNext) {
     print("Oups next_event_millis <= 0 :" + next_event_millis);
     fp.write(parseInt(Date().getTime()/1000)+",issue,"+next_event+"\n");
   }
-
 }
+
 function leadZero(value) {
   return ("0"+value.toString()).substr(-2);
 }
+
 function disabledScreen() {
   if(!DEMO_MODE && !isUserAvailable()) {
     g.clear();
@@ -534,5 +550,3 @@ function disabledScreen() {
 load_parameters();
 installTimeouts(false);
 disabledScreen();
-
-onMode2();
