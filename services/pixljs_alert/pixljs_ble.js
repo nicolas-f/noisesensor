@@ -298,6 +298,7 @@ function refreshCountdown() {
     clearInterval(idRefreshInterval);
     idRefreshInterval = 0;
     drawExitMessage();
+    setTimeout(disabledScreen, 15000);
   }
 }
 
