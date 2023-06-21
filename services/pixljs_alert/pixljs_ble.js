@@ -42,17 +42,13 @@ let train_event_slots = `
 21h40
 `;
 let disponibility = `
-10/06/2023 08h00 18h00
-11/06/2023 08h00 18h00
-12/06/2023 08h00 18h00
-13/06/2023 08h00 18h00
-14/06/2023 08h00 18h00
+21/06/2023 17h00 23h59
+22/06/2023 19h00 23h59
+23/06/2023 08h00 15h00
 `;
 
 let mode2_activation = `
-20/06/2023 15h10 23h59
-21/06/2023 10h35 23h59
-22/06/2023 15h10 23h59;
+21/06/2023 16h35 23h59
 `;
 
 parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
@@ -470,13 +466,6 @@ function installTimeouts(skipNext) {
   let now = Date();
   g.setFontPixeloidSans(1);
   if (now.getFullYear() < 2023) {
-    Pixl.setLCDPower(true);
-    LED.write(false);
-    g.clear();
-    text = "Boitier non initialisé !";
-    text_metrics = g.stringMetrics(text);
-    g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, g.getHeight() / 2 - text_metrics.height / 2);
-    g.flip();
     return;
   }
   if (timeout_id_mode2 != 0) {
@@ -518,6 +507,16 @@ function leadZero(value) {
 }
 
 function disabledScreen() {
+  if(now.getFullYear() < 2023) {
+    Pixl.setLCDPower(true);
+    LED.write(false);
+    g.clear();
+    text = "Boitier non initialisé !";
+    text_metrics = g.stringMetrics(text);
+    g.drawString(text, g.getWidth() / 2 - text_metrics.width / 2, g.getHeight() / 2 - text_metrics.height / 2);
+    g.flip();
+    return 0;
+  }
   if(!DEMO_MODE && !isUserAvailable()) {
     g.clear();
     Pixl.setLCDPower(false);
