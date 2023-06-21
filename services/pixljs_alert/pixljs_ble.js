@@ -293,6 +293,7 @@ function refreshCountdown() {
     // Stop the interval
     clearInterval(idRefreshInterval);
     idRefreshInterval = 0;
+    alarmEnabled = false;
     drawExitMessage();
     setTimeout(disabledScreen, 15000);
   }
@@ -375,7 +376,8 @@ function onMode2() {
   turnOnOffScreenBacklight(true, total_time_question);
   setTimeout(installTimeouts, 5*60000, false);
   print("Mode 2 enabled !");
-  buzzerDelay();
+  alarmEnabled = true;
+  buzzerSequence();
   flashLightSequence();
   screenQuestion();
 }
