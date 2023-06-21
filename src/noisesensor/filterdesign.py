@@ -61,7 +61,7 @@ class FilterDesign:
     """
     def __init__(self, sample_rate=48000, first_frequency_band=50,
                  last_frequency_band=20000, filter_order=6,
-                 window_samples=48000):
+                 window_samples=0):
         """
         :param sample_rate: Sample rate must be greater than 0
         :param first_frequency_band: First pass band (no limitation)
@@ -71,6 +71,8 @@ class FilterDesign:
         with the provided window size
         """
         self.sample_rate = sample_rate
+        if window_samples == 0:
+            window_samples = sample_rate
         self.window_samples = window_samples
         self.first_frequency_band = first_frequency_band
         self.last_frequency_band = last_frequency_band

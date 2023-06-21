@@ -367,6 +367,7 @@ function onClickSnooze() {
 
 function onMode1() {
   Mode1Screen();
+  turnOnOffScreenBacklight(true, alarmLength);
   buzzerDelay();
   flashLightSequence();
 }
