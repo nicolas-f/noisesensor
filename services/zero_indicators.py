@@ -1,37 +1,123 @@
 import datetime
-import noisesensor
+import time
+
+from noisesensor.spectrumchannel import SpectrumChannel, compute_leq
 import sys
 import argparse
 import zmq
+import numpy as np
+import json
+
+
+def generate_stack_dict(filter_config):
+    stack_dict = {"lzeq": []}
+    fields = []
+    if "bandpass" in filter_config:
+        fields = ["%g" % bp["nominal_frequency"] for bp in
+                  filter_config["bandpass"]]
+    if "a_weighting" in filter_config:
+        stack_dict["LAeq"] = []
+    if "c_weighting" in filter_config:
+        stack_dict["LCeq"] = []
+    for field in fields:
+        stack_dict[field] = []
+    return fields, stack_dict
 
 
 class AcousticIndicatorsProcessor:
     def __init__(self, config):
         self.config = config
         self.epoch = datetime.datetime.utcfromtimestamp(0)
+        self.total_read = 0
+        self.current_stack_time = 0
+        self.filter_config = json.load(open(self.config.configuration_file,
+                                            "r"))
+        self.channel = SpectrumChannel(self.filter_config, use_scipy=False,
+                                       use_cascade=True)
+        fields, stack_dict = generate_stack_dict(self.filter_config)
+        self.fields = fields
+        self.current_stack_dict = stack_dict
+        self.stack_count = 0
+        self.socket = None
+        self.socket_out = None
 
     def init_socket(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
         self.socket.connect(self.config.input_address)
         self.socket.subscribe("")
+        self.socket_out = context.socket(zmq.PUB)
+        self.socket_out.bind(self.config.output_address)
+
     def unix_time(self):
         return (datetime.datetime.utcnow() - self.epoch).total_seconds()
 
     def run(self):
         self.init_socket()
         # sensitivity of my Umik-1 is -28.34 dBFS @ 94 dB/1khz
-        db_delta = 94 - self.config("sensitivity") 
+        db_delta = 94 - self.config.sensitivity
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
-        audio_bytes = self.socket.recv()
+        window_samples = self.config.window * \
+            self.filter_config["configuration"]["sample_rate"]
+        current_window = np.zeros(window_samples, dtype=np.single)
+        cursor = 0
+        while True:
+            audio_data_bytes = np.frombuffer(self.socket.recv(),
+                                             dtype=np.single)
+            buffer_cursor = 0
+            while buffer_cursor < len(audio_data_bytes):
+                # Process part of samples to fit configured windows
+                to_read = min(window_samples-cursor, len(audio_data_bytes)
+                              - buffer_cursor)
+                current_window[cursor:cursor+to_read] = \
+                    audio_data_bytes[buffer_cursor:buffer_cursor+to_read]
+                cursor += to_read
+                buffer_cursor += to_read
+                self.total_read += to_read
+                if cursor == window_samples:
+                    cursor = 0
+                    if self.current_stack_time == 0:
+                        self.current_stack_time = time.time()
+                    # analysis window filled
+                    lzeq = compute_leq(current_window)
+                    self.current_stack_dict["LZeq"].append(lzeq)
+                    if "a_weighting" in self.filter_config:
+                        laeq = self.channel.process_samples_weight_a(
+                            current_window)
+                        self.current_stack_dict["LAeq"].append(laeq)
+                    if "c_weighting" in self.filter_config:
+                        lceq = self.channel.process_samples_weight_c(
+                            current_window)
+                        self.current_stack_dict["LCeq"].append(lceq)
+                    if "bandpass" in self.filter_config:
+                        spectrum = self.channel.process_samples(current_window)
+                        for column, lzeq in zip(self.fields, spectrum):
+                            self.current_stack_dict[column].append(lzeq)
+                    self.stack_count += 1
+                    if self.stack_count == self.config.output_stack:
+                        # stack of noise indicator complete
+                        # send the full document
+                        self.stack_count = 0
+                        self.current_stack_dict[
+                            "timestamp"] = self.current_stack_time
+                        self.socket_out.send_json(self.current_stack_dict)
+                        self.current_stack_time = 0
+                        self.current_stack_dict = generate_stack_dict(
+                            self.filter_config)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and publish noise events',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--configuration_file", help="Configuration file created with filterdesign.py")
+    parser = argparse.ArgumentParser(
+        description='This program read audio stream from zeromq and publish'
+                    ' noise events', formatter_class=
+        argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--configuration_file", help="Configuration file generated by filterdesign.py")
     parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34, type=float)
+    parser.add_argument("--window", help="Will produce one indicator per provided time frame in seconds", default=0.125, type=float)
+    parser.add_argument("--output_stack", help="Each output document will provide this number of indicators (related to window)", default=80, type=int)
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
+    parser.add_argument("--output_address", help="Address for publishing JSON of noise indicators",
+                        default="tcp://*:10005")
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     ai = AcousticIndicatorsProcessor(args)
