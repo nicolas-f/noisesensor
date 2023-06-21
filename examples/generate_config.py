@@ -3,7 +3,7 @@ import json
 
 
 f = FilterDesign(sample_rate=48000, first_frequency_band=50,
-                 last_frequency_band=16000)
+                 last_frequency_band=16000, window_samples=48000*0.125)
 f.down_sampling = f.G2
 f.band_division = 3
 

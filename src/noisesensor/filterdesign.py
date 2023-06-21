@@ -60,14 +60,18 @@ class FilterDesign:
         Create multiple filter configuration for a cascaded band pass filtering
     """
     def __init__(self, sample_rate=48000, first_frequency_band=50,
-                 last_frequency_band=20000, filter_order=6):
+                 last_frequency_band=20000, filter_order=6,
+                 window_samples=48000):
         """
         :param sample_rate: Sample rate must be greater than 0
         :param first_frequency_band: First pass band (no limitation)
         :param last_frequency_band: Last pass band, should be less than
          sample_rate / 2
+        :@param window_samples: Limit the depth of subsampling in order to fit
+        with the provided window size
         """
         self.sample_rate = sample_rate
+        self.window_samples = window_samples
         self.first_frequency_band = first_frequency_band
         self.last_frequency_band = last_frequency_band
         self.G10 = 10.0 ** (3.0 / 10.0)
@@ -159,7 +163,9 @@ class FilterDesign:
             while self.sample_rate % \
                     ds_factor ** (subsampling_depth+1) == 0\
                     and self.sample_rate / ds_factor **\
-                    (subsampling_depth+1) >= frequency_high * 2:
+                    (subsampling_depth+1) >= frequency_high * 2 and \
+                    self.window_samples % ds_factor ** (subsampling_depth+1)\
+                    == 0:
                 subsampling_depth += 1
             data["subsampling_depth"] = subsampling_depth
             # compute the target frequency index for the used down-sampling

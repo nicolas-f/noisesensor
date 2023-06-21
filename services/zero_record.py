@@ -100,8 +100,8 @@ class AudioFolderPlayListBuffer(io.BytesIO):
             import numpy as np
             # push new data
             file_name = self.playlist[random.randrange(0, len(self.playlist))]
-            print("Playing " + file_name)
             wav_data, sr = sf.read(file_name, dtype=np.int16)
+            print("Playing " + file_name + " sample rate %d Hz-> %d Hz" % (sr, self.sample_rate))
             assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
             waveform = wav_data / 32768.0  # Convert to [-1.0, +1.0]
             waveform = waveform.astype('float32')
@@ -110,7 +110,8 @@ class AudioFolderPlayListBuffer(io.BytesIO):
               waveform = np.mean(waveform, axis=1)
             if sr != self.sample_rate:
                 import resampy
-                waveform = resampy.resample(waveform, sr, self.sample_rate)
+                waveform = resampy.resample(waveform, sr, self.sample_rate,
+                                            filter=self.config.resample_method)
             super().__init__(b"")
             self.write(waveform.tobytes())
             self.seek(0)
@@ -171,6 +172,9 @@ def main():
     parser.add_argument("-i", "--interface", help="Interface to publish", default="*", type=str)
     parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=16000, type=int)
     parser.add_argument("-r", "--sample_rate", help="Set frequency of debug file", default=16000, type=int)
+    parser.add_argument("--resample_method",
+                        help="Resampling method when reading wave file",
+                        default='kaiser_fast', type=str)
     parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
                                                   " second of transfer", default=0, type=int)
     parser.add_argument("-w", "--wave", help="File name or folder containing wave file(s), will be used instead of"
