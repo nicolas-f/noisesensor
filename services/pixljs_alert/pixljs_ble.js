@@ -1,5 +1,5 @@
 var user_id = '007';
-var DEMO_MODE = 0;
+var DEMO_MODE = 1;
 var FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY = 3;
 
 var parsed_train_event_slots = null;
@@ -43,12 +43,10 @@ let train_event_slots = `
 `;
 let disponibility = `
 21/06/2023 17h00 23h59
-22/06/2023 19h00 23h59
-23/06/2023 08h00 15h00
 `;
 
 let mode2_activation = `
-21/06/2023 16h35 23h59
+22/06/2023 10h33 23h59
 `;
 
 parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
@@ -85,7 +83,7 @@ var next_event = null;
 // Variables to track the slider position
 var sliderValue = 5;
 var total_time_question = 15 * 60 * 1000;
-var time_end_question = Date() + total_time_question;
+var time_end_question = 0;
 var idRefreshInterval = 0;
 
 Bluetooth.setConsole(1);
@@ -374,6 +372,7 @@ function onMode1() {
 
 function onMode2() {
   // set next mode 2 time if exists
+  time_end_question = Date() + total_time_question;
   turnOnOffScreenBacklight(true, total_time_question);
   setTimeout(installTimeouts, 5*60000, false);
   print("Mode 2 enabled !");
@@ -510,7 +509,7 @@ function leadZero(value) {
 }
 
 function disabledScreen() {
-  if(now.getFullYear() < 2023) {
+  if(Date().getFullYear() < 2023) {
     Pixl.setLCDPower(true);
     LED.write(false);
     g.clear();
