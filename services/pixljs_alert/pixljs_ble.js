@@ -364,6 +364,10 @@ function onClickSnooze() {
 }
 
 function onMode1() {
+  if(Date() < time_end_question) {
+    // currently asking on mode2..
+    return 0;
+  }
   Mode1Screen();
   turnOnOffScreenBacklight(true, alarmLength);
   buzzerDelay();
