@@ -89,7 +89,7 @@ if __name__ == "__main__":
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
                 time_part = datetime.datetime.now().\
-                    strftime("%Y_%m_%d.%Hh%Mm%S.%f.csv")
+                    strftime("%Y_%m_%d.%Hh%Mm%S.%f")
                 file_path = os.path.join(args.output_folder,
                                          document_name+"_%s.json" % time_part)
                 with open(file_path, "w") as fp:
