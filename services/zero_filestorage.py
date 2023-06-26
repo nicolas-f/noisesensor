@@ -41,8 +41,6 @@ import threading
 import collections
 import datetime
 import json
-from json import encoder
-encoder.FLOAT_REPR = lambda o: format(o, '.2f')
 
 class ZeroMQThread(threading.Thread):
     def __init__(self, global_settings, name, address):
@@ -69,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--input_address", nargs="+",
                         help="Address and file name for zero_record json"
                              " channel, you can provide it multiple times",
-                        default="tcp://127.0.0.1:10005/indicators")
+                        default=["tcp://127.0.0.1:10005/indicators"])
     parser.add_argument("-o", "--output_folder", help="Json output folder",
                         required=True, type=str)
 

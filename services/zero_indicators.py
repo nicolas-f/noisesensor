@@ -119,21 +119,21 @@ class AcousticIndicatorsProcessor:
                 if cursor == window_samples:
                     # analysis window filled
                     cursor = 0
-                    lzeq = compute_leq(current_window) + db_delta
+                    lzeq = round(compute_leq(current_window) + db_delta, 2)
                     self.current_stack_dict["LZeq"].append(lzeq)
                     if "a_weighting" in self.filter_config:
-                        laeq = self.channel.process_samples_weight_a(
-                            current_window) + db_delta
+                        laeq = round(self.channel.process_samples_weight_a(
+                            current_window) + db_delta, 2)
                         self.current_stack_dict["LAeq"].append(laeq)
                     if "c_weighting" in self.filter_config:
-                        lceq = self.channel.process_samples_weight_c(
-                            current_window) + db_delta
+                        lceq = round(self.channel.process_samples_weight_c(
+                            current_window) + db_delta, 2)
                         self.current_stack_dict["LCeq"].append(lceq)
                     if "bandpass" in self.filter_config:
                         spectrum = self.channel.process_samples(current_window)
                         for column, lzeq in zip(self.fields, spectrum):
-                            self.current_stack_dict[column].append(lzeq +
-                                                                   db_delta)
+                            self.current_stack_dict[column].append(round(lzeq +
+                                                                   db_delta, 2))
                     self.stack_count += 1
                     if self.stack_count == self.config.output_stack:
                         # stack of noise indicator complete
