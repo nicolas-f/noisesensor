@@ -42,11 +42,17 @@ let train_event_slots = `
 21h40
 `;
 let disponibility = `
-21/06/2023 17h00 23h59
+23/06/2023 08h00 12h00
+26/06/2023 08h00 12h00
+27/06/2023 08h00 12h00
+28/06/2023 08h00 12h00
 `;
 
 let mode2_activation = `
-22/06/2023 10h33 23h59
+23/06/2023 14h00 23h59
+26/06/2023 14h00 23h59
+27/06/2023 14h00 23h59
+28/06/2023 14h00 23h59
 `;
 
 parsed_train_event_slots = train_event_slots.trim().split("\n").map(parse_event);
@@ -363,15 +369,20 @@ function onClickSnooze() {
   fp.write(parseInt(Date().getTime()/1000)+",onClickSnooze,0"+"\n");
 }
 
+function launchAlarm() {
+  alarmEnabled = true;
+  setTimeout(turnOnOffScreenBacklight,buzzer_buz_time_ms*2, true, alarmLength);
+  buzzerDelay();
+  setTimeout(flashLightSequence, buzzer_buz_time_ms*2);
+}
+
 function onMode1() {
   if(Date() < time_end_question) {
     // currently asking on mode2..
     return 0;
   }
   Mode1Screen();
-  turnOnOffScreenBacklight(true, alarmLength);
-  buzzerDelay();
-  flashLightSequence();
+  launchAlarm();
 }
 
 function onMode2() {
@@ -380,9 +391,7 @@ function onMode2() {
   turnOnOffScreenBacklight(true, total_time_question);
   setTimeout(installTimeouts, 5*60000, false);
   print("Mode 2 enabled !");
-  alarmEnabled = true;
-  buzzerSequence();
-  flashLightSequence();
+  launchAlarm();
   screenQuestion();
 }
 
