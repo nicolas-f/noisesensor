@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import argparse
+import sys
 import time
 import zmq
 import os
@@ -92,9 +93,13 @@ if __name__ == "__main__":
                 time_part = datetime.datetime.now().\
                     strftime("%Y_%m_%d.%Hh%Mm%S.%f")
                 file_path = os.path.join(args.output_folder,
-                                         document_name+"_%s.json" % time_part)
+                                         document_name+"_%s" % time_part)
+                # make tmp extension in order to not process this file
+                # until it has been fully saved
                 with open(file_path, "w") as fp:
-                    json.dump(document_json, fp, allow_nan=True)
+                    json.dump(document_json+".json.tmp", fp, allow_nan=True)
+                # rename to the final name
+                os.rename(document_json+".json.tmp", document_json+".json")
             time.sleep(0.005)
     finally:
         args.running = False

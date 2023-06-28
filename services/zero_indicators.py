@@ -165,8 +165,8 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--window", help="Will produce one indicator per provided time frame in seconds", default=0.125, type=float)
     parser.add_argument("-s", "--output_stack", help="Each output document will provide this number of indicators (related to window)", default=80, type=int)
     parser.add_argument("-t", "--output_time",
-                        help="Output time for each time frame",
-                        default=False, type=bool)
+                        help="Output time for each time frame", default=False,
+                        action="store_true")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of noise indicators",
                         default="tcp://127.0.0.1:10005")
