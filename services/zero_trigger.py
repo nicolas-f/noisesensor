@@ -358,6 +358,7 @@ class TriggerProcessor:
                         status = "wait_trigger"
                         self.socket_out.send_json(document)
                         continue
+                processing_time = 0 # yamnet window has been rejected
             elif status == "record":
                 while status == "record":
                     audio_data_encrypt = ""
