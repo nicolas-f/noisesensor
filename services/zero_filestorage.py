@@ -110,11 +110,11 @@ def main():
                                          document_name+"_%s" % time_part)
                 # make tmp extension in order to not process this file
                 # until it has been fully saved
-                temporary_extension = document_json+extension+".tmp"
-                with open_file_for_write(file_path, args) as fp:
-                    json.dump(temporary_extension, fp, allow_nan=True)
+                temporary_extension = file_path+extension+".tmp"
+                with open_file_for_write(temporary_extension, args) as fp:
+                    json.dump(document_json, fp, allow_nan=True)
                 # rename to the final name
-                os.rename(temporary_extension, document_json+extension)
+                os.rename(temporary_extension, file_path+extension)
             time.sleep(0.005)
     finally:
         args.running = False
