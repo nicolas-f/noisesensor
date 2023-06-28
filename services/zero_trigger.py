@@ -37,7 +37,6 @@ import collections
 import argparse
 import threading
 import time
-import array
 import math
 import csv
 
@@ -66,7 +65,7 @@ except ImportError:
 import soundfile as sf
 import io
 import datetime
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 import resampy
 from importlib.resources import files
 
@@ -167,7 +166,7 @@ class TriggerProcessor:
         self.socket_out = None
         self.yamnet_config = Params()
         tflite_path = self.config.yamnet_weights
-        self.yamnet_interpreter = tf.lite.Interpreter(tflite_path)
+        self.yamnet_interpreter = tflite.Interpreter(model_path=tflite_path)
         self.tensors = Tensors()
 
         input_details = self.yamnet_interpreter.get_input_details()
