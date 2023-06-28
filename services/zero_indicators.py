@@ -44,7 +44,7 @@ import numpy as np
 import json
 
 
-def generate_stack_dict(filter_config):
+def generate_stack_dict(filter_config, push_time):
     stack_dict = {"LZeq": []}
     fields = []
     if "bandpass" in filter_config:
@@ -56,6 +56,8 @@ def generate_stack_dict(filter_config):
         stack_dict["LCeq"] = []
     for field in fields:
         stack_dict[field] = []
+    if push_time:
+        stack_dict["timestamp"] = []
     return fields, stack_dict
 
 
@@ -69,7 +71,8 @@ class AcousticIndicatorsProcessor:
                                             "r"))
         self.channel = SpectrumChannel(self.filter_config, use_scipy=False,
                                        use_cascade=True)
-        fields, stack_dict = generate_stack_dict(self.filter_config)
+        fields, stack_dict = generate_stack_dict(self.filter_config,
+                                                 self.config.output_time)
         self.fields = fields
         self.current_stack_dict = stack_dict
         self.stack_count = 0
@@ -89,13 +92,14 @@ class AcousticIndicatorsProcessor:
 
     def run(self):
         self.init_socket()
+        sample_rate = self.filter_config["configuration"]["sample_rate"]
         # sensitivity of my Umik-1 is -28.34 dBFS @ 94 dB/1khz
         db_delta = 94 - self.config.sensitivity
         ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         window_samples = int(
             self.config.window * self.filter_config["configuration"][
                 "sample_rate"])
-        if self.filter_config["configuration"]["sample_rate"] % (
+        if sample_rate % (
                 1 / self.config.window) != 0:
             print("Warning ! window does not fit with sample rate")
         current_window = np.zeros(shape=window_samples, dtype=np.single)
@@ -132,8 +136,11 @@ class AcousticIndicatorsProcessor:
                     if "bandpass" in self.filter_config:
                         spectrum = self.channel.process_samples(current_window)
                         for column, lzeq in zip(self.fields, spectrum):
-                            self.current_stack_dict[column].append(round(lzeq +
-                                                                   db_delta, 2))
+                            self.current_stack_dict[column].append(
+                                round(lzeq + db_delta, 2))
+                    if self.config.output_time:
+                        self.current_stack_dict["timestamp"].append(
+                            round(time.time() - window_samples/sample_rate, 3))
                     self.stack_count += 1
                     if self.stack_count == self.config.output_stack:
                         # stack of noise indicator complete
@@ -144,7 +151,7 @@ class AcousticIndicatorsProcessor:
                         self.socket_out.send_json(self.current_stack_dict)
                         self.current_stack_time = 0
                         fields, stack_dict = generate_stack_dict(
-                            self.filter_config)
+                            self.filter_config, self.config.output_time)
                         self.current_stack_dict = stack_dict
 
 
@@ -157,6 +164,9 @@ if __name__ == "__main__":
     parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34, type=float)
     parser.add_argument("-w", "--window", help="Will produce one indicator per provided time frame in seconds", default=0.125, type=float)
     parser.add_argument("-s", "--output_stack", help="Each output document will provide this number of indicators (related to window)", default=80, type=int)
+    parser.add_argument("-t", "--output_time",
+                        help="Output time for each time frame",
+                        default=False, type=bool)
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of noise indicators",
                         default="tcp://127.0.0.1:10005")
