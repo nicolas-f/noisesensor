@@ -48,6 +48,8 @@ def compute_leq(samples):
 
 
 class SpectrumChannel:
+    minimum_samples_length = 1
+
     def __init__(self, configuration, use_scipy=False, use_cascade=True):
         """
         init sub_samplers with anti aliasing filters parameters
@@ -61,72 +63,78 @@ class SpectrumChannel:
         """
         self.configuration = configuration
         self.use_scipy = use_scipy
-        bp = configuration["bandpass"]
-        max_subsampling = max([v["subsampling_depth"] for v in
-                               bp])
-        if not use_cascade:
-            max_subsampling = 0
-        self.subsampling_ratio = configuration["anti_aliasing"]["sample_ratio"]
-        self.minimum_samples_length = self.subsampling_ratio ** max_subsampling
-        ref_filter_config = configuration["anti_aliasing"]
-        self.sub_samplers = []
-        for i in range(max_subsampling):
-            if not self.use_scipy:
-                iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
-                             numpy.array(ref_filter_config["b1"]),
-                             numpy.array(ref_filter_config["b2"]),
-                             numpy.array(ref_filter_config["a1"]),
-                             numpy.array(ref_filter_config["a2"]))
-            else:
-                iir_filter = numpy.array(
-                    [[ref_filter_config["b0"][filter_index],
-                        ref_filter_config["b1"][filter_index],
-                        ref_filter_config["b2"][filter_index],
-                        1.0,
-                        ref_filter_config["a1"][filter_index],
-                        ref_filter_config["a2"][filter_index]]
-                     for filter_index in range(len(ref_filter_config["b0"]))])
-            self.sub_samplers.append(iir_filter)
+        if "bandpass" in configuration:
+            bp = configuration["bandpass"]
+            max_subsampling = max([v["subsampling_depth"] for v in
+                                   bp])
+            if not use_cascade:
+                max_subsampling = 0
+            self.subsampling_ratio = configuration["anti_aliasing"]["sample_ratio"]
+            self.minimum_samples_length = self.subsampling_ratio ** max_subsampling
+            ref_filter_config = configuration["anti_aliasing"]
+            self.sub_samplers = []
+            for i in range(max_subsampling):
+                if not self.use_scipy:
+                    iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
+                                 numpy.array(ref_filter_config["b1"]),
+                                 numpy.array(ref_filter_config["b2"]),
+                                 numpy.array(ref_filter_config["a1"]),
+                                 numpy.array(ref_filter_config["a2"]))
+                else:
+                    iir_filter = numpy.array(
+                        [[ref_filter_config["b0"][filter_index],
+                            ref_filter_config["b1"][filter_index],
+                            ref_filter_config["b2"][filter_index],
+                            1.0,
+                            ref_filter_config["a1"][filter_index],
+                            ref_filter_config["a2"][filter_index]]
+                         for filter_index in range(len(ref_filter_config["b0"]))])
+                self.sub_samplers.append(iir_filter)
 
-        self.iir_filters = [list() for i in range(max_subsampling + 1)]
-        for id_frequency, freq in enumerate(bp):
-            if use_cascade:
-                ref_filter_config = freq["subsampling_filter"]["sos"]
-            else:
-                ref_filter_config = freq["sos"]
-            if not self.use_scipy:
-                iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
-                                          numpy.array(ref_filter_config["b1"]),
-                                          numpy.array(ref_filter_config["b2"]),
-                                          numpy.array(ref_filter_config["a1"]),
-                                          numpy.array(ref_filter_config["a2"]))
-            else:
-                iir_filter = numpy.array(
-                    [[ref_filter_config["b0"][filter_index],
-                        ref_filter_config["b1"][filter_index],
-                        ref_filter_config["b2"][filter_index],
-                        1.0,
-                        ref_filter_config["a1"][filter_index],
-                        ref_filter_config["a2"][filter_index]]
-                     for filter_index in range(len(ref_filter_config["b0"]))])
-            if use_cascade:
-                self.iir_filters[freq["subsampling_depth"]]\
-                    .append((id_frequency, iir_filter))
-            else:
-                self.iir_filters[0].append((id_frequency, iir_filter))
+            self.iir_filters = [list() for i in range(max_subsampling + 1)]
+            for id_frequency, freq in enumerate(bp):
+                if use_cascade:
+                    ref_filter_config = freq["subsampling_filter"]["sos"]
+                else:
+                    ref_filter_config = freq["sos"]
+                if not self.use_scipy:
+                    iir_filter = BiquadFilter(numpy.array(ref_filter_config["b0"]),
+                                              numpy.array(ref_filter_config["b1"]),
+                                              numpy.array(ref_filter_config["b2"]),
+                                              numpy.array(ref_filter_config["a1"]),
+                                              numpy.array(ref_filter_config["a2"]))
+                else:
+                    iir_filter = numpy.array(
+                        [[ref_filter_config["b0"][filter_index],
+                            ref_filter_config["b1"][filter_index],
+                            ref_filter_config["b2"][filter_index],
+                            1.0,
+                            ref_filter_config["a1"][filter_index],
+                            ref_filter_config["a2"][filter_index]]
+                         for filter_index in range(len(ref_filter_config["b0"]))])
+                if use_cascade:
+                    self.iir_filters[freq["subsampling_depth"]]\
+                        .append((id_frequency, iir_filter))
+                else:
+                    self.iir_filters[0].append((id_frequency, iir_filter))
         # weighting filters
-        self.a_numerator = numpy.array(
-            configuration["a_weighting"]["filter_numerator"])
-        self.a_denominator = numpy.array(
-            configuration["a_weighting"]["filter_denominator"])
-        self.a_filter = DigitalFilter(self.a_numerator, self.a_denominator)
-        self.c_numerator = numpy.array(
-            configuration["c_weighting"]["filter_numerator"])
-        self.c_denominator = numpy.array(
-            configuration["c_weighting"]["filter_denominator"])
-        self.c_filter = DigitalFilter(self.c_numerator, self.c_denominator)
+        if "a_weighting" in configuration:
+            self.a_numerator = numpy.array(
+                configuration["a_weighting"]["filter_numerator"])
+            self.a_denominator = numpy.array(
+                configuration["a_weighting"]["filter_denominator"])
+            self.a_filter = DigitalFilter(self.a_numerator, self.a_denominator)
+        if "c_weighting" in configuration:
+            self.c_numerator = numpy.array(
+                configuration["c_weighting"]["filter_numerator"])
+            self.c_denominator = numpy.array(
+                configuration["c_weighting"]["filter_denominator"])
+            self.c_filter = DigitalFilter(self.c_numerator, self.c_denominator)
 
     def process_samples_weight_a(self, samples):
+        if "c_weighting" not in self.configuration:
+            raise ValueError("Provided configuration does not contain "
+                             "c weighting filters")
         if not self.use_scipy:
             return self.a_filter.filter_leq(samples)
         else:
@@ -135,6 +143,9 @@ class SpectrumChannel:
             return compute_leq(samples)
 
     def process_samples_weight_c(self, samples):
+        if "c_weighting" not in self.configuration:
+            raise ValueError("Provided configuration does not contain "
+                             "c weighting filters")
         if not self.use_scipy:
             return self.c_filter.filter_leq(samples)
         else:
@@ -144,14 +155,16 @@ class SpectrumChannel:
 
     def process_samples(self, samples):
         """
-        Compute the leq for provided samples
+        Compute the spectrum leq for provided samples
         :param samples:
         :return:
         """
         if len(samples) % self.minimum_samples_length != 0:
             raise ValueError("Provided samples len should be a factor of "
                              "%d samples" % self.minimum_samples_length)
-
+        if "bandpass" not in self.configuration:
+            raise ValueError("Provided configuration does not contain "
+                             "bandpass filters")
         last_filter_samples = samples
         leqs = [0 for i in range(len(self.configuration["bandpass"]))]
         for cascade_index, cascade_element in enumerate(self.iir_filters):
