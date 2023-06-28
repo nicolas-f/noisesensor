@@ -69,7 +69,7 @@ class ZeroMQThread(threading.Thread):
 
 def open_file_for_write(filename, configuration):
     if configuration.compress:
-        return gzip.open(filename, 'wb')
+        return gzip.open(filename, 'w')
     else:
         return open(filename, 'w')
 
