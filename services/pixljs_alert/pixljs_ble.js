@@ -365,7 +365,6 @@ function onClickSnooze() {
 
 function launchAlarm() {
   alarmEnabled = true;
-  setTimeout(turnOnOffScreenBacklight,buzzer_buz_time_ms*2, true, alarmLength);
   buzzerDelay();
   setTimeout(flashLightSequence, buzzer_buz_time_ms*2);
 }
@@ -376,6 +375,7 @@ function onMode1() {
     return 0;
   }
   Mode1Screen();
+  setTimeout(turnOnOffScreenBacklight,buzzer_buz_time_ms*2, true, alarmLength);
   launchAlarm();
 }
 
