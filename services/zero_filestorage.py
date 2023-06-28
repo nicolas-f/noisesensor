@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import argparse
+import gzip
 import sys
 import time
 import zmq
@@ -62,7 +63,14 @@ class ZeroMQThread(threading.Thread):
             self.global_settings.documents_stack.append([self.name, json_data])
 
 
-if __name__ == "__main__":
+def open_file_for_write(filename, configuration):
+    if configuration.compress:
+        return gzip.open(filename, 'wb')
+    else:
+        return open(filename, 'w')
+
+
+def main():
     parser = argparse.ArgumentParser(
         description='This program read json documents on zeromq channels'
                     ' and write in the specified folder', formatter_class=
@@ -74,12 +82,18 @@ if __name__ == "__main__":
                         required=True, type=str)
     parser.add_argument("-o", "--output_folder", help="Json output folder",
                         required=True, type=str)
-
+    parser.add_argument("-c", "--compress",
+                        help="Compress output files", default=False,
+                        action="store_true")
     args = parser.parse_args()
     print("Configuration: " + repr(args))
 
     args.documents_stack = collections.deque()
     args.running = True
+    extension = ".json"
+    if args.compress:
+        extension = ".json.gz"
+        import gzip
     try:
         for input_data in itertools.chain.from_iterable(args.input_address):
             t_sep = input_data.rfind("/")
@@ -96,10 +110,15 @@ if __name__ == "__main__":
                                          document_name+"_%s" % time_part)
                 # make tmp extension in order to not process this file
                 # until it has been fully saved
-                with open(file_path, "w") as fp:
-                    json.dump(document_json+".json.tmp", fp, allow_nan=True)
+                temporary_extension = document_json+extension+".tmp"
+                with open_file_for_write(file_path, args) as fp:
+                    json.dump(temporary_extension, fp, allow_nan=True)
                 # rename to the final name
-                os.rename(document_json+".json.tmp", document_json+".json")
+                os.rename(temporary_extension, document_json+extension)
             time.sleep(0.005)
     finally:
         args.running = False
+
+
+if __name__ == "__main__":
+    main()
