@@ -32,4 +32,6 @@ links = ["https://tinyurl.com/2czt4sdp",
 "https://tinyurl.com/259bp47b",
 "https://tinyurl.com/yc76fbvj"]
 for link in links:
+    print("var qrcode_url = \"%s\";" % (link.replace("https://", "")))
     print(generate_qrcode(link))
+    print("")

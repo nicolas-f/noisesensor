@@ -110,7 +110,8 @@ Graphics.prototype.setFontPixeloidSans = function(scale) {
   );
 };
 
-var qrcode = { width: 25, height : 25, buffer : atob("/vI/wQxQbpWrt0eV26Pq7BLVB/qq/gGbANpQoLTbz5KVUy4SRvInCg9BnEuahz9iQy2GDfsAccW/lSowSLEbqr+V1L8O6cg/BcK3/vCkgA==") };
+var qrcode_url = "tinyurl.com/2czt4sdp";
+var qrcode = { width: 25, height : 25, buffer : atob("/nI/wQ9QbpyLt1eV26rK7BNRB/qq/gCXAMdkDHKbz4jTwWGEXpS3qgyJnIq6FXcBty26Z/oAaMQ/tqowWHEbpn+10e8O6bEbBUMx/vCkgA==") };
 var zzImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAHwAB8GAGDADBwB88AffHwHh8B8GA/DAPx8D+fA/gAH8AB/wMf//D//gf/wD/4AP8A=")};
 var checkImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAABAAA4AAfAAPgQHwOD4Hx8A++AH/AA/gAHwAA4AAEAAAAAAAAAAAA=")};
 var demoImage = { width : 20, height : 20, bpp : 1, buffer : atob("AAAAAAAAAAAAAAAAAAAAAAAOdt6UVSl1UpRFLnReAAAAAAAAAAAAAAAAAAAAAAAAAAA=")};
@@ -257,8 +258,8 @@ function drawSlider() {
   g.setFontAlign(-1, -1);
   g.setFontPixeloidSans(2);
   g.drawString("-", 0, 0);
-  f_metrics = g.stringMetrics("+");
-  g.drawString("+", g.getWidth() - f_metrics.width, 0);
+  g.setFontAlign(1, -1);
+  g.drawString("+", g.getWidth(), 0);
   g.setFontPixeloidSans(1);
   g.setFontAlign(0.5, 0.5);
   var x = g.getWidth() / 2; // Calculate the center x-coordinate
@@ -267,20 +268,8 @@ function drawSlider() {
   g.setFontAlign(0.0, -1);
   x = g.getWidth() / 2; // Calculate the center x-coordinate
   g.drawString("Gêne au passage", x, 0);
-  g.setFontAlign(0.0, 0.0);
-  x = g.getWidth() - 30; // Calculate the center x-coordinate
-  y = 60; // Calculate the center y-coordinate
-  g.drawString("Suivant > ", x, y);
-  g.setFontAlign(0.5, 0.5);
-  x = g.getWidth() / 2; // Calculate the center x-coordinate
-  y = 33; // Calculate the center y-coordinate
-  if (sliderValue < 2) {
-    g.drawString("Pas du tout Gênant", x, y);
-  } else if (sliderValue > 7) {
-    g.drawString("Extrêment Gênant", x, y);
-  } else {
-    g.drawString("Assez Gênant", x, y);
-  }
+  g.setFontAlign(1, 0.0);
+  g.drawString("Suivant > ", g.getWidth(), 60);
   // Start the countdown timer
   g.setFontAlign(0.5, 0.5); // Center text horizontally and vertically
   let timeRemaining = parseInt((time_end_question-Date())/1000);
@@ -313,8 +302,12 @@ function Mode1Screen() {
   // button 2
   g.drawImage(checkImage, g.getWidth() - checkImage.width, 0);
   // Resize qrcode if qrcode size is smaller than 2x screen size
-  let scale = parseInt(g.getHeight() / qrcode.height);
-  g.drawImage(qrcode, g.getWidth() / 2 - (qrcode.width * scale) / 2, g.getHeight() / 2 - (qrcode.height * scale) / 2, options = {scale: scale});
+  g.setFontPixeloidSans(1);
+  g.setFontAlign(0.5, 1);
+  g.drawString(qrcode_url, g.getWidth()/2, g.getHeight());
+  f_metrics = g.stringMetrics(qrcode_url);
+  let scale = parseInt((g.getHeight()-f_metrics.height)/ qrcode.height);
+  g.drawImage(qrcode, g.getWidth() / 2 - (qrcode.width * scale) / 2, 0, options = {scale: scale});
   g.flip();
   disableButtons();
   button_watch[1] = setWatch(onClickStopAlarm, BTN2, {edge:"rising", debounce:50, repeat:true});
@@ -545,6 +538,7 @@ function disabledScreen() {
   // Display button icons
   if(DEMO_MODE) {
     g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
+    g.drawImage(demoImage, g.getWidth() - demoImage.width, g.getHeight() - demoImage.height);
     g.setFontAlign(0.5, 1);
     g.setFontPixeloidSans(1);
     let next_event_alert = Date(next_event-FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY * 60000);
@@ -560,6 +554,7 @@ function disabledScreen() {
   button_watch[0] = setWatch(function() { if(snooze_time==0) {snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;}else{snooze_time = 0;} disabledScreen();}, BTN1, {  repeat: true,  edge: 'rising'});
   if(DEMO_MODE) {
     button_watch[3] = setWatch(function() { ignore_train_time=0;onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
+    button_watch[2] = setWatch(function() { onMode2();}, BTN3, {  repeat: true,  edge: 'rising'});
   }
 }
 
