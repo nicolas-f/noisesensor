@@ -69,9 +69,9 @@ class ZeroMQThread(threading.Thread):
 
 def open_file_for_write(filename, configuration):
     if configuration.compress:
-        return gzip.open(filename, 'wt')
+        return gzip.open(filename, 'at')
     else:
-        return open(filename, 'w')
+        return open(filename, 'a')
 
 
 def main():
@@ -86,6 +86,15 @@ def main():
                         required=True, type=str)
     parser.add_argument("-o", "--output_folder", help="Json output folder",
                         required=True, type=str)
+    parser.add_argument("-t", "--time_format",
+                        help="Time format name for the file,"
+                             " if the file already exists the json"
+                             " will be added as a new line",
+                        default="%Y_%m_%d.%Hh%Mm%S.%f", required=True,
+                        type=str)
+    parser.add_argument("-r", "--row_count",
+                        help="Maximum row count for stacked json in one file",
+                        default=1,  type=int)
     parser.add_argument("-c", "--compress",
                         help="Compress output files", default=False,
                         action="store_true")
@@ -105,20 +114,30 @@ def main():
             t_address = input_data[:t_sep]
             t = ZeroMQThread(args, t_name, t_address)
             t.start()
+        document_counter = {}
         while args.running:
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
+                if document_name not in document_counter:
+                    document_counter[document_name] = 1
+                else:
+                    document_counter[document_name] += 1
                 time_part = datetime.datetime.now().\
-                    strftime("%Y_%m_%d.%Hh%Mm%S.%f")
+                    strftime(args.time_format)
                 file_path = os.path.join(args.output_folder,
                                          document_name+"_%s" % time_part)
                 # make tmp extension in order to not process this file
                 # until it has been fully saved
                 temporary_extension = file_path+extension+".tmp"
+                exists = os.path.exists(temporary_extension)
                 with open_file_for_write(temporary_extension, args) as fp:
+                    if exists:
+                        fp.write("\n")
                     json.dump(document_json, fp, allow_nan=True)
-                # rename to the final name
-                os.rename(temporary_extension, file_path+extension)
+                # rename to the final name if document file is complete
+                if args.row_count <= document_counter[document_name]:
+                    os.rename(temporary_extension, file_path+extension)
+                    document_counter[document_name] = 0
             time.sleep(0.005)
     finally:
         args.running = False

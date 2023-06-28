@@ -57,7 +57,7 @@ def generate_stack_dict(filter_config, push_time):
     for field in fields:
         stack_dict[field] = []
     if push_time:
-        stack_dict["timestamp"] = []
+        stack_dict["timestamps"] = []
     return fields, stack_dict
 
 
@@ -139,7 +139,7 @@ class AcousticIndicatorsProcessor:
                             self.current_stack_dict[column].append(
                                 round(lzeq + db_delta, 2))
                     if self.config.output_time:
-                        self.current_stack_dict["timestamp"].append(
+                        self.current_stack_dict["timestamps"].append(
                             round(time.time() - window_samples/sample_rate, 3))
                     self.stack_count += 1
                     if self.stack_count == self.config.output_stack:
