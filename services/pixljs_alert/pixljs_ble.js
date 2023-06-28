@@ -296,6 +296,7 @@ function refreshCountdown() {
   } else {
     // Stop the interval
     clearInterval(idRefreshInterval);
+    disableButtons();
     idRefreshInterval = 0;
     alarmEnabled = false;
     drawExitMessage();
