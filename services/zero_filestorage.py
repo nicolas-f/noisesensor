@@ -41,6 +41,7 @@ import threading
 import collections
 import datetime
 import json
+import itertools
 
 class ZeroMQThread(threading.Thread):
     def __init__(self, global_settings, name, address):
@@ -52,6 +53,7 @@ class ZeroMQThread(threading.Thread):
     def run(self):
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
+        print("Looking for json content in " + self.address)
         socket.connect(self.address)
         socket.subscribe("")
         while self.global_settings.running:
@@ -64,10 +66,11 @@ if __name__ == "__main__":
         description='This program read json documents on zeromq channels'
                     ' and write in the specified folder', formatter_class=
         argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-c", "--input_address", nargs="+",
+    parser.add_argument("-i", "--input_address", nargs="+", action='append',
                         help="Address and file name for zero_record json"
-                             " channel, you can provide it multiple times",
-                        default=["tcp://127.0.0.1:10005/indicators"])
+                             " channel, you can provide it multiple times. "
+                             "ex: tcp://127.0.0.1:10005/indicators",
+                        required=True, type=str)
     parser.add_argument("-o", "--output_folder", help="Json output folder",
                         required=True, type=str)
 
@@ -77,7 +80,7 @@ if __name__ == "__main__":
     args.documents_stack = collections.deque()
     args.running = True
     try:
-        for input_data in args.input_address:
+        for input_data in itertools.chain.from_iterable(args.input_address):
             t_sep = input_data.rfind("/")
             t_name = input_data[t_sep+1:]
             t_address = input_data[:t_sep]
