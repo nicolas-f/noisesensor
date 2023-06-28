@@ -59,8 +59,12 @@ class ZeroMQThread(threading.Thread):
         socket.connect(self.address)
         socket.subscribe("")
         while self.global_settings.running:
-            json_data = socket.recv_json()
-            self.global_settings.documents_stack.append([self.name, json_data])
+            try:
+                json_data = socket.recv_json(flags=zmq.NOBLOCK)
+                self.global_settings.documents_stack.append([self.name,
+                                                             json_data])
+            except zmq.ZMQError as e:
+                time.sleep(0.05)
 
 
 def open_file_for_write(filename, configuration):
@@ -95,12 +99,14 @@ def main():
         extension = ".json.gz"
         import gzip
     try:
+        threads = []
         for input_data in itertools.chain.from_iterable(args.input_address):
             t_sep = input_data.rfind("/")
             t_name = input_data[t_sep+1:]
             t_address = input_data[:t_sep]
             t = ZeroMQThread(args, t_name, t_address)
             t.start()
+            threads.append(t)
         while args.running:
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
@@ -118,7 +124,7 @@ def main():
             time.sleep(0.005)
     finally:
         args.running = False
-
+        map()
 
 if __name__ == "__main__":
     main()
