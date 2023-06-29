@@ -330,13 +330,27 @@ class TriggerProcessor:
                                np.argsort([prediction[i]-self.yamnet_classes[1][i]
                                            for i in classes_threshold_index])[::-1]]
                     # Compute a score between 0-100% from threshold to 1.0
-                    scores = {self.yamnet_classes[0][i]:
-                              round(float(((prediction[i]-self.yamnet_classes[1][i]) /
-                                    (1-self.yamnet_classes[1][i])) * 100)) for i in classes_threshold_index}
-                    document = {"scores": scores,
-                                "leq": round(leq, 2), "epoch_millisecond": int(cur_time)}
+                    scores_percentage = {self.yamnet_classes[0][i]: round(
+                        float(((prediction[i] - self.yamnet_classes[1][i]) / (
+                                    1 - self.yamnet_classes[1][i])) * 100)) for
+                                         i in classes_threshold_index}
+                    document_scores = {self.yamnet_classes[0][i]:
+                              round(prediction[i], 2) for i in
+                              classes_threshold_index}
+                    # threshold_time is the score over the time
+                    # there is 2x more cells because there is 50% overlap
+                    threshold_time = {
+                        self.yamnet_classes[0][i]: [self.yamnet_classes[1][i],
+                                                    np.round(scores[:, i],
+                                                             3).tolist]
+                        for i in classes_threshold_index}
+                    document = {"scores": document_scores,
+                                "scores_perc": scores_percentage,
+                                "scores_time": threshold_time,
+                                "leq": round(leq, 2),
+                                "epoch_millisecond": int(cur_time)}
                     tags = ' '.join('{:s}({:d}%)'.format(k, v)
-                                    for k,v in scores.items())
+                                    for k, v in scores_percentage.items())
                     if self.remaining_triggers > 0:
                         self.remaining_triggers -= 1
                     print("%s tags:%s \n processed in %.3f seconds for "
