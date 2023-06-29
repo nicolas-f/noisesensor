@@ -114,18 +114,20 @@ def main():
             t_address = input_data[:t_sep]
             t = ZeroMQThread(args, t_name, t_address)
             t.start()
-        document_counter = {}
+        document_tracker = {}
         while args.running:
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
-                if document_name not in document_counter:
-                    document_counter[document_name] = 1
-                else:
-                    document_counter[document_name] += 1
                 time_part = datetime.datetime.now().\
                     strftime(args.time_format)
                 file_path = os.path.join(args.output_folder,
                                          document_name+"_%s" % time_part)
+                # append to document if it has been tracked
+                if document_name not in document_tracker:
+                    document_tracker[document_name] = [1, file_path]
+                else:
+                    document_tracker[document_name][0] += 1
+                    file_path = document_tracker[document_name][1]
                 # make tmp extension in order to not process this file
                 # until it has been fully saved
                 temporary_extension = file_path+extension+".tmp"
@@ -135,9 +137,9 @@ def main():
                         fp.write("\n")
                     json.dump(document_json, fp, allow_nan=True)
                 # rename to the final name if document file is complete
-                if args.row_count <= document_counter[document_name]:
+                if args.row_count <= document_tracker[document_name][0]:
                     os.rename(temporary_extension, file_path+extension)
-                    document_counter[document_name] = 0
+                    del(document_tracker[document_name])
             time.sleep(0.005)
     finally:
         args.running = False
