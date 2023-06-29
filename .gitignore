@@ -7,6 +7,7 @@ dist/
 .kdev4
 .idea
 venv
+out/
 
 # Compiled source #
 ###################
