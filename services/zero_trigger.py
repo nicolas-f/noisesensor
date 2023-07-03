@@ -41,7 +41,7 @@ import math
 import csv
 
 import numpy as np
-from scipy import signal
+
 try:
     import zmq
 except ImportError as e:
@@ -144,6 +144,12 @@ def read_yamnet_class_and_threshold(class_map_csv):
         return names, np.array(threshold, dtype=float)
 
 
+def butter_highpass(cutoff, fs, order=4):
+    from scipy import signal
+    return signal.butter(order, cutoff / (fs / 2.0), btype='high',
+                         output='sos')
+
+
 class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
@@ -185,16 +191,13 @@ class TriggerProcessor:
             yamnet_class_map = files('yamnet').joinpath('yamnet_class_threshold_map.csv')
         self.yamnet_classes = read_yamnet_class_and_threshold(yamnet_class_map)
         if self.config.yamnet_cutoff_frequency > 0:
-            self.sos = self.butter_highpass(self.config.yamnet_cutoff_frequency,
+            self.sos = butter_highpass(self.config.yamnet_cutoff_frequency,
                                             self.yamnet_config.sample_rate)
         else:
             self.sos = None
 
-
-    def butter_highpass(self, cutoff, fs, order=4):
-        return signal.butter(order, cutoff / (fs / 2.0), btype='high', output='sos')
-
     def butter_highpass_filter(self, waveform):
+        from scipy import signal
         return signal.sosfilt(self.sos, waveform)
 
     def check_hour(self):

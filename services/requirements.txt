@@ -4,3 +4,4 @@ soundfile==0.12.1
 qrcode==7.4.2
 numba==0.57.0
 resampy==0.4.2
+
