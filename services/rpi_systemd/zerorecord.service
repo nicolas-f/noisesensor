@@ -1,6 +1,6 @@
 [Unit]
 Description=zerotrigger service
-After=multi-user.target
+After=time-sync.target
 
 [Service]
 Type=simple
