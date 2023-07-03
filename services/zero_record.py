@@ -168,17 +168,27 @@ def main():
                                      epilog=epilog, formatter_class=
                                      argparse.RawTextHelpFormatter)
 
-    parser.add_argument("-p", "--port", help="Port to publish samples", default=10001, type=int)
-    parser.add_argument("-i", "--interface", help="Interface to publish", default="*", type=str)
-    parser.add_argument("-b", "--block_size", help="Number of bytes to publish per message", default=16000, type=int)
-    parser.add_argument("-r", "--sample_rate", help="Set frequency of debug file", default=16000, type=int)
+    parser.add_argument("-p", "--port", help="Port to publish samples",
+                        default=10001, type=int)
+    parser.add_argument("-i", "--interface", help="Interface to publish",
+                        default="127.0.0.1", type=str)
+    parser.add_argument("-b", "--block_size",
+                        help="Number of bytes to publish per message",
+                        default=16000, type=int)
+    parser.add_argument("-r", "--sample_rate",
+                        help="Set frequency of debug file", default=16000,
+                        type=int)
     parser.add_argument("--resample_method",
                         help="Resampling method when reading wave file",
                         default='kaiser_fast', type=str)
-    parser.add_argument("--debug_byte_rate", help="You can use a raw file input and provide the expected bytes per"
-                                                  " second of transfer", default=0, type=int)
-    parser.add_argument("-w", "--wave", help="File name or folder containing wave file(s), will be used instead of"
-                                             " stdin", default="", type=str)
+    parser.add_argument("--debug_byte_rate",
+                        help="You can use a raw file input and "
+                             "provide the expected bytes per second of "
+                             "transfer", default=0, type=int)
+    parser.add_argument("-w", "--wave", help="File name or folder containing "
+                                             "wave file(s), will be used "
+                                             "instead of stdin", default="",
+                        type=str)
     args = parser.parse_args()
     publish_samples(args)
 
