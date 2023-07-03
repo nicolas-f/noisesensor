@@ -1,0 +1,6 @@
+pyzmq==25.1.0
+tflite-runtime-nightly>=2.14.0.dev20230627
+soundfile==0.12.1
+qrcode==7.4.2
+numba==0.57.0
+resampy==0.4.2
