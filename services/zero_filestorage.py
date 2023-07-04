@@ -90,7 +90,7 @@ def main():
                         help="Time format name for the file,"
                              " if the file already exists the json"
                              " will be added as a new line",
-                        default="%Y_%m_%d.%Hh%Mm%S.%f", required=True,
+                        default="%Y_%m_%d.%Hh%Mm%S.%f",
                         type=str)
     parser.add_argument("-r", "--row_count",
                         help="Maximum row count for stacked json in one file",
