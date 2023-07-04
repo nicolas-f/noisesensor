@@ -161,8 +161,8 @@ class TriggerProcessor:
         self.config = config
         self.total_read = 0  # Total audio samples read
         self.sample_rate = self.config.sample_rate
-        format_byte_width = {"S16_LE": 2, "S32_LE": 4, "FLOAT_LE": 4, "S24_3LE": 3, "S24_LE": 4}
-        sample_length = format_byte_width[self.config.sample_format]
+        # 4 bytes for float
+        sample_length = 4
         self.bytes_per_seconds = self.sample_rate * sample_length
         self.remaining_samples = 0
         self.remaining_triggers = self.config.trigger_count
@@ -307,6 +307,11 @@ class TriggerProcessor:
                     # If trigger_tag defined, we process only if one of the
                     # tag is specified
                     keep_classification = len(self.config.trigger_tag) == 0
+                    if len(classes_threshold_index) == 0:
+                        # classifier rejected all known classes
+                        print("No classes found above yamnet threshold")
+                        status = "wait_trigger"
+                        continue
                     if len(self.config.trigger_tag) > 0:
                         classification_tag = [self.yamnet_classes[0][i]
                                               for i in classes_threshold_index]
@@ -316,11 +321,10 @@ class TriggerProcessor:
                                       " been detected" % banned_tag)
                                 keep_classification = True
                                 break
-                    if len(classes_threshold_index) == 0 or\
-                            not keep_classification:
+                    if not keep_classification:
                         # classifier rejected all known classes
-                        print("No classes found above yamnet threshold")
-                        self.samples_stack.clear()
+                        print("No classes that fit in %s"
+                              % str(self.config.trigger_tag))
                         status = "wait_trigger"
                         continue
                     # Sort by score
@@ -333,7 +337,7 @@ class TriggerProcessor:
                                     1 - self.yamnet_classes[1][i])) * 100)) for
                                          i in classes_threshold_index}
                     document_scores = {self.yamnet_classes[0][i]:
-                              round(prediction[i], 2) for i in
+                              round(float(prediction[i]), 2) for i in
                               classes_threshold_index}
                     # threshold_time is the score over the time
                     # there is 2x more cells because there is 50% overlap
@@ -441,7 +445,6 @@ if __name__ == "__main__":
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
     parser.add_argument("--sample_rate", help="audio sample rate", default=48000, type=int)
     parser.add_argument("--resample_method", help="Resampling method as Yamnet is requiring 16 KHz", default='kaiser_fast', type=str)
-    parser.add_argument("--sample_format", help="audio format", default="FLOAT_LE")
     parser.add_argument("--ssh_file", help="public key file for audio encryption", default="~/.ssh/id_rsa.pub")
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
