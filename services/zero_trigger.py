@@ -340,7 +340,7 @@ class TriggerProcessor:
                     threshold_time = {
                         self.yamnet_classes[0][i]: [self.yamnet_classes[1][i],
                                                     np.round(scores[:, i],
-                                                             3).tolist]
+                                                             3).tolist()]
                         for i in classes_threshold_index}
                     document = {"scores": document_scores,
                                 "scores_perc": scores_percentage,
