@@ -51,8 +51,10 @@ async def main(config):
     socket.subscribe("")
     last_push = time.time()
     tries = 0
+    c = ""
     while True:
-        c = process_message(socket)
+        if not c:
+            c = process_message(socket)
         logger.info("Reconnect to " + repr(address))
         try:
             async with BleakClient(address) as client:
