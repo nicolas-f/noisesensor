@@ -25,9 +25,15 @@ def main():
         resp = send_command(ser, "AT#USBCFG?")
         print(resp)
         while "USBCFG: 4" not in resp:
+            send_command(ser, "AT#USBCFG=4")
             time.sleep(5)
             resp = send_command(ser, "AT#USBCFG?")
             print(resp)
+        print_comment("Should return the APN details and IP address")
+        resp = send_command(ser, "AT+CGDCONT?")
+        print(resp)
+        if "mmsbouygtel" not in resp:
+            print(send_command(ser, "AT+CGDCONT=1,\"IP\",\"mmsbouygtel.com\""))
         print_comment("Should return 0,1")
         resp = send_command(ser, "AT#ECM?")
         print(resp)
@@ -44,8 +50,6 @@ def main():
         print(send_command(ser, "AT+CPIN?"))
         print_comment("Should return 0,1 or 0,5")
         print(send_command(ser, "AT+CREG?"))
-        print_comment("Should return the APN details and IP address")
-        print(send_command(ser, "AT+CGDCONT?"))
 
 
 main()
