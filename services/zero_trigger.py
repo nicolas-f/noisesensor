@@ -330,8 +330,8 @@ class TriggerProcessor:
                                 break
                     if not keep_classification:
                         # classifier rejected all known classes
-                        print("No classes that fit in %s"
-                              % str(self.config.trigger_tag))
+                        print("No expected tag found, do not transmit"
+                              " document")
                         status = "wait_trigger"
                         continue
                     # Sort by score
