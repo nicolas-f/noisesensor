@@ -36,11 +36,13 @@ import json
 import os.path
 import collections
 import argparse
+import sys
 import threading
 import time
 import math
 import csv
 import numpy as np
+import types
 
 try:
     import zmq
@@ -425,11 +427,13 @@ class TriggerProcessor:
 
 
 if __name__ == "__main__":
+    required_actions = []
     parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and publish noise events',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--trigger_count", help="limit the number of embedding of audio by day (-1 unlimited)", default=-1, type=int)
     parser.add_argument("-b", "--trigger_ban", help="Remove storage of audio if one of the following audio recognition tag is detected",
                         action='append', type=str)
+    parser.add_argument("-c", "--configuration_file", help="Provide json configuration file instead of arguments", default="", type=str)
     parser.add_argument("-t", "--trigger_tag", help="Send json only if this tags are detected",
                         action='append', type=str, default=[])
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
@@ -442,8 +446,8 @@ if __name__ == "__main__":
     parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
     parser.add_argument("--output_address", help="Address for publishing JSON of sound recognition",
                         default="tcp://*:10002")
-    parser.add_argument("--yamnet_class_map", help="Yamnet CSV path yamnet_class_threshold_map.csv", required=True, type=str)
-    parser.add_argument("--yamnet_weights", help="Yamnet .tflite model download at https://tfhub.dev/google/lite-model/yamnet/tflite/1", type=str,required=True)
+    required_actions.append(parser.add_argument("--yamnet_class_map", help="Yamnet CSV path yamnet_class_threshold_map.csv", type=str))
+    required_actions.append(parser.add_argument("--yamnet_weights", help="Yamnet .tflite model download at https://tfhub.dev/google/lite-model/yamnet/tflite/1", type=str))
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=0, type=float)
     parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=8.0, type=float)
     parser.add_argument("--yamnet_window_time", help="Sound source recognition time in seconds", default=5.0,
@@ -453,7 +457,18 @@ if __name__ == "__main__":
     parser.add_argument("--delay_print_samples", help="Delay in second between each print of number of samples read",
                         default=0, type=float)
     args = parser.parse_args()
-    print("Configuration: " + json.dumps(vars(args),
+    if not args.configuration_file:
+        # no configuration file but configured with command line arguments
+        # Set-up mandatory arguments
+        for action in required_actions:
+            action.required = True
+        args = parser.parse_args()
+    else:
+        with open(args.configuration_file, "r") as fp:
+            print("Load configuration file " + args.configuration_file)
+            cfg = json.load(fp)
+            args = types.SimpleNamespace(**cfg)
+    print("Configuration:\n" + json.dumps(vars(args),
           sort_keys=False, indent=2))
     trigger = TriggerProcessor(args)
     args.running = True
