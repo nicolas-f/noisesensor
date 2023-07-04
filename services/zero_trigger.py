@@ -200,23 +200,6 @@ class TriggerProcessor:
         from scipy import signal
         return signal.sosfilt(self.sos, waveform)
 
-    def check_hour(self):
-        t = datetime.datetime.now()
-        if "start_hour" not in self.config:
-            return True
-        h, m = map(int, self.config["start_hour"].split(":"))
-        start_ok = False
-        if t.hour > h or (t.hour == h and t.minute >= m):
-            start_ok = True
-        end_ok = False
-        if "end_hour" not in self.config:
-            end_ok = True
-        else:
-            h, m = map(int, self.config["end_hour"].split(":"))
-            if t.hour < h or (t.hour == h and t.minute < m):
-                end_ok = True
-        return start_ok and end_ok
-
     def init_socket(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.SUB)
@@ -281,9 +264,7 @@ class TriggerProcessor:
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config.trigger_count
-            if self.config is not None and status == "wait_trigger"\
-                    and cur_time > self.config.date_start \
-                    and self.check_hour():
+            if self.config is not None and status == "wait_trigger":
                 waveform = self.fetch_audio_data()
                 deb = time.time()
                 if self.config.sample_rate != self.yamnet_config.sample_rate:
@@ -321,7 +302,20 @@ class TriggerProcessor:
                     filter_pred = (prediction > self.yamnet_classes[1])
                     filter_pred = filter_pred.nonzero()[0]
                     classes_threshold_index = list(map(int, filter_pred))
-                    if len(classes_threshold_index) == 0:
+                    # If trigger_tag defined, we process only if one of the
+                    # tag is specified
+                    keep_classification = len(self.config.trigger_tag) == 0
+                    if len(self.config.trigger_tag) > 0:
+                        classification_tag = [self.yamnet_classes[0][i]
+                                              for i in classes_threshold_index]
+                        for tag in self.config.trigger_tag:
+                            if tag in classification_tag:
+                                print("Do not record audio because %s has"
+                                      " been detected" % banned_tag)
+                                keep_classification = True
+                                break
+                    if len(classes_threshold_index) == 0 or\
+                            not keep_classification:
                         # classifier rejected all known classes
                         print("No classes found above yamnet threshold")
                         self.samples_stack.clear()
@@ -433,12 +427,11 @@ class TriggerProcessor:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and publish noise events',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
-    parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000,
-                        type=int)
     parser.add_argument("--trigger_count", help="limit the number of embedding of audio by day (-1 unlimited)", default=-1, type=int)
-    parser.add_argument("--trigger_ban", help="Remove storage of audio if one of the following audio recognition tag is detected",
-                        nargs="+", action='append', type=str)
+    parser.add_argument("-b", "--trigger_ban", help="Remove storage of audio if one of the following audio recognition tag is detected",
+                        action='append', type=str)
+    parser.add_argument("-t", "--trigger_tag", help="Send json only if this tags are detected",
+                        action='append', type=str, default=[])
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
     parser.add_argument("--total_length", help="record length total in seconds to be embedded into the output json", default=10, type=float)
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
