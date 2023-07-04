@@ -4,7 +4,7 @@ After=time-sync.target
 
 [Service]
 Type=simple
-ExecStart=/bin/sh -c '/usr/bin/arecord --disable-resample --disable-softvol -D plughw:CARD=U18dB,DEV=0 -r 48000 -f FLOAT_LE -c 1 -t raw | /usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_record.py -p 10001 -b 24000'
+ExecStart=/bin/sh -c '/usr/bin/arecord --disable-resample --disable-softvol -D plughw:CARD=U18dB,DEV=0 -r 48000 -f FLOAT_LE -c 1 -t raw | /usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_record.py -p 10001 -b 24000 -i "*"'
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
