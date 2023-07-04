@@ -5,9 +5,6 @@ import logging
 import zmq
 import argparse
 import time
-import qrcode
-import base64
-import numpy
 
 UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -21,32 +18,10 @@ def uart_data_received(sender, data):
 def process_message(socket):
     logger.info("Waiting for next zmq message")
     data = socket.recv_json()
-    leq = data["leq"]
     scores = data["scores"]
-    messages = ["leq: %.2f dB" % leq]
     if len(scores) > 0:
-        sorted_tags = sorted(scores.items(), key=lambda item: -item[1])
-        found_tags = [v[0] for v in sorted_tags]
-        # if "Rail transport" in found_tags or "Train" in found_tags:
-        if "Whistling" in found_tags:
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=2,
-                border=0,
-            )
-            qr.add_data("https://surveys.ifsttar.fr/limesurvey/index.php/273522?newtest=Y&QUE1=%.1f%%20dB"
-                        % data["leq"])
-            qr_matrix = numpy.array(qr.get_matrix())
-            qr_bits = numpy.packbits(qr_matrix).tobytes()
-            pixljs_image = b"qrcode = { width: %d, height : %d, buffer : atob(\"%s\") };" % (
-                qr_matrix.shape[0], qr_matrix.shape[1],
-                base64.b64encode(qr_bits))
-            # Set time for sleeping at night
-            offset = time.timezone if (time.localtime().tm_isdst == 0) else time.altzone
-            offset = offset / -3600
-            return b"\x03\x10setTime(%ld);\n\x10E.setTimeZone(%d);\n\x10%s;\n\x10main();\n" \
-                % (time.time(), offset, pixljs_image)
+        print(repr(scores))
+        return b"\x03\x10onTrainCrossing(false);\n"
     return ""
 
 

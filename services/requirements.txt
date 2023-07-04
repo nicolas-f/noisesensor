@@ -4,4 +4,5 @@ soundfile==0.12.1
 numba==0.57.0
 resampy==0.4.2
 pycryptodome==3.18.0
+scipy==1.11.1
 
