@@ -39,7 +39,6 @@ import threading
 import time
 import math
 import csv
-
 import numpy as np
 
 try:
@@ -58,7 +57,7 @@ try:
     from Crypto.Random import get_random_bytes
     import base64
 except ImportError:
-    print("Please install PyCryptodome, base64 and numpy")
+    print("Please install PyCryptodome")
     print("pip install pycryptodome")
     print("Audio encryption has been disabled")
 
@@ -281,10 +280,9 @@ class TriggerProcessor:
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config.trigger_count
-            if self.config is not None and status == "wait_trigger" and \
-                    (self.remaining_triggers > 0 or
-                     self.remaining_triggers == -1) and \
-                    cur_time > self.config.date_start and self.check_hour():
+            if self.config is not None and status == "wait_trigger"\
+                    and cur_time > self.config.date_start \
+                    and self.check_hour():
                 waveform = self.fetch_audio_data()
                 deb = time.time()
                 if self.config.sample_rate != self.yamnet_config.sample_rate:
@@ -354,8 +352,6 @@ class TriggerProcessor:
                                 "epoch_millisecond": int(cur_time)}
                     tags = ' '.join('{:s}({:d}%)'.format(k, v)
                                     for k, v in scores_percentage.items())
-                    if self.remaining_triggers > 0:
-                        self.remaining_triggers -= 1
                     print("%s tags:%s \n processed in %.3f seconds for "
                           "%.1f seconds of audio." %
                           (time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -366,7 +362,18 @@ class TriggerProcessor:
                     if self.remaining_triggers >= 0:
                         print(" Remaining triggers for today %d" %
                               self.remaining_triggers)
-                    if self.config.total_length > 0:
+                    # check for audio storage tag exception
+                    banned = False
+                    if len(self.config.trigger_ban) > 0:
+                        for banned_tag in self.config.trigger_ban:
+                            if banned_tag in document["scores"].keys():
+                                print("Do not record audio because %s has"
+                                      " been detected" % banned_tag)
+                                banned = True
+                                break
+                    if not banned and self.config.total_length > 0 and (
+                            self.remaining_triggers > 0 or
+                            self.remaining_triggers == -1):
                         # requesting audio data into the json file, so now record audio
                         status = "record"
                         continue
@@ -377,6 +384,8 @@ class TriggerProcessor:
                         continue
                 processing_time = 0 # yamnet window has been rejected
             elif status == "record":
+                if self.remaining_triggers > 0:
+                    self.remaining_triggers -= 1
                 while status == "record":
                     audio_data_encrypt = ""
                     ssh_file = os.path.expanduser(self.config.ssh_file)
@@ -397,7 +406,7 @@ class TriggerProcessor:
                         # Compress audio samples
                         output = io.BytesIO()
                         data, samplerate = sf.read(samples_trigger, format='RAW',
-                                                   channels=1 if self.config.mono else 2,
+                                                   channels=1,
                                                    samplerate=int(self.config.sample_rate),
                                                    subtype='PCM_32')
                         channels = 1
@@ -426,7 +435,9 @@ if __name__ == "__main__":
     parser.add_argument("--date_start", help="activate noise event detector from this epoch", default=0, type=int)
     parser.add_argument("--date_end", help="activate noise event detector up to this epoch", default=4106967057000,
                         type=int)
-    parser.add_argument("--trigger_count", help="limit the number of noise event recognition by day (-1 unlimited)", default=-1, type=int)
+    parser.add_argument("--trigger_count", help="limit the number of embedding of audio by day (-1 unlimited)", default=-1, type=int)
+    parser.add_argument("--trigger_ban", help="Remove storage of audio if one of the following audio recognition tag is detected",
+                        nargs="+", action='append', type=str)
     parser.add_argument("--min_leq", help="minimum leq to trigger an event", default=30, type=float)
     parser.add_argument("--total_length", help="record length total in seconds to be embedded into the output json", default=10, type=float)
     parser.add_argument("--cached_length", help="record length before the trigger", default=5, type=float)
@@ -440,15 +451,11 @@ if __name__ == "__main__":
     parser.add_argument("--yamnet_class_map", help="Yamnet CSV path yamnet_class_threshold_map.csv", required=True, type=str)
     parser.add_argument("--yamnet_weights", help="Yamnet .tflite model download at https://tfhub.dev/google/lite-model/yamnet/tflite/1", type=str,required=True)
     parser.add_argument("--yamnet_cutoff_frequency", help="Yamnet highpass filter frequency", default=0, type=float)
-    parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=20.0, type=float)
+    parser.add_argument("--yamnet_max_gain", help="Yamnet maximum gain in dB", default=8.0, type=float)
     parser.add_argument("--yamnet_window_time", help="Sound source recognition time in seconds", default=5.0,
                         type=int)
-    parser.add_argument("--yamnet_leq_interval", help="Leq period for triggering scan of audio source", default=1.0,
-                        type=float)
     parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34,
                         type=float)
-    parser.add_argument("--mono", help="Mono audio", default=True,
-                        type=bool)
     parser.add_argument("--delay_print_samples", help="Delay in second between each print of number of samples read",
                         default=0, type=float)
     args = parser.parse_args()
