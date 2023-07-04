@@ -32,6 +32,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+import json
 import os.path
 import collections
 import argparse
@@ -459,7 +460,8 @@ if __name__ == "__main__":
     parser.add_argument("--delay_print_samples", help="Delay in second between each print of number of samples read",
                         default=0, type=float)
     args = parser.parse_args()
-    print("Configuration: " + repr(args))
+    print("Configuration: " + json.dumps(vars(args),
+          sort_keys=False, indent=2))
     trigger = TriggerProcessor(args)
     args.running = True
     status_thread = StatusThread(trigger, args)
