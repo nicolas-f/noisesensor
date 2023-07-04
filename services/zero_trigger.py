@@ -174,15 +174,17 @@ class TriggerProcessor:
         self.socket_out = None
         self.yamnet_config = Params()
         tflite_path = self.config.yamnet_weights
+        print("Init yamnet interpreter..")
         self.yamnet_interpreter = tflite.Interpreter(model_path=tflite_path)
+        print("Init tensors..")
         self.tensors = Tensors()
-
         input_details = self.yamnet_interpreter.get_input_details()
         self.tensors.waveform_input_index = input_details[0]['index']
         output_details = self.yamnet_interpreter.get_output_details()
         self.tensors.scores_output_index = output_details[0]['index']
         self.tensors.embeddings_output_index = output_details[1]['index']
         self.tensors.spectrogram_output_index = output_details[2]['index']
+        print("Init tensors done")
         self.yamnet_samples = np.zeros((int(config.yamnet_window_time *
                                  self.yamnet_config.sample_rate)),
                                        dtype=np.float32)
