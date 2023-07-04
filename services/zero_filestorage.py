@@ -132,6 +132,9 @@ def main():
                 # until it has been fully saved
                 temporary_extension = file_path+extension+".tmp"
                 exists = os.path.exists(temporary_extension)
+                if not os.path.exists(args.output_folder):
+                    print("Try to create parent folder " + args.output_folder)
+                    os.mkdir(args.output_folder)
                 with open_file_for_write(temporary_extension, args) as fp:
                     if exists:
                         fp.write("\n")

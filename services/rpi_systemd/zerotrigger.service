@@ -4,7 +4,7 @@ After=zerorecord.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_trigger.py --sample_rate 48000 --cached_length 0 --total_length 0 --min_leq 0 --trigger_count -1 --trigger_ban Speech --yamnet_max_gain 8 --yamnet_class_map third_parties/yamnet/yamnet/yamnet_class_threshold_map.csv --yamnet_weights third_parties/yamnet/yamnet/yamnet.tflite
+ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_trigger.py -c services/rpi_systemd/zerotrigger_config.json
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s

@@ -304,21 +304,26 @@ class TriggerProcessor:
                     filter_pred = (prediction > self.yamnet_classes[1])
                     filter_pred = filter_pred.nonzero()[0]
                     classes_threshold_index = list(map(int, filter_pred))
-                    # If trigger_tag defined, we process only if one of the
-                    # tag is specified
-                    keep_classification = len(self.config.trigger_tag) == 0
                     if len(classes_threshold_index) == 0:
                         # classifier rejected all known classes
                         print("No classes found above yamnet threshold")
                         status = "wait_trigger"
                         continue
+                    classification_tag = [self.yamnet_classes[0][i]
+                                          for i in classes_threshold_index]
+                    print("%s tags:%s \n processed in %.3f seconds for "
+                          "%.1f seconds of audio." %
+                          (time.strftime("%Y-%m-%d %H:%M:%S"),
+                           ",".join(classification_tag), processing_time,
+                           len(self.yamnet_samples) /
+                           self.yamnet_config.sample_rate))
+                    processing_time = 0
+                    # If trigger_tag defined, we process only if one of the
+                    # tag is specified
+                    keep_classification = len(self.config.trigger_tag) == 0
                     if len(self.config.trigger_tag) > 0:
-                        classification_tag = [self.yamnet_classes[0][i]
-                                              for i in classes_threshold_index]
                         for tag in self.config.trigger_tag:
                             if tag in classification_tag:
-                                print("Do not record audio because %s has"
-                                      " been detected" % banned_tag)
                                 keep_classification = True
                                 break
                     if not keep_classification:
@@ -353,13 +358,6 @@ class TriggerProcessor:
                                 "epoch_millisecond": int(cur_time)}
                     tags = ' '.join('{:s}({:d}%)'.format(k, v)
                                     for k, v in scores_percentage.items())
-                    print("%s tags:%s \n processed in %.3f seconds for "
-                          "%.1f seconds of audio." %
-                          (time.strftime("%Y-%m-%d %H:%M:%S"),
-                           tags, processing_time,
-                           len(self.yamnet_samples) /
-                           self.yamnet_config.sample_rate))
-                    processing_time = 0
                     if self.remaining_triggers >= 0:
                         print(" Remaining triggers for today %d" %
                               self.remaining_triggers)
