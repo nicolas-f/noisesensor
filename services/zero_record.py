@@ -81,7 +81,7 @@ class ZeroMQThread(threading.Thread):
 
 
 class AudioFolderPlayListBuffer(io.BytesIO):
-    def __init__(self, folder_or_file, sample_rate):
+    def __init__(self, folder_or_file, sample_rate, resample_method):
         super().__init__(b"")
         self.sample_rate = sample_rate
         self.playlist = []
@@ -89,6 +89,7 @@ class AudioFolderPlayListBuffer(io.BytesIO):
             self.playlist = [folder_or_file+os.sep+filepath for filepath in os.listdir(folder_or_file) if filepath.lower().endswith(".wav")]
         else:
             self.playlist.append(folder_or_file)
+        self.resample_method = resample_method
 
     def get_bytes_rate(self):
         return self.sample_rate * 4
@@ -111,7 +112,7 @@ class AudioFolderPlayListBuffer(io.BytesIO):
             if sr != self.sample_rate:
                 import resampy
                 waveform = resampy.resample(waveform, sr, self.sample_rate,
-                                            filter=self.config.resample_method)
+                                            filter=self.resample_method)
             super().__init__(b"")
             self.write(waveform.tobytes())
             self.seek(0)
@@ -127,7 +128,8 @@ def publish_samples(args):
     if args.wave == "":
         input_buffer = sys.stdin.buffer
     else:
-        input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate)
+        input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate,
+                                                 args.resample_method)
         byte_rate = input_buffer.get_bytes_rate()
     total_bytes_read = 0
     data = {"running": True}
