@@ -7,9 +7,12 @@ import time
 import serial
 from colorama import Fore, Back, Style
 
+
 def send_command(ser, cmd):
+    print(Fore.YELLOW + cmd + Fore.RESET)
     ser.write(bytes(cmd + "\r", encoding='ascii'))
     return ser.read(64).decode("ascii").strip()
+
 
 def print_comment(comment):
     print(Fore.GREEN + comment + Fore.RESET)
@@ -27,13 +30,17 @@ def main():
         while "USBCFG: 4" not in resp:
             send_command(ser, "AT#USBCFG=4")
             time.sleep(5)
+            send_command(ser, "AT#REBOOT")
             resp = send_command(ser, "AT#USBCFG?")
             print(resp)
         print_comment("Should return the APN details and IP address")
         resp = send_command(ser, "AT+CGDCONT?")
         print(resp)
         if "mmsbouygtel" not in resp:
-            print(send_command(ser, "AT+CGDCONT=1,\"IP\",\"mmsbouygtel.com\""))
+            print(send_command(ser, 'AT+CGDCONT=1,"IP","mmsbouygtel.com"'))
+            print(send_command(ser, 'AT+CGDCONT=2,"IPV4V6",""'))
+            print(send_command(ser, 'AT+CGDCONT=3,"IPV4V6",""'))
+            print(send_command(ser, 'AT+CGDCONT=3,"IPV4V6",""'))
         print_comment("Should return 0,1")
         resp = send_command(ser, "AT#ECM?")
         print(resp)
