@@ -131,7 +131,7 @@ def publish_samples(args):
         input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate,
                                                  args.resample_method)
         byte_rate = input_buffer.get_bytes_rate()
-    total_bytes_read = 0
+    args.total_bytes_read = 0
     data = {"running": True}
     manager = ZeroMQThread(args=args, data=data)
     manager.start()
@@ -141,10 +141,11 @@ def publish_samples(args):
             audio_data_bytes = input_buffer.read(block_size)
             if not audio_data_bytes:
                 print("%s End of audio samples, total bytes read %d" %
-                      (datetime.datetime.now().isoformat(), total_bytes_read))
+                      (datetime.datetime.now().isoformat(),
+                       args.total_bytes_read))
                 break
             manager.push_bytes(audio_data_bytes)
-            total_bytes_read += len(audio_data_bytes)
+            args.total_bytes_read += len(audio_data_bytes)
             if byte_rate > 0:
                 # if byte rate provided by user
                 # pause time before reading the next bytes according to expected byte rate
@@ -155,6 +156,25 @@ def publish_samples(args):
                 start = time.time()
     finally:
         data["running"] = False
+
+
+class StatusThread(threading.Thread):
+    def __init__(self, config):
+        threading.Thread.__init__(self)
+        self.config = config
+
+    def run(self):
+        last_print_bytes = 0
+        last_print_time = time.time()
+        while self.config.running:
+            new_time = time.time()
+            byte_rate = int((self.config.total_bytes_read -
+                             last_print_bytes) / (new_time-last_print_time))
+            last_print_bytes = self.config.total_bytes_read
+            last_print_time = new_time
+            print("received %d B/s" % byte_rate)
+            time.sleep(self.config.delay_print_rate)
+
 
 def main():
     epilog = "example:\narecord --disable-softvol " \
@@ -191,7 +211,15 @@ def main():
                                              "wave file(s), will be used "
                                              "instead of stdin", default="",
                         type=str)
+    parser.add_argument("--delay_print_rate",
+                        help="Delay in second between each print of byte rate",
+                        default=0, type=float)
     args = parser.parse_args()
+    args.running = True
+    args.total_bytes_read = 0
+    if args.delay_print_rate > 0:
+        # run stats thread
+        StatusThread(args).start()
     publish_samples(args)
 
 

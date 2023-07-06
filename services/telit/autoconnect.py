@@ -63,6 +63,11 @@ def main():
                 print(send_command(ser, "AT+CREG?"))
                 return
         except serial.serialutil.SerialException:
-            pass
+            print_comment("Got disconnected from serial")
+            cpt = 35
+            while cpt > 0:
+                cpt -= 1
+                print_comment("Waiting %d" % cpt)
+
 
 main()
