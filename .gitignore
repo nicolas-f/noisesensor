@@ -27,4 +27,4 @@ ESC-50-master
 yamnet.h5
 .tox
 *.tflite
-
+examples/*.ogg

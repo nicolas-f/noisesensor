@@ -393,7 +393,8 @@ class TriggerProcessor:
                     if "AES" in globals() and os.path.exists(ssh_file):
                         # empty audio cache
                         samples_trigger = io.BytesIO()
-                        remaining_samples = int(self.config.total_length * self.config.sample_rate)
+                        remaining_samples = int(
+                            self.config.total_length * self.config.sample_rate)
                         while len(self.samples_stack) > 0:
                             audio_samples = self.samples_stack.popleft()
                             remaining_samples -= len(audio_samples)
@@ -406,18 +407,25 @@ class TriggerProcessor:
                         audio_processing_start = time.time()
                         # Compress audio samples
                         output = io.BytesIO()
-                        data, samplerate = sf.read(samples_trigger, format='RAW',
-                                                   channels=1,
-                                                   samplerate=int(self.config.sample_rate),
-                                                   subtype='PCM_32')
+                        data, samplerate = sf.read(samples_trigger,
+                                                   format='RAW', channels=1,
+                                                   samplerate=int(
+                                                       self.config.
+                                                       sample_rate), subtype=
+                                                   'FLOAT')
                         channels = 1
-                        with sf.SoundFile(output, 'w', samplerate, channels, format='OGG') as f:
+                        with sf.SoundFile(output, 'w', samplerate, channels,
+                                          format='OGG') as f:
                             f.write(data)
                             f.flush()
-                        audio_data_encrypt = base64.b64encode(encrypt(output.getvalue(), ssh_file)).decode("UTF-8")
-                        print("raw %d array %d bytes b64 ogg: %d bytes in %.3f seconds" % (
-                            samples_trigger.tell(), data.shape[0], len(audio_data_encrypt),
-                            time.time() - audio_processing_start))
+                        audio_data_encrypt = base64.b64encode(encrypt(
+                            output.getvalue(), ssh_file)).decode("UTF-8")
+                        print("raw %d array %d bytes b64 ogg: %d bytes"
+                              " in %.3f seconds" % (samples_trigger.tell(),
+                                                    data.shape[0],
+                                                    len(audio_data_encrypt),
+                                                    time.time() -
+                                                    audio_processing_start))
                         info = sf.info(io.BytesIO(output.getvalue()))
                         print("Audio duration %.2f s, remaining triggers %d" % (info.duration, self.remaining_triggers))
                     document["encrypted_audio"] = audio_data_encrypt
