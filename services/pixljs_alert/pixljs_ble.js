@@ -545,13 +545,13 @@ function disabledScreen() {
     g.drawString("Next: "+leadZero(next_event_alert.getHours())+"h"+leadZero(next_event_alert.getMinutes()), g.getWidth() / 2, g.getHeight());
     g.setFontAlign(-1, -1);
   }
-  if(snooze_time > 0) {
+  if(snooze_time > Date()) {
     g.drawImage(zzImage, 0, 0);
   }
   g.flip();
   // test train crossing
   disableButtons();
-  button_watch[0] = setWatch(function() { if(snooze_time==0) {snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;}else{snooze_time = 0;} disabledScreen();}, BTN1, {  repeat: true,  edge: 'rising'});
+  button_watch[0] = setWatch(function() { if(snooze_time < Date()) {snooze_time = Date() + SNOOZE_TOTAL_TIME_MS;}else{snooze_time = 0;} disabledScreen();}, BTN1, {  repeat: true,  edge: 'rising'});
   if(DEMO_MODE) {
     button_watch[3] = setWatch(function() { ignore_train_time=0;onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
     button_watch[2] = setWatch(function() { onMode2();}, BTN3, {  repeat: true,  edge: 'rising'});
