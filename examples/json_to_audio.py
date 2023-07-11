@@ -43,7 +43,7 @@ def main():
                         required=True, type=str)
     parser.add_argument("--ssh_file",
                         help="private key file for audio decryption",
-                        default="~/.ssh/id_rsa")
+                        required=True)
     parser.add_argument("--ssh_password",
                         help="password of private key", default=None, type=str)
     parser.add_argument("--ogg_file",
