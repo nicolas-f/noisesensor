@@ -141,7 +141,12 @@ def main():
                     json.dump(document_json, fp, allow_nan=True)
                 # rename to the final name if document file is complete
                 if args.row_count <= document_tracker[document_name][0]:
-                    os.rename(temporary_extension, file_path+extension)
+                    final_name = file_path+extension
+                    cpt = 2
+                    while os.path.exists(final_name):
+                        final_name = file_path + "_%d" % cpt + extension
+                        cpt += 1
+                    os.rename(temporary_extension, final_name)
                     del(document_tracker[document_name])
             time.sleep(0.005)
     finally:
