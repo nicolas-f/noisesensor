@@ -1,5 +1,5 @@
 var user_id = '007';
-var DEMO_MODE = 1;
+var DEMO_MODE = 0;
 var FORCED_TRAIN_EVENT_MINUTES_NEGATIVE_DELAY = 3;
 
 var parsed_train_event_slots = null;
@@ -65,7 +65,7 @@ parsed_activation = mode2_activation.trim().split("\n").map(parse_interval);
 // Disable logging events to screen
 var PIN_BUZZER = D5; // Yellow cable pin Buzzer is connected to
 var FLASH_EN_PIN = D9;
-var SNOOZE_TOTAL_TIME_MS = 8 * 3600 * 1000;
+var SNOOZE_TOTAL_TIME_MS = 24 * 3600 * 1000;
 var timeout_id_mode2 = 0;
 var timeout_next_forced_train_event = 0;
 var timeout_stop_alarm = 0;
@@ -526,15 +526,16 @@ function disabledScreen() {
     g.flip();
     return 0;
   }
-  if(!DEMO_MODE && !isUserAvailable()) {
-    g.clear();
-    Pixl.setLCDPower(false);
-    LED.write(0);
-    return 0;
-  }
   Pixl.setLCDPower(true);
   LED.write(0);
   g.clear();
+  g.setFontAlign(-1, -1);
+  g.setFontPixeloidSans(1);
+  var t = new Date(); // get the current date and time
+  var time_date = t.getFullYear()+"/"+("0"+t.getMonth()).substr(-2)+"/"+("0"+t.getDay()).substr(-2);
+  g.drawString(time_date, g.getWidth() / 2 - g.stringMetrics(time_date).width / 2, 0);
+  var time = t.getHours()+":"+("0"+t.getMinutes()).substr(-2);
+  g.drawString(time, g.getWidth() / 2 - g.stringMetrics(time).width / 2, g.stringMetrics(time_date).height);
   // Display button icons
   if(DEMO_MODE) {
     g.drawImage(demoImage, 0, g.getHeight() - demoImage.height);
@@ -556,6 +557,10 @@ function disabledScreen() {
     button_watch[3] = setWatch(function() { ignore_train_time=0;onTrainCrossing(false);}, BTN4, {  repeat: true,  edge: 'rising'});
     button_watch[2] = setWatch(function() { onMode2();}, BTN3, {  repeat: true,  edge: 'rising'});
   }
+  if(idRefreshInterval > 0) {
+    clearTimeout(idRefreshInterval);
+  }
+  idRefreshInterval = setTimeout(disabledScreen, 60000);
 }
 
 load_parameters();

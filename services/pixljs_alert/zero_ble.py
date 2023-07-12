@@ -17,13 +17,19 @@ def uart_data_received(sender, data):
     print(Fore.GREEN + decoded + Fore.RESET, end="")
 
 
+def get_refresh_time_command():
+    now = time.time()
+    return b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\n" % (
+     now, now, -time.altzone // 3600)
+
+
 def process_message(socket):
     logger.info("Waiting for next zmq message")
     data = socket.recv_json()
     scores = data["scores"]
     if len(scores) > 0:
         print(repr(scores))
-        return b"\x03\x10onTrainCrossing(false);\n"
+        return get_refresh_time_command()+b"\x03\x10onTrainCrossing(false);\n"
     return ""
 
 
@@ -33,6 +39,7 @@ How to overwrite Flash:
 command:
 "\u0010reset();\n\u0010print()\n\u0010setTime(1681798003.809);E.setTimeZone(2)\n\u0010\u001b[1drequire(\"Storage\").write(\".bootcde\",\"// Disable logging events to screen\\nBluetooth.setConsole(1);\\n\",0,939);\n\u0010\u001b[2dload()\n\n"
 """
+
 
 
 async def main(config):
@@ -54,8 +61,7 @@ async def main(config):
     last_push = time.time()
     tries = 0
     # sync time of pixl.js
-    c = b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\n" % (
-    last_push, last_push, -time.altzone // 3600)
+    c = get_refresh_time_command()
     while True:
         if not c:
             c = process_message(socket)
