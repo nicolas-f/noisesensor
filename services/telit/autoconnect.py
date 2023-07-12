@@ -68,6 +68,7 @@ def main():
             while cpt > 0:
                 cpt -= 1
                 print_comment("Waiting %d" % cpt)
+                time.sleep(1)
 
 
 main()
