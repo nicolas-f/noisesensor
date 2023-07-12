@@ -34,8 +34,6 @@ command:
 "\u0010reset();\n\u0010print()\n\u0010setTime(1681798003.809);E.setTimeZone(2)\n\u0010\u001b[1drequire(\"Storage\").write(\".bootcde\",\"// Disable logging events to screen\\nBluetooth.setConsole(1);\\n\",0,939);\n\u0010\u001b[2dload()\n\n"
 """
 
-def check_time():
-    pass
 
 async def main(config):
     address = None
@@ -56,7 +54,7 @@ async def main(config):
     last_push = time.time()
     tries = 0
     # sync time of pixl.js
-    c = b"if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\\n" % (
+    c = b"\x03\x10if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\n" % (
     last_push, last_push, -time.altzone // 3600)
     while True:
         if not c:
