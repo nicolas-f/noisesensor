@@ -5,6 +5,7 @@ import logging
 import zmq
 import argparse
 import time
+from colorama import Fore
 
 UUID_NORDIC_TX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 UUID_NORDIC_RX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def uart_data_received(sender, data):
-    print("RX> {0}".format(data.decode('UTF-8')))
+    decoded = data.decode('UTF-8')
+    print(Fore.GREEN + decoded + Fore.RESET, end="")
 
 
 def process_message(socket):
@@ -54,7 +56,7 @@ async def main(config):
     last_push = time.time()
     tries = 0
     # sync time of pixl.js
-    c = b"\u0010if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\n" % (
+    c = b"if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);load_parameters();installTimeouts(false);disabledScreen();}\\n" % (
     last_push, last_push, -time.altzone // 3600)
     while True:
         if not c:
