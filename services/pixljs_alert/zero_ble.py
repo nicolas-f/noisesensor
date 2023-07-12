@@ -54,8 +54,8 @@ async def main(config):
     last_push = time.time()
     tries = 0
     # sync time of pixl.js
-    c = "if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);" \
-        "load_parameters();installTimeouts(false);disabledScreen();}" \
+    c = b"if(Math.abs(getTime()-%f) > 300) { setTime(%f);E.setTimeZone(%d);" \
+        b"load_parameters();installTimeouts(false);disabledScreen();}" \
         % (last_push, last_push, -time.altzone // 3600)
     while True:
         if not c:
