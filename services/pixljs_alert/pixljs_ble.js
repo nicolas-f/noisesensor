@@ -560,7 +560,9 @@ function disabledScreen() {
   if(idRefreshInterval > 0) {
     clearTimeout(idRefreshInterval);
   }
-  idRefreshInterval = setTimeout(disabledScreen, 60000);
+  next_minute = Date();
+  next_minute.setHours(next_minute.getHours(), next_minute.getMinutes(), 0, 0);
+  idRefreshInterval = setTimeout(disabledScreen, next_minute + 60000 - Date());
 }
 
 load_parameters();
