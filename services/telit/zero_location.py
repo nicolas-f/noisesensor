@@ -111,8 +111,9 @@ def gps_config(args):
                         time.sleep(5)
                         resp = send_command(ser, "AT$GPSP?")
             return
-        except serial.serialutil.SerialException:
-            print("Got disconnected from serial")
+        except serial.serialutil.SerialException as e:
+            print("Got disconnected from serial reason:\n%s" % e,
+                  file=sys.stderr)
             cpt = 35
             while cpt > 0:
                 cpt -= 1
