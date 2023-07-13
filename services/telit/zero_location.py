@@ -75,8 +75,9 @@ def lte_config(args):
                 print("Should return 0,1 or 0,5")
                 print(send_command(ser, "AT+CREG?"))
                 return
-        except serial.serialutil.SerialException:
-            print("Got disconnected from serial")
+        except serial.serialutil.SerialException as e:
+            print("Got disconnected from serial reason:\n%s" % e,
+                  file=sys.stderr)
             cpt = 35
             while cpt > 0:
                 cpt -= 1
