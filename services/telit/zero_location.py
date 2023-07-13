@@ -177,7 +177,7 @@ def main():
                         default=300, type=int)
     parser.add_argument("--push_interval",
                         help="JSON GPS push interval in second",
-                        default=1800, type=int)
+                        default=1, type=int)
     parser.add_argument("-v", "--verbose",
                         help="Verbose mode", default=False,
                         action="store_true")
