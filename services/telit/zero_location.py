@@ -85,7 +85,7 @@ def wait(wait_time):
     cpt = wait_time
     while cpt > 0:
         cpt -= 1
-        print("Waiting %d%d" % (cpt, wait_time))
+        print("Waiting %d" % cpt)
         time.sleep(1)
 
 
