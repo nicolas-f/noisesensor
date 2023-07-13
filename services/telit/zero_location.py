@@ -78,11 +78,15 @@ def lte_config(args):
         except serial.serialutil.SerialException as e:
             print("Got disconnected from serial reason:\n%s" % e,
                   file=sys.stderr)
-            cpt = 35
-            while cpt > 0:
-                cpt -= 1
-                print("Waiting %d" % cpt)
-                time.sleep(1)
+            wait(35)
+
+
+def wait(wait_time):
+    cpt = wait_time
+    while cpt > 0:
+        cpt -= 1
+        print("Waiting %d%d" % (cpt, wait_time))
+        time.sleep(1)
 
 
 def gps_config(args):
@@ -100,26 +104,17 @@ def gps_config(args):
                     resp = send_command(ser, "AT$GPSP=1", "Enable GPS")
                     print(resp)
                     if "ERROR" in resp:
-                        print(send_command(ser, "AT$GPSRST", "Reset GPS"))
-                        print(send_command(ser, "AT$GPSNVRAM=15,0", "Delete the GPS information"))
+                        print(send_command(ser, "AT$GPSR=0", "Factory reset"))
+                        wait(10)
                         print(send_command(ser, "AT$GPSNMUN=2,1,1,1,1,1,1", "Enable stream of GPS sentences on dev/ttyUSB1"))
                         print(send_command(ser, "AT$GPSQOS=0,0,0,0,2,3,1", "set high accuracy QOS"))
                         print(send_command(ser, "AT$GPSSAV", "save settings"))
-                        print(send_command(ser, "AT$GPSR=1", "restart module"))
-                        time.sleep(5)
-                        print(send_command(ser, "AT$GPSP=1", "Enable GPS"))
-                        time.sleep(5)
                         resp = send_command(ser, "AT$GPSP?")
             return
         except serial.serialutil.SerialException as e:
             print("Got disconnected from serial reason:\n%s" % e,
                   file=sys.stderr)
-            cpt = 35
-            while cpt > 0:
-                cpt -= 1
-                print("Waiting %d" % cpt)
-                time.sleep(1)
-
+            wait(35)
 
 class ZMQThread(threading.Thread):
     def __init__(self, config):

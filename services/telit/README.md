@@ -4,6 +4,16 @@ This python module connect to, configure Sixfab Telit LE910C4-EU Raspberry pi ha
 
 GPS locations are transmitted through zeromq.
 
+# configure access to pi with /dev/ttyUSB2
+
+You may have to reboot or logout/login after usemod
+
+```shell
+sudo usermod -a -G dialout pi
+sudo systemctl stop ModemManager.service
+sudo systemctl disable ModemManager.service
+```
+
 # Install gpsd
 
 ```shell
