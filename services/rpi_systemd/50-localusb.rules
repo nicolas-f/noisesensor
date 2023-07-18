@@ -1,0 +1,6 @@
+# We have to restart usb if we do not receive samples from it
+# place it in /etc/udev/rules.d/50-localusb.rules
+# look for idVendor and idProduct using pyusb see restart_usb.py
+# sudo usermod -a -G dialout pi
+# reboot the rpi
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="2752", ATTRS{idProduct}=="0007", GROUP="dialout", MODE="0666"

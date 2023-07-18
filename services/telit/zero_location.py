@@ -104,11 +104,13 @@ def gps_config(args):
                     resp = send_command(ser, "AT$GPSP=1", "Enable GPS")
                     print(resp)
                     if "ERROR" in resp:
-                        print(send_command(ser, "AT$GPSR=0", "Factory reset"))
+                        print(send_command(ser, "AT$GPSRST", "Restore factory configuration"))
+                        print(send_command(ser, "AT$GPSNVRAM=15,0", "Delete the GPS information stored in NVM"))
                         wait(10)
-                        print(send_command(ser, "AT$GPSNMUN=2,1,1,1,1,1,1", "Enable stream of GPS sentences on dev/ttyUSB1"))
-                        print(send_command(ser, "AT$GPSQOS=0,0,0,0,2,3,1", "set high accuracy QOS"))
+                        print(send_command(ser, "AT$GPSACP", "Check that after history buffer cleaning no GPS information is available"))
+                        resp = send_command(ser, "AT$GPSP=1", "Enable GPS")
                         print(send_command(ser, "AT$GPSSAV", "save settings"))
+                        wait(300)
                         resp = send_command(ser, "AT$GPSP?")
             return
         except serial.serialutil.SerialException as e:
