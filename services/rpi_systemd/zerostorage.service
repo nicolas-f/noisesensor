@@ -4,7 +4,7 @@ After=zerorecord.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_filestorage.py -o /home/pi/noisesensor/out/ -i tcp://127.0.0.1:10002/yamnet --compress
+ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_filestorage.py -o /home/pi/noisesensor/out/ -i tcp://127.0.0.1:10002/yamnet tcp://127.0.0.1:10006/location --compress
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
