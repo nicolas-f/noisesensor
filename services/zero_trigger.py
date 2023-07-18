@@ -357,7 +357,9 @@ class TriggerProcessor:
                                 "scores_perc": scores_percentage,
                                 "scores_time": threshold_time,
                                 "leq": round(leq, 2),
-                                "epoch_millisecond": int(cur_time)}
+                                "epoch_millisecond": int(cur_time),
+                                "spectrogram": np.round(spectrogram, 1)
+                                .tolist()}
                     tags = ' '.join('{:s}({:d}%)'.format(k, v)
                                     for k, v in scores_percentage.items())
                     if self.remaining_triggers >= 0:
