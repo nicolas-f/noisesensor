@@ -48,11 +48,10 @@ ALERT_DELAY = 5.0
 
 
 class ZeroMQThread(threading.Thread):
-    def __init__(self, args, data: dict):
+    def __init__(self, args):
         threading.Thread.__init__(self)
         self.samples_queue = collections.deque()
         self.args = args
-        self.data = data
         self.last_warning = 0
 
     def push_bytes(self, samples_bytes):
@@ -73,7 +72,7 @@ class ZeroMQThread(threading.Thread):
         socket.bind(address)
         print("Publishing samples on interface:")
         print(address)
-        while self.data["running"] or len(self.samples_queue) > 0:
+        while self.args.running or len(self.samples_queue) > 0:
             while len(self.samples_queue) > 0:
                 audio_data_bytes = self.samples_queue.popleft()
                 socket.send(audio_data_bytes)
@@ -132,12 +131,11 @@ def publish_samples(args):
                                                  args.resample_method)
         byte_rate = input_buffer.get_bytes_rate()
     args.total_bytes_read = 0
-    data = {"running": True}
-    manager = ZeroMQThread(args=args, data=data)
+    manager = ZeroMQThread(args=args)
     manager.start()
     start = time.time()
     try:
-        while data["running"]:
+        while args.running:
             audio_data_bytes = input_buffer.read(block_size)
             if not audio_data_bytes:
                 print("%s End of audio samples, total bytes read %d" %
@@ -155,7 +153,7 @@ def publish_samples(args):
                     time.sleep(samples_time - (cur - start))
                 start = time.time()
     finally:
-        data["running"] = False
+        args.running = False
 
 
 class StatusThread(threading.Thread):
