@@ -357,11 +357,11 @@ class TriggerProcessor:
                                 "scores_perc": scores_percentage,
                                 "scores_time": threshold_time,
                                 "leq": round(leq, 2),
-                                "epoch_millisecond": int(cur_time),
-                                "spectrogram": np.round(spectrogram, 1)
-                                .tolist()}
-                    tags = ' '.join('{:s}({:d}%)'.format(k, v)
-                                    for k, v in scores_percentage.items())
+                                "epoch_millisecond": int(cur_time)}
+                    if self.config.add_spectrogram:
+                        document["spectrogram"] = base64.b64encode(
+                                    spectrogram.astype(np.float16).
+                                    tobytes()).decode("UTF-8")
                     if self.remaining_triggers >= 0:
                         print(" Remaining triggers for today %d" %
                               self.remaining_triggers)
@@ -469,6 +469,9 @@ if __name__ == "__main__":
                         type=float)
     parser.add_argument("--delay_print_samples", help="Delay in second between each print of number of samples read",
                         default=0, type=float)
+    parser.add_argument("--add_spectrogram",
+                        help="Add spectrogram float16 array in base 64 in"
+                             " json file", default=False, action="store_true")
     args = parser.parse_args()
     if not args.configuration_file:
         # no configuration file but configured with command line arguments

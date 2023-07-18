@@ -20,5 +20,6 @@
   "yamnet_max_gain": 8.0,
   "yamnet_window_time": 5.0,
   "sensitivity": -28.34,
-  "delay_print_samples": 300
+  "delay_print_samples": 300,
+  "add_spectrogram": true
 }
