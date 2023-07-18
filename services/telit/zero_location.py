@@ -129,6 +129,7 @@ class ZMQThread(threading.Thread):
     def run(self):
         while self.config.running:
             try:
+                print("Connect to GPSD")
                 gpsd.connect()
                 while self.config.running:
                     # Get gps position

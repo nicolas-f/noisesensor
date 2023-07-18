@@ -4,7 +4,7 @@ After=gpsd.service
 
 [Service]
 Type=simple
-ExecStart= /usr/bin/python3.9 -u /home/pi/noisesensor/services/telit/zero_location.py --push_interval 1800
+ExecStart= /usr/bin/python3.9 -u /home/pi/noisesensor/services/telit/zero_location.py --push_interval 1800 -v
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s
