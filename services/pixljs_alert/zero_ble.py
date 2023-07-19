@@ -68,6 +68,8 @@ async def main(config):
     while True:
         if not c:
             c = process_message(socket, config)
+        if not c:
+            c = get_refresh_time_command()
         logger.info("Reconnect to " + repr(address))
         try:
             async with BleakClient(address) as client:
