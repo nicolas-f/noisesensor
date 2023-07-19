@@ -130,20 +130,23 @@ def publish_samples(args):
         input_buffer = AudioFolderPlayListBuffer(args.wave, args.sample_rate,
                                                  args.resample_method)
         byte_rate = input_buffer.get_bytes_rate()
-    args.total_bytes_read = 0
     manager = ZeroMQThread(args=args)
     manager.start()
     start = time.time()
+    last_time_read = start
     try:
         while args.running:
             audio_data_bytes = input_buffer.read(block_size)
+            now = time.time()
             if not audio_data_bytes:
                 print("%s End of audio samples, total bytes read %d" %
                       (datetime.datetime.now().isoformat(),
                        args.total_bytes_read))
                 break
             manager.push_bytes(audio_data_bytes)
-            args.total_bytes_read += len(audio_data_bytes)
+            args.total_bytes_read = len(audio_data_bytes)
+            args.total_bytes_read_since = now - last_time_read
+            last_time_read = now
             if byte_rate > 0:
                 # if byte rate provided by user
                 # pause time before reading the next bytes according to expected byte rate
@@ -169,9 +172,8 @@ class BandwidthWatchThread(threading.Thread):
         last_print_bytes = 0
         last_print_time = time.time()
         while self.config.running:
-            new_time = time.time()
-            byte_rate = int((self.config.total_bytes_read -
-                             last_print_bytes) / (new_time-last_print_time))
+            byte_rate = int(self.config.total_bytes_read /
+                            self.config.total_bytes_read_since)
             if byte_rate < 0:
                 zero_byte_rate_warning += 1
             if zero_byte_rate_warning >= 5:
@@ -186,7 +188,7 @@ class BandwidthWatchThread(threading.Thread):
                       " USB device to reset")
                 zero_byte_rate_warning = 0
             last_print_bytes = self.config.total_bytes_read
-            last_print_time = new_time
+            last_print_time = time.time()
             if self.config.delay_print_rate > 0:
                 print("received %d B/s" % byte_rate)
             time.sleep(watch_delay)
@@ -233,6 +235,7 @@ def main():
     args = parser.parse_args()
     args.running = True
     args.total_bytes_read = 0
+    args.total_bytes_read_since = 0
     BandwidthWatchThread(args).start()
     publish_samples(args)
 
