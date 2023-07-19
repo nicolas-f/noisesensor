@@ -235,7 +235,7 @@ def main():
     args = parser.parse_args()
     args.running = True
     args.total_bytes_read = 0
-    args.total_bytes_read_since = 0
+    args.total_bytes_read_since = 1
     BandwidthWatchThread(args).start()
     publish_samples(args)
 
