@@ -119,6 +119,10 @@ def gps_config(args):
             wait(35)
 
 
+def clean_response(resp):
+    return resp.replace("\\r", "").replace("\\n", " ")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='This program read json documents on zeromq channels'
@@ -180,13 +184,10 @@ def main():
                         with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
                             resp = send_command(ser, "AT#TEMPMON=1")
                             if "TEMPMEAS" in resp and "," in resp:
-                                temperature = resp.replace(
-                                    "#TEMPMEAS: ", "").strip()
-                                document["temperature_module"] = temperature
+                                document["temperature_module"] = clean_response(resp)
                             resp = send_command(ser, "AT+CSQ")
                             if "CSQ:" in resp:
-                                document["lte_strength"] = resp.replace(
-                                    "+CSQ: ", "").strip()
+                                document["lte_strength"] = clean_response(resp)
                     except serial.serialutil.SerialException as e:
                         print("Got disconnected from serial reason:\n%s" % e,
                               file=sys.stderr)
