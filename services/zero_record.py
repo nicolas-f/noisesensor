@@ -156,22 +156,40 @@ def publish_samples(args):
         args.running = False
 
 
-class StatusThread(threading.Thread):
+class BandwidthWatchThread(threading.Thread):
     def __init__(self, config):
         threading.Thread.__init__(self)
         self.config = config
 
     def run(self):
+        watch_delay = 1
+        zero_byte_rate_warning = 0
+        if self.config.delay_print_rate > 0:
+            watch_delay = self.config.delay_print_rate
         last_print_bytes = 0
         last_print_time = time.time()
         while self.config.running:
             new_time = time.time()
             byte_rate = int((self.config.total_bytes_read -
                              last_print_bytes) / (new_time-last_print_time))
+            if byte_rate < 0:
+                zero_byte_rate_warning += 1
+            if zero_byte_rate_warning >= 5:
+                # Restart USB
+                from usb.core import find as finddev
+                for device in finddev():
+                    if "Audio" in repr(device.interfaces()):
+                        print("Reset " + repr(device) + repr(device.interfaces()))
+                        device.reset()
+                        break
+                print("Zero bytes rates but could not find"
+                      " USB device to reset")
+                zero_byte_rate_warning = 0
             last_print_bytes = self.config.total_bytes_read
             last_print_time = new_time
-            print("received %d B/s" % byte_rate)
-            time.sleep(self.config.delay_print_rate)
+            if self.config.delay_print_rate > 0:
+                print("received %d B/s" % byte_rate)
+            time.sleep(watch_delay)
 
 
 def main():
@@ -215,9 +233,7 @@ def main():
     args = parser.parse_args()
     args.running = True
     args.total_bytes_read = 0
-    if args.delay_print_rate > 0:
-        # run stats thread
-        StatusThread(args).start()
+    BandwidthWatchThread(args).start()
     publish_samples(args)
 
 
