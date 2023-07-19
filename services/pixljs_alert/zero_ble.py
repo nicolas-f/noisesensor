@@ -23,8 +23,11 @@ def get_refresh_time_command():
      now, now, -time.altzone // 3600)
 
 
-def process_message(socket):
+def process_message(socket, config):
     logger.info("Waiting for next zmq message")
+    event = socket.poll(timeout=config.reconnect_ble)
+    if event == 0:
+        return ""
     data = socket.recv_json()
     scores = data["scores"]
     if len(scores) > 0:
@@ -64,7 +67,7 @@ async def main(config):
     c = get_refresh_time_command()
     while True:
         if not c:
-            c = process_message(socket)
+            c = process_message(socket, config)
         logger.info("Reconnect to " + repr(address))
         try:
             async with BleakClient(address) as client:
@@ -103,6 +106,9 @@ if __name__ == "__main__":
     parser.add_argument("--input_address", help="Address for zero_trigger tags", default="tcp://127.0.0.1:10002")
     parser.add_argument("--disconnect_ble_timeout", help="Disconnect ble if no new message in this delay in"
                                                          " milliseconds", default=10000, type=int)
+    parser.add_argument("--reconnect_ble", help="Reconnect to pixl.js at "
+                                                "least each milliseconds",
+                        default=300000, type=int)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main(args))
