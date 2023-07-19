@@ -45,6 +45,7 @@ import threading
 
 ALERT_STACK_BYTES = 960000
 ALERT_DELAY = 5.0
+SECONDS_DELAY_RESET_USB = 5.0
 
 
 class ZeroMQThread(threading.Thread):
@@ -146,6 +147,7 @@ def publish_samples(args):
             manager.push_bytes(audio_data_bytes)
             args.total_bytes_read = len(audio_data_bytes)
             args.total_bytes_read_since = now - last_time_read
+            args.total_bytes_read_last_time = now
             last_time_read = now
             if byte_rate > 0:
                 # if byte rate provided by user
@@ -165,18 +167,15 @@ class BandwidthWatchThread(threading.Thread):
         self.config = config
 
     def run(self):
+        time.sleep(1)  # wait for some bytes
         watch_delay = 1
-        zero_byte_rate_warning = 0
         if self.config.delay_print_rate > 0:
             watch_delay = self.config.delay_print_rate
-        last_print_bytes = 0
-        last_print_time = time.time()
         while self.config.running:
             byte_rate = int(self.config.total_bytes_read /
                             self.config.total_bytes_read_since)
-            if byte_rate < 0:
-                zero_byte_rate_warning += 1
-            if zero_byte_rate_warning >= 5:
+            if time.time() - self.config.total_bytes_read_last_time > \
+                    SECONDS_DELAY_RESET_USB:
                 # Restart USB
                 from usb.core import find as finddev
                 for device in finddev():
@@ -187,8 +186,6 @@ class BandwidthWatchThread(threading.Thread):
                 print("Zero bytes rates but could not find"
                       " USB device to reset")
                 zero_byte_rate_warning = 0
-            last_print_bytes = self.config.total_bytes_read
-            last_print_time = time.time()
             if self.config.delay_print_rate > 0:
                 print("received %d B/s" % byte_rate)
             time.sleep(watch_delay)
@@ -236,6 +233,7 @@ def main():
     args.running = True
     args.total_bytes_read = 0
     args.total_bytes_read_since = 1
+    args.total_bytes_read_last_time = time.time()
     BandwidthWatchThread(args).start()
     publish_samples(args)
 
