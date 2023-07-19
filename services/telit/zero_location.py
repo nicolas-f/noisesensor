@@ -120,7 +120,11 @@ def gps_config(args):
 
 
 def clean_response(resp):
-    return resp.replace("\\r", "").replace("\\n", " ")
+    rows = resp.split("\n")
+    if len(rows) > 1:
+        return rows[1].replace("\r", "")
+    else:
+        return resp.replace("\r", "").replace("\n", " ")
 
 
 def main():
