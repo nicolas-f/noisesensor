@@ -180,11 +180,13 @@ def main():
                         with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
                             resp = send_command(ser, "AT#TEMPMON=1")
                             if "TEMPMEAS" in resp and "," in resp:
-                                temperature = int(resp[resp.rfind(",") + 1:resp.find("\r")].strip())
+                                temperature = resp.replace(
+                                    "#TEMPMEAS: ", "").strip()
                                 document["temperature_module"] = temperature
                             resp = send_command(ser, "AT+CSQ")
                             if "CSQ:" in resp:
-                                document["lte_strength"] = resp[resp.rfind(":") + 1:resp.find("\r")].strip()
+                                document["lte_strength"] = resp.replace(
+                                    "+CSQ: ", "").strip()
                     except serial.serialutil.SerialException as e:
                         print("Got disconnected from serial reason:\n%s" % e,
                               file=sys.stderr)
