@@ -118,47 +118,6 @@ def gps_config(args):
                   file=sys.stderr)
             wait(35)
 
-class ZMQThread(threading.Thread):
-    def __init__(self, config):
-        threading.Thread.__init__(self)
-        context = zmq.Context()
-        self.config = config
-        self.socket_out = context.socket(zmq.PUB)
-        self.socket_out.bind(self.config.output_address)
-
-    def run(self):
-        while self.config.running:
-            try:
-                print("Connect to GPSD")
-                gpsd.connect()
-                while self.config.running:
-                    # Get gps position
-                    packet = gpsd.get_current()
-                    document = {
-                       "location": {
-                           "type": "Point",
-                           "coordinates": packet.position()
-                       }, "properties": {
-                            "accuracy": packet.position_precision(),
-                            "speed": packet.speed(),
-                            "speed_vertical": packet.speed_vertical(),
-                            "altitude": packet.altitude(),
-                            "time": packet.get_time().isoformat(),
-                            "satellites": packet.sats,
-                            "satellites_valid": packet.sats_valid
-                        }
-                    }
-                    if self.config.verbose:
-                        print(repr(document))
-                    self.socket_out.send_json(document)
-                    last_push = time.time()
-                    while time.time() < last_push + self.config.push_interval\
-                            and self.config.running:
-                        time.sleep(0.1)
-            except Exception as e:
-                print(repr(e), file=sys.stderr)
-                time.sleep(5)
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -187,18 +146,60 @@ def main():
 
     args = parser.parse_args()
     args.running = True
+    context = zmq.Context()
+    socket_out = context.socket(zmq.PUB)
     try:
-        zmq_thread = None
         while True:
             last_config_check = time.time()
             # configuration
             if not ping(args.check_ip):
                 lte_config(args)
             gps_config(args)
-            if not zmq_thread:
-                zmq_thread = ZMQThread(args)
-                zmq_thread.start()
-            time.sleep(max(5, last_config_check+args.wait_check-time.time()))
+            print("Connect to GPSD")
+            gpsd.connect()
+            while args.running:
+                # Get gps position
+                packet = gpsd.get_current()
+                document = {
+                   "location": {
+                       "type": "Point",
+                       "coordinates": packet.position()
+                   }, "properties": {
+                        "accuracy": packet.position_precision(),
+                        "speed": packet.speed(),
+                        "speed_vertical": packet.speed_vertical(),
+                        "altitude": packet.altitude(),
+                        "time": packet.get_time().isoformat(),
+                        "satellites": packet.sats,
+                        "satellites_valid": packet.sats_valid
+                    }
+                }
+                # Read stuff from telit
+                try:
+                    with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+                        resp = send_command(ser, "AT#TEMPMON=1")
+                        if "TEMPMEAS" in resp and "," in resp:
+                            document["temperature_module"] = int(
+                                resp[resp.rfind(",") + 1:])
+                        resp = send_command(ser, "AT+CSQ")
+                        if "CSQ:" in resp:
+                            document["lte_strength"] = \
+                                resp[resp.rfind(":") + 1:].strip()
+                except serial.serialutil.SerialException as e:
+                    print("Got disconnected from serial reason:\n%s" % e,
+                          file=sys.stderr)
+                if args.verbose:
+                    print(repr(document))
+                socket_out.send_json(document)
+                last_push = time.time()
+                while time.time() < min(last_push + args.push_interval,
+                                        last_config_check+args.wait_check):
+                    time.sleep(0.1)
+                if time.time() >= last_config_check+args.wait_check:
+                    break  # go check GPS and LTE status
+    except Exception as e:
+        print(repr(e), file=sys.stderr)
+        time.sleep(5)
     finally:
         args.running = False
 
