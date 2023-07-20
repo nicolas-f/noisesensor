@@ -177,14 +177,19 @@ class BandwidthWatchThread(threading.Thread):
             if time.time() - self.config.total_bytes_read_last_time > \
                     SECONDS_DELAY_RESET_USB:
                 # Restart USB
+                found_usb_audio = False
                 from usb.core import find as finddev
-                for device in finddev():
-                    if "Audio" in repr(device.interfaces()):
-                        print("Reset " + repr(device) + repr(device.interfaces()))
+                for device in finddev(find_all=True):
+                    usb_label = repr(device.get_active_configuration().
+                                     interfaces())
+                    if "Audio" in usb_label:
+                        print("Reset " + repr(device) + usb_label)
                         device.reset()
+                        found_usb_audio = True
                         break
-                print("Zero bytes rates but could not find"
-                      " USB device to reset")
+                if not found_usb_audio:
+                    print("Zero bytes rates but could not find"
+                          " USB device to reset")
                 zero_byte_rate_warning = 0
             if self.config.delay_print_rate > 0:
                 print("received %d B/s" % byte_rate)
