@@ -158,6 +158,7 @@ def main():
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(args.output_address)
     last_push = 0
+    gpsd_connected = False
     try:
         while True:
             last_config_check = time.time()
@@ -165,8 +166,11 @@ def main():
             if not ping(args.check_ip):
                 lte_config(args)
             gps_config(args)
-            print("Connect to GPSD")
-            gpsd.connect()
+            if not gpsd_connected:
+                print("Connect to GPSD")
+                gpsd.connect()
+                gpsd_connected = True
+                print("Connected to GPSD")
             while args.running:
                 try:
                     if time.time() >= last_push + args.push_interval:
