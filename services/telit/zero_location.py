@@ -156,6 +156,7 @@ def main():
     args.running = True
     context = zmq.Context()
     socket_out = context.socket(zmq.PUB)
+    socket_out.bind(args.output_address)
     try:
         while True:
             last_config_check = time.time()
