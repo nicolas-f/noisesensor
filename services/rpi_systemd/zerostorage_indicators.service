@@ -1,6 +1,6 @@
 [Unit]
 Description=Storage of json files
-After=zerorecord.service
+Requires=zerorecord.service
 
 [Service]
 Type=simple

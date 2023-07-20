@@ -1,6 +1,6 @@
 [Unit]
 Description=Create noise indicators from
-After=zerorecord.service
+Requires=zerorecord.service
 
 [Service]
 Type=simple
