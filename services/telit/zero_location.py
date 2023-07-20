@@ -182,6 +182,7 @@ def main():
                                             "Toff", "PPS", "Osc"]):
                                 if result["class"] == "TPV" and "TPV" in document.keys():
                                     break
+                                document[result["class"]] = result
                             # Read stuff from telit
                             try:
                                 with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
