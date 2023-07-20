@@ -157,6 +157,7 @@ def main():
     context = zmq.Context()
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(args.output_address)
+    last_push = 0
     try:
         while True:
             last_config_check = time.time()
@@ -168,38 +169,39 @@ def main():
             gpsd.connect()
             while args.running:
                 try:
-                    # Get gps position
-                    packet = gpsd.get_current()
-                    document = {
-                       "location": {
-                           "type": "Point",
-                           "coordinates": packet.position()
-                       }, "properties": {
-                            "accuracy": packet.position_precision(),
-                            "speed": packet.speed(),
-                            "speed_vertical": packet.speed_vertical(),
-                            "altitude": packet.altitude(),
-                            "time": packet.get_time().isoformat(),
-                            "satellites": packet.sats,
-                            "satellites_valid": packet.sats_valid
+                    if time.time() >= last_push + args.push_interval:
+                        # Get gps position
+                        packet = gpsd.get_current()
+                        document = {
+                           "location": {
+                               "type": "Point",
+                               "coordinates": packet.position()
+                           }, "properties": {
+                                "accuracy": packet.position_precision(),
+                                "speed": packet.speed(),
+                                "speed_vertical": packet.speed_vertical(),
+                                "altitude": packet.altitude(),
+                                "time": packet.get_time().isoformat(),
+                                "satellites": packet.sats,
+                                "satellites_valid": packet.sats_valid
+                            }
                         }
-                    }
-                    # Read stuff from telit
-                    try:
-                        with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
-                            resp = send_command(ser, "AT#TEMPMON=1")
-                            if "TEMPMEAS" in resp and "," in resp:
-                                document["temperature_module"] = clean_response(resp)
-                            resp = send_command(ser, "AT+CSQ")
-                            if "CSQ:" in resp:
-                                document["lte_strength"] = clean_response(resp)
-                    except serial.serialutil.SerialException as e:
-                        print("Got disconnected from serial reason:\n%s" % e,
-                              file=sys.stderr)
-                    if args.verbose:
-                        print(repr(document))
-                    socket_out.send_json(document)
-                    last_push = time.time()
+                        # Read stuff from telit
+                        try:
+                            with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+                                resp = send_command(ser, "AT#TEMPMON=1")
+                                if "TEMPMEAS" in resp and "," in resp:
+                                    document["temperature_module"] = clean_response(resp)
+                                resp = send_command(ser, "AT+CSQ")
+                                if "CSQ:" in resp:
+                                    document["lte_strength"] = clean_response(resp)
+                        except serial.serialutil.SerialException as e:
+                            print("Got disconnected from serial reason:\n%s" % e,
+                                  file=sys.stderr)
+                        if args.verbose:
+                            print(repr(document))
+                        socket_out.send_json(document)
+                        last_push = time.time()
                     while time.time() < min(last_push + args.push_interval,
                                             last_config_check+args.wait_check):
                         time.sleep(0.1)
