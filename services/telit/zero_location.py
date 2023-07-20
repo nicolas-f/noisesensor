@@ -1,6 +1,6 @@
 import sys
 
-import gpsd
+from gpsdclient import GPSDClient
 import argparse
 import serial
 import time
@@ -33,6 +33,11 @@ def send_command(ser, cmd, comment=""):
 def lte_config(args):
     ####################
     # LTE Configuration and initialisation
+    # Module active mode
+    # AT+CFUN=1
+    # Module in sleep mode
+    # AT+CFUN=4
+    #
     while True:
         try:
             with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
@@ -108,7 +113,8 @@ def gps_config(args):
                         print(send_command(ser, "AT$GPSNVRAM=15,0", "Delete the GPS information stored in NVM"))
                         wait(10)
                         print(send_command(ser, "AT$GPSACP", "Check that after history buffer cleaning no GPS information is available"))
-                        resp = send_command(ser, "AT$GPSP=1", "Enable GPS")
+                        print(send_command(ser, "AT$GPSNMUN=2,1,1,1,1,1,1", "Enabling unsolicited messages of GNSS data"))
+                        print(send_command(ser, "AT$GPSP=1", "Enable GPS"))
                         print(send_command(ser, "AT$GPSSAV", "save settings"))
                         wait(300)
                         resp = send_command(ser, "AT$GPSP?")
@@ -158,7 +164,6 @@ def main():
     socket_out = context.socket(zmq.PUB)
     socket_out.bind(args.output_address)
     last_push = 0
-    gpsd_connected = False
     try:
         while True:
             last_config_check = time.time()
@@ -166,54 +171,41 @@ def main():
             if not ping(args.check_ip):
                 lte_config(args)
             gps_config(args)
-            if not gpsd_connected:
-                print("Connect to GPSD")
-                gpsd.connect()
-                gpsd_connected = True
-                print("Connected to GPSD")
-            while args.running:
-                try:
-                    if time.time() >= last_push + args.push_interval:
-                        # Get gps position
-                        packet = gpsd.get_current()
-                        document = {
-                           "location": {
-                               "type": "Point",
-                               "coordinates": packet.position()
-                           }, "properties": {
-                                "accuracy": packet.position_precision(),
-                                "speed": packet.speed(),
-                                "speed_vertical": packet.speed_vertical(),
-                                "altitude": packet.altitude(),
-                                "time": packet.get_time().isoformat(),
-                                "satellites": packet.sats,
-                                "satellites_valid": packet.sats_valid
-                            }
-                        }
-                        # Read stuff from telit
-                        try:
-                            with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
-                                resp = send_command(ser, "AT#TEMPMON=1")
-                                if "TEMPMEAS" in resp and "," in resp:
-                                    document["temperature_module"] = clean_response(resp)
-                                resp = send_command(ser, "AT+CSQ")
-                                if "CSQ:" in resp:
-                                    document["lte_strength"] = clean_response(resp)
-                        except serial.serialutil.SerialException as e:
-                            print("Got disconnected from serial reason:\n%s" % e,
-                                  file=sys.stderr)
-                        if args.verbose:
-                            print(repr(document))
-                        socket_out.send_json(document)
-                        last_push = time.time()
-                    while time.time() < min(last_push + args.push_interval,
-                                            last_config_check+args.wait_check):
-                        time.sleep(0.1)
-                    if time.time() >= last_config_check+args.wait_check:
-                        break  # go check GPS and LTE status
-                except Exception as e:
-                    print(repr(e), file=sys.stderr)
-                    time.sleep(5)
+            with GPSDClient(host="127.0.0.1") as gpsd_client:
+                while args.running:
+                    try:
+                        if time.time() >= last_push + args.push_interval:
+                            # Get gps position
+                            document = {}
+                            for result in gpsd_client.dict_stream(convert_datetime=False,
+                                    filter=["TPV", "Sky", "GST", "Att", "Imu",
+                                            "Toff", "PPS", "Osc"]):
+                                if result["class"] == "TPV" and "TPV" in document.keys():
+                                    break
+                            # Read stuff from telit
+                            try:
+                                with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+                                    resp = send_command(ser, "AT#TEMPMON=1")
+                                    if "TEMPMEAS" in resp and "," in resp:
+                                        document["temperature_module"] = clean_response(resp)
+                                    resp = send_command(ser, "AT+CSQ")
+                                    if "CSQ:" in resp:
+                                        document["lte_strength"] = clean_response(resp)
+                            except serial.serialutil.SerialException as e:
+                                print("Got disconnected from serial reason:\n%s" % e,
+                                      file=sys.stderr)
+                            if args.verbose:
+                                print(repr(document))
+                            socket_out.send_json(document)
+                            last_push = time.time()
+                        while time.time() < min(last_push + args.push_interval,
+                                                last_config_check+args.wait_check):
+                            time.sleep(0.1)
+                        if time.time() >= last_config_check+args.wait_check:
+                            break  # go check GPS and LTE status
+                    except Exception as e:
+                        print(repr(e), file=sys.stderr)
+                        time.sleep(5)
     finally:
         args.running = False
 

@@ -1,4 +1,4 @@
 pyserial==3.5
 colorama==0.4.6
-gpsd-py3==0.3.0
+gpsdclient==1.3.2
 pyzmq==25.1.0
