@@ -135,6 +135,7 @@ def publish_samples(args):
     manager.start()
     start = time.time()
     last_time_read = start
+    total_bytes=0
     try:
         while args.running:
             audio_data_bytes = input_buffer.read(block_size)
@@ -142,10 +143,13 @@ def publish_samples(args):
             if not audio_data_bytes:
                 print("%s End of audio samples, total bytes read %d" %
                       (datetime.datetime.now().isoformat(),
-                       args.total_bytes_read))
+                       total_bytes))
+                if total_bytes == 0:
+                    reset_usb()
                 break
             manager.push_bytes(audio_data_bytes)
             args.total_bytes_read = len(audio_data_bytes)
+            total_bytes += args.total_bytes_read
             args.total_bytes_read_since = now - last_time_read
             args.total_bytes_read_last_time = now
             last_time_read = now
@@ -159,6 +163,22 @@ def publish_samples(args):
                 start = time.time()
     finally:
         args.running = False
+
+
+def reset_usb():
+    found_usb_audio = False
+    from usb.core import find as finddev
+    for device in finddev(find_all=True):
+        usb_label = repr(device.get_active_configuration().
+                         interfaces())
+        if "Audio" in usb_label:
+            print("Reset " + repr(device) + usb_label)
+            device.reset()
+            found_usb_audio = True
+            break
+    if not found_usb_audio:
+        print("Zero bytes rates but could not find"
+              " USB device to reset")
 
 
 class BandwidthWatchThread(threading.Thread):
@@ -177,20 +197,7 @@ class BandwidthWatchThread(threading.Thread):
             if time.time() - self.config.total_bytes_read_last_time > \
                     SECONDS_DELAY_RESET_USB:
                 # Restart USB
-                found_usb_audio = False
-                from usb.core import find as finddev
-                for device in finddev(find_all=True):
-                    usb_label = repr(device.get_active_configuration().
-                                     interfaces())
-                    if "Audio" in usb_label:
-                        print("Reset " + repr(device) + usb_label)
-                        device.reset()
-                        found_usb_audio = True
-                        break
-                if not found_usb_audio:
-                    print("Zero bytes rates but could not find"
-                          " USB device to reset")
-                zero_byte_rate_warning = 0
+                reset_usb()
             if self.config.delay_print_rate > 0:
                 print("received %d B/s" % byte_rate)
             time.sleep(watch_delay)
