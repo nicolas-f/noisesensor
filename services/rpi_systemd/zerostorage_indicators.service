@@ -4,7 +4,7 @@ Requires=zerorecord.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_filestorage.py -o /home/pi/noisesensor/out/ -i tcp://127.0.0.1:10005/indicators --compress -r 30 -t %%Y_%%m_%%d.%%Hh%%M
+ExecStart=/usr/bin/python3.9 -u /home/pi/noisesensor/services/zero_filestorage.py -o /home/pi/noisesensor/out/ -i tcp://127.0.0.1:10005/indicators --compress -r 30 -t %%Y_%%m_%%d.%%Hh%%M --insert_hwa eth0
 WorkingDirectory=/home/pi/noisesensor/
 Restart=always
 RestartSec=5s

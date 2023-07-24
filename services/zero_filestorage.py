@@ -44,6 +44,17 @@ import collections
 import datetime
 import json
 import itertools
+import fcntl
+import socket
+import struct
+
+
+def get_hw_address(interface_name):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack(
+        '256s', bytes(interface_name, 'utf-8')[:15]))
+    return ''.join('%02x' % b for b in info[18:24])
+
 
 class ZeroMQThread(threading.Thread):
     def __init__(self, global_settings, name, address):
@@ -54,13 +65,18 @@ class ZeroMQThread(threading.Thread):
 
     def run(self):
         context = zmq.Context()
-        socket = context.socket(zmq.SUB)
+        zmq_socket = context.socket(zmq.SUB)
         print("Looking for json content in " + self.address)
-        socket.connect(self.address)
-        socket.subscribe("")
+        zmq_socket.connect(self.address)
+        zmq_socket.subscribe("")
+        hwa = ""
+        if self.global_settings.insert_hwa:
+            hwa = get_hw_address(self.global_settings.insert_hwa)
         while self.global_settings.running:
             try:
-                json_data = socket.recv_json(flags=zmq.NOBLOCK)
+                json_data = zmq_socket.recv_json(flags=zmq.NOBLOCK)
+                if hwa:
+                    json_data["hwa"] = hwa
                 self.global_settings.documents_stack.append([self.name,
                                                              json_data])
             except zmq.ZMQError as e:
@@ -98,6 +114,9 @@ def main():
     parser.add_argument("-c", "--compress",
                         help="Compress output files", default=False,
                         action="store_true")
+    parser.add_argument("--insert_hwa",
+                        help="Insert hardware address of the specified"
+                             " interface as a new field 'hwa'", default="")
     args = parser.parse_args()
     print("Configuration: " + repr(args))
 
