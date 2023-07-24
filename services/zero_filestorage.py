@@ -35,7 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import argparse
 import gzip
-import sys
 import time
 import zmq
 import os
@@ -47,7 +46,7 @@ import itertools
 import fcntl
 import socket
 import struct
-
+import signal
 
 def get_hw_address(interface_name):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -89,6 +88,20 @@ def open_file_for_write(filename, configuration):
     else:
         return open(filename, 'a')
 
+
+# Close and rename files when filestorage service is closed
+def stop(sig, frame, args):
+    print("Clean closing of temporary files")
+    args.running = False
+
+
+def rename_file(temporary_extension, file_path, extension):
+    final_name = file_path + extension
+    cpt = 2
+    while os.path.exists(final_name):
+        final_name = file_path + "_%d" % cpt + extension
+        cpt += 1
+    os.rename(temporary_extension, final_name)
 
 def main():
     parser = argparse.ArgumentParser(
@@ -134,6 +147,10 @@ def main():
             t = ZeroMQThread(args, t_name, t_address)
             t.start()
         document_tracker = {}
+        signal.signal(signal.SIGTERM,
+                      lambda sig, frame: stop(sig, frame, args))
+        signal.signal(signal.SIGINT,
+                      lambda sig, frame: stop(sig, frame, args))
         while args.running:
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
@@ -160,16 +177,18 @@ def main():
                     json.dump(document_json, fp, allow_nan=True)
                 # rename to the final name if document file is complete
                 if args.row_count <= document_tracker[document_name][0]:
-                    final_name = file_path+extension
-                    cpt = 2
-                    while os.path.exists(final_name):
-                        final_name = file_path + "_%d" % cpt + extension
-                        cpt += 1
-                    os.rename(temporary_extension, final_name)
+                    rename_file(temporary_extension, file_path, extension)
                     del(document_tracker[document_name])
             time.sleep(0.005)
+        # close/rename remaining files
+        for document_name, document_data in document_tracker.items():
+            file_path = document_data[1]
+            temporary_extension = file_path + extension + ".tmp"
+            print("Rename incomplete file " + temporary_extension)
+            rename_file(temporary_extension, file_path, extension)
     finally:
         args.running = False
+
 
 if __name__ == "__main__":
     main()
