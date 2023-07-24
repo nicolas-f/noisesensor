@@ -103,6 +103,8 @@ def gps_config(args):
                     print("Not ready..")
                     time.sleep(1)
                 print("READY")
+                print(send_command(ser, "AT$GPSNMUN=2,1,1,1,1,1,1",
+                             "Enabling unsolicited messages of GNSS data"))
                 resp = send_command(ser, "AT$GPSP?")
                 print(resp)
                 while "GPSP: 1" not in resp:
