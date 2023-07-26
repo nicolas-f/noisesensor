@@ -1,0 +1,12 @@
+- name: Run vcgencmd measure_temp command on the remote host
+  hosts: all
+  gather_facts: no
+  connection: ssh
+  tasks:
+    - name: Execute vcgencmd measure_temp
+      ansible.builtin.command: vcgencmd measure_temp
+      register: temp_output
+
+    - name: Print temperature output
+      ansible.builtin.debug:
+        var: temp_output.stdout
