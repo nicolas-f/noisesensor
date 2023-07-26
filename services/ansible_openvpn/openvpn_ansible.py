@@ -27,6 +27,8 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import os
+
 
 # This script convert OpenVPN status into a dynamic Ansible inventory
 # It can use local /var/log/openvpn/openvpn-status.log file
@@ -61,6 +63,7 @@ def parse_openvpn_status(log_text):
 def write_to_ansible_inventory(inventory_text, filename):
     with open(filename, 'w') as file:
         file.write(inventory_text)
+    os.chmod(filename, 664)
 
 
 def main():
@@ -71,9 +74,10 @@ def main():
         log_text = file.read()
 
     hosts = parse_openvpn_status(log_text)
-    inventory_text = "\n".join(["%s ansible_port=5555 ansible_host=%s" %
-                                (host["Virtual Address"],
-                                 host["Common Name"]) for host in hosts])
+    inventory_text = "\n".join(
+        ["%s ansible_port=22 ansible_host=%s ansible_user=pi" % (
+            host["Common Name"],
+            host["Virtual Address"]) for host in hosts])
 
     # Replace this with the desired path for the Ansible inventory file
     ansible_inventory_file = "inventory.ini"
