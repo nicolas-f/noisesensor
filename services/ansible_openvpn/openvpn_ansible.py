@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #  BSD 3-Clause License
 #
 #  Copyright (c) 2023, University Gustave Eiffel
@@ -28,11 +29,13 @@
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
-
+import argparse
+import json
 
 # This script convert OpenVPN status into a dynamic Ansible inventory
 # It can use local /var/log/openvpn/openvpn-status.log file
 # or OpenVPN telnet management console
+
 
 def parse_openvpn_status(log_text):
     # Split the log text into lines
@@ -60,13 +63,31 @@ def parse_openvpn_status(log_text):
     return hosts
 
 
-def write_to_ansible_inventory(inventory_text, filename):
-    with open(filename, 'w') as file:
-        file.write(inventory_text)
-    os.chmod(filename, 664)
-
-
 def main():
+    arg_parser = argparse.ArgumentParser(
+        description=__doc__,
+        prog=__file__
+    )
+    arg_parser.add_argument(
+        '--pretty',
+        action='store_true',
+        default=False,
+        help="Pretty print JSON"
+    )
+    mandatory_options = arg_parser.add_mutually_exclusive_group()
+    mandatory_options.add_argument(
+        '--list',
+        action='store',
+        nargs="*",
+        default="dummy",
+        help="Show JSON of all managed hosts"
+    )
+    mandatory_options.add_argument(
+        '--host',
+        action='store',
+        help="Display vars related to the host"
+    )
+    args = arg_parser.parse_args()
     # Replace this with the path to your openvpn-status.log file
     log_file_path = "openvpn-status.log"
 
@@ -74,14 +95,26 @@ def main():
         log_text = file.read()
 
     hosts = parse_openvpn_status(log_text)
-    inventory_text = "\n".join(
-        ["%s ansible_port=22 ansible_host=%s ansible_user=pi" % (
-            host["Common Name"],
-            host["Virtual Address"]) for host in hosts])
 
-    # Replace this with the desired path for the Ansible inventory file
-    ansible_inventory_file = "inventory.ini"
-    write_to_ansible_inventory(inventory_text, ansible_inventory_file)
+    data = {
+        'all': {
+            'children': {
+                'ungrouped': {
+                    'hosts': {host["Common Name"]: {
+                        'ansible_host': host["Virtual Address"],
+                        'ansible_user': 'pi',
+                        'ansible_port': 22}
+                       for host in hosts}
+                }
+            }
+        }
+    }
+    if args.host:
+        print(json.dumps({}))
+    elif len(args.list) >= 0:
+        print(json.dumps(data, indent=args.pretty))
+    else:
+        raise ValueError("Expecting either --host $HOSTNAME or --list")
 
 
 if __name__ == "__main__":

@@ -28,3 +28,4 @@ yamnet.h5
 .tox
 *.tflite
 examples/*.ogg
+.env
