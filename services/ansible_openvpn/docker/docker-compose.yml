@@ -57,6 +57,7 @@ services:
       python3 -m ensurepip;
       python3 -m pip install --upgrade pip;
       python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/docker/requirements.txt;
+      /usr/local/bin/semaphore-wrapper /usr/local/bin/semaphore server --config /etc/semaphore/config.json
       '
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
