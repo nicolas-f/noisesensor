@@ -52,10 +52,10 @@ services:
     depends_on:
       - mysql # for postgres, change to: postgres
     command: >
-      bash -c '
-      git checkout https://github.com/nicolas-f/noisesensor.git && cd noisesensor && git checkout yamnet_trigger
-      python3 -m ensurepip --upgrade
-      python3 -m pip -r services/ansible_openvpn/docker/requirements.txt
+      /bin/sh -c '
+      git clone https://github.com/nicolas-f/noisesensor.git && cd noisesensor && git checkout yamnet_trigger;
+      python3 -m ensurepip;
+      python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/docker/requirements.txt;
       '
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
