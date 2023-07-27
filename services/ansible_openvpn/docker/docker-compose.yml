@@ -55,6 +55,7 @@ services:
       /bin/sh -c '
       git clone https://github.com/nicolas-f/noisesensor.git && cd noisesensor && git checkout yamnet_trigger;
       python3 -m ensurepip;
+      python3 -m pip install --upgrade pip;
       python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/docker/requirements.txt;
       '
 volumes:

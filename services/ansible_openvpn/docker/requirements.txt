@@ -1,2 +1,1 @@
 pyserial==3.5
-/home/ansible/noisesensor/services/ansible_openvpn/docker/requirements.txt
