@@ -3,7 +3,7 @@
   connection: local
   tasks:
   - name: check out a git repository
-    ansible.builtin.script: services/ansible_openvpn/openvpn_ansible.py
+    ansible.builtin.script: openvpn_ansible.py
     args:
       executable: python3
     register: command_output
