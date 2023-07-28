@@ -23,6 +23,7 @@ services:
       MYSQL_USER: semaphore
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
   openvpn:
+    # https://github.com/kylemanna/docker-openvpn/blob/master/docs/docker-compose.md
     cap_add:
      - NET_ADMIN
     image: kylemanna/openvpn
@@ -34,10 +35,13 @@ services:
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
+     - openvpn-status:/tmp/
   semaphore:
     restart: unless-stopped
     ports:
       - 3000:3000
+    volumes:
+     - openvpn-status:/openvpnlog/
     image: semaphoreui/semaphore:latest
     environment:
       SEMAPHORE_DB_USER: semaphore
