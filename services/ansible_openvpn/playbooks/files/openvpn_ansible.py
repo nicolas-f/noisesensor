@@ -124,6 +124,7 @@ def main():
             log_text = file.read()
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
         s.connect(("host.docker.internal", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':

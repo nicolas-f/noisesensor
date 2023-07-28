@@ -2,7 +2,7 @@
   hosts: 127.0.0.1
   connection: local
   tasks:
-  - name: check out a git repository
+  - name: Launch python script from playbook
     ansible.builtin.script: openvpn_ansible.py
     args:
       executable: python3

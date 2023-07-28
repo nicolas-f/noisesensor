@@ -26,8 +26,8 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/log/openvpn/:/openvpnlog
     image: semaphoreui/semaphore:latest
     env_file:
       - .env
@@ -51,6 +51,7 @@ services:
       SEMAPHORE_LDAP_DN_SEARCH: 'dc=local,dc=example,dc=com'
       SEMAPHORE_LDAP_SEARCH_FILTER: "(\u0026(uid=%s)(memberOf=cn=ipausers,cn=groups,cn=accounts,dc=local,dc=example,dc=com))"
       ANSIBLE_HOST_KEY_CHECKING: False # We are using OpenVPN, so it is ok, additionally RPI IP address are dynamic
+      OPENVPN_STATUS_PATH: "/var/log/openvpn/openvpn-status.log"
     depends_on:
       - mysql # for postgres, change to: postgres
 volumes:
