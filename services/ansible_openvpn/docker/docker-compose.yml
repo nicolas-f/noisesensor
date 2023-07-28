@@ -26,6 +26,8 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
+    expose:
+      - 5555
     image: semaphoreui/semaphore:latest
     environment:
       SEMAPHORE_DB_USER: semaphore
