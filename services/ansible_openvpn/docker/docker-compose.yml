@@ -26,7 +26,6 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
-      - 5555:5555 # OpenVPN management console port, update in the .env file, look at README.md
     image: semaphoreui/semaphore:latest
     environment:
       SEMAPHORE_DB_USER: semaphore
@@ -60,6 +59,7 @@ services:
       python3 -m ensurepip;
       python3 -m pip install --upgrade pip;
       python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/docker/requirements.txt;
+      (crontab -l 2>/dev/null; echo "* * * * * /path/to/job -with args") | crontab -
       /usr/local/bin/semaphore-wrapper /usr/local/bin/semaphore server --config /etc/semaphore/config.json
       '
 volumes:
