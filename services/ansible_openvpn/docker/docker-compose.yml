@@ -58,8 +58,7 @@ services:
       git checkout yamnet_trigger;
       python3 -m ensurepip;
       python3 -m pip install --upgrade pip;
-      python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/docker/requirements.txt;
-      (crontab -l 2>/dev/null; echo "* * * * * /path/to/job -with args") | crontab -
+      python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/requirements.txt;
       /usr/local/bin/semaphore-wrapper /usr/local/bin/semaphore server --config /etc/semaphore/config.json
       '
 volumes:
