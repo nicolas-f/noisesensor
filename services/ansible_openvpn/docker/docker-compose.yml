@@ -26,8 +26,8 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
-    expose:
-      - 5555
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     image: semaphoreui/semaphore:latest
     env_file:
       - .env

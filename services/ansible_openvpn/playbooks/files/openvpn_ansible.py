@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 #  BSD 3-Clause License
 #
 #  Copyright (c) 2023, University Gustave Eiffel
@@ -28,6 +29,16 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#  BSD 3-Clause License
+#
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are met:
+#
+#
+#
+#
 import os
 import argparse
 import json
@@ -113,7 +124,7 @@ def main():
             log_text = file.read()
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("localhost", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
+        s.connect(("host.docker.internal", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
             s.send(os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
