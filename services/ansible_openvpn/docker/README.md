@@ -13,6 +13,21 @@ docker compose run --rm openvpn ovpn_initpki
 sudo chown -R $(whoami): ./openvpn-data
 ```
 
+* Change settings to expose openvpn management console
+
+Edit the file `openvpn-data/conf/openvpn.conf`, add the following line
+
+```ini
+management 0.0.0.0 5555 telnetpwd
+```
+
+Push your own password for openvpn control management into the file
+
+```shell
+sudo echo "YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD" > openvpn-data/conf/telnetpwd
+sudo chmod 600 openvpn-data/conf/telnetpwd
+```
+
 * Start OpenVPN server process
 
 ```bash
@@ -68,8 +83,6 @@ MYSQL_PASSWORD=DATABASE_PASSWORD
 SEMAPHORE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 SEMAPHORE_ACCESS_KEY_ENCRYPTION="YOUR_RANDOM_KEY"
 MANAGEMENT_OPENVPN_PASSWORD=YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD
-MANAGEMENT_OPENVPN_PORT=5555
-OPENVPN_STATUS_PATH=""
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 
@@ -77,5 +90,3 @@ SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with
 ```shell
 head -c32 /dev/urandom | base64
 ```
-
-OPENVPN_STATUS_PATH could be `/var/log/openvpn/openvpn-status.log` if the container have access to it

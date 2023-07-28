@@ -61,6 +61,8 @@ services:
       SEMAPHORE_LDAP_DN_SEARCH: 'dc=local,dc=example,dc=com'
       SEMAPHORE_LDAP_SEARCH_FILTER: "(\u0026(uid=%s)(memberOf=cn=ipausers,cn=groups,cn=accounts,dc=local,dc=example,dc=com))"
       ANSIBLE_HOST_KEY_CHECKING: False # We are using OpenVPN, so it is ok, additionally RPI IP address are dynamic
+      MANAGEMENT_OPENVPN_PASSWORD: ${MANAGEMENT_OPENVPN_PASSWORD}
+      MANAGEMENT_OPENVPN_PORT: 5555
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn
