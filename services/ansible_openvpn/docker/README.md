@@ -15,5 +15,4 @@ SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with
 head -c32 /dev/urandom | base64
 ```
 
-
 OPENVPN_STATUS_PATH could be `/var/log/openvpn/openvpn-status.log` if the container have access to it
