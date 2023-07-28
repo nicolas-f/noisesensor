@@ -31,10 +31,22 @@
 import os
 import argparse
 import json
+import socket
+import sys
+import time
 
 # This script convert OpenVPN status into a dynamic Ansible inventory
 # It can use local /var/log/openvpn/openvpn-status.log file
 # or OpenVPN telnet management console
+
+
+def receive(s):
+    time.sleep(0.1)
+    return s.recv(4096).decode("utf-8")
+
+
+def send(s, command):
+    s.send(bytes(command, "utf-8"))
 
 
 def parse_openvpn_status(log_text):
@@ -89,10 +101,28 @@ def main():
     )
     args = arg_parser.parse_args()
     # Replace this with the path to your openvpn-status.log file
-    log_file_path = "openvpn-status.log"
+    log_text = ""
 
-    with open(log_file_path, 'r') as file:
-        log_text = file.read()
+    if "OPENVPN_STATUS_PATH" in os.environ and \
+            os.environ["OPENVPN_STATUS_PATH"]:
+        if not os.path.exists(os.environ["OPENVPN_STATUS_PATH"]):
+            print("Could not find "+os.environ["OPENVPN_STATUS_PATH"] +
+                  " file, abort..", file=sys.stderr)
+            exit(-1)
+        with open(os.environ["OPENVPN_STATUS_PATH"], 'r') as file:
+            log_text = file.read()
+    else:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect("localhost:"+os.environ["MANAGEMENT_OPENVPN_PORT"])
+        sout = receive(s)
+        if sout == 'ENTER PASSWORD:':
+            s.send(os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
+            sout = receive(s)
+        if not ">INFO:" not in sout:
+            print(sout, file=sys.stderr)
+            exit(-1)
+        s.send("status\n")
+        log_text = receive(s)
 
     hosts = parse_openvpn_status(log_text)
 

@@ -26,6 +26,7 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
+      - 5555:5555 # OpenVPN management console port, update in the .env file, look at README.md
     image: semaphoreui/semaphore:latest
     environment:
       SEMAPHORE_DB_USER: semaphore
