@@ -31,17 +31,13 @@ services:
     hostname: openvpn
     ports:
      - "1194:1194/udp"
-     - "5555:5555/tcp" # management console
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
-     - openvpn-status:/tmp/
   semaphore:
     restart: unless-stopped
     ports:
       - 3000:3000
-    volumes:
-     - openvpn-status:/openvpnlog/
     image: semaphoreui/semaphore:latest
     environment:
       SEMAPHORE_DB_USER: semaphore
@@ -70,4 +66,3 @@ services:
       - openvpn
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
-  openvpn-status: # to see connected clients
