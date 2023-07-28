@@ -113,7 +113,7 @@ def main():
             log_text = file.read()
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect("localhost:"+os.environ["MANAGEMENT_OPENVPN_PORT"])
+        s.connect(("localhost", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
             s.send(os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
