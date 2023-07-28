@@ -51,16 +51,6 @@ services:
       ANSIBLE_HOST_KEY_CHECKING: False # We are using OpenVPN, so it is ok, additionally RPI IP address are dynamic
     depends_on:
       - mysql # for postgres, change to: postgres
-    command: >
-      /bin/sh -c '
-      git clone https://github.com/nicolas-f/noisesensor.git;
-      cd noisesensor;
-      git checkout yamnet_trigger;
-      python3 -m ensurepip;
-      python3 -m pip install --upgrade pip;
-      python3 -m pip install -r /home/semaphore/noisesensor/services/ansible_openvpn/requirements.txt;
-      /usr/local/bin/semaphore-wrapper /usr/local/bin/semaphore server --config /etc/semaphore/config.json
-      '
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
 
