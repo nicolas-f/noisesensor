@@ -51,8 +51,8 @@ import time
 # or OpenVPN telnet management console
 
 
-def receive(s):
-    time.sleep(0.1)
+def receive(s, wait_time=0.1):
+    time.sleep(wait_time)
     return s.recv(4096).decode("utf-8")
 
 
@@ -134,7 +134,7 @@ def main():
             print(sout, file=sys.stderr)
             exit(-1)
         send(s, "status\n")
-        log_text = receive(s)
+        log_text = receive(s, 1.0)
 
     hosts = parse_openvpn_status(log_text)
 
