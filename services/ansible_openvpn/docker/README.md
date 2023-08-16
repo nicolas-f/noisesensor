@@ -1,3 +1,10 @@
+# Docker platform of NoiseSensor
+
+This platform aim to deploy sensors on raspberry pi over an OpenVPN private network.
+
+All RPI are driven by an Ansible Semaphore software.
+
+
 # OpenVPN
 
 * Initialize the configuration files and certificates
@@ -82,7 +89,6 @@ Create a file named .env in this folder with your own generated credentials for 
 MYSQL_PASSWORD=DATABASE_PASSWORD
 SEMAPHORE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 SEMAPHORE_ACCESS_KEY_ENCRYPTION="YOUR_RANDOM_KEY"
-MANAGEMENT_OPENVPN_PASSWORD=YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 
@@ -90,3 +96,20 @@ SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with
 ```shell
 head -c32 /dev/urandom | base64
 ```
+
+# Create dynamic raspberry-pi ansible inventory using OpenVPN management console
+
+The following playbook will create a file in that will contain all RPI connected in OpenVPN:
+
+```services/ansible_openvpn/playbooks/fetch_openvpn_hosts.yml```
+
+This playbook use the following environment variable:
+
+```
+{ 
+  "MANAGEMENT_OPENVPN_PORT": "5555",
+  "MANAGEMENT_OPENVPN_PASSWORD": "YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD"
+}
+```
+
+

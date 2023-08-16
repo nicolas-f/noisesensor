@@ -147,7 +147,7 @@ def main():
                         'ansible_host': host["Virtual Address"],
                         'ansible_user': 'pi',
                         'ansible_port': 22}
-                       for host in hosts}
+                       for host in hosts if "rpi" in host["Common Name"]}
                 }
             }
         }

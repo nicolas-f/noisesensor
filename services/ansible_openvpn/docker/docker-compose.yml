@@ -34,12 +34,22 @@ services:
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
+    networks:
+     public:
+       ipv4_address: 172.100.0.10
+     private:
+       ipv4_address: 172.200.0.10
   semaphore:
     restart: unless-stopped
     hostname: semaphore
     ports:
       - 3000:3000
     image: semaphoreui/semaphore:latest
+    networks:
+      public:
+        ipv4_address: 172.100.0.20
+      private:
+        ipv4_address: 172.200.0.20
     environment:
       SEMAPHORE_DB_USER: semaphore
       SEMAPHORE_DB_PASS: ${MYSQL_PASSWORD}
@@ -69,3 +79,13 @@ services:
       - openvpn
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
+
+networks:
+  public:
+    ipam:
+      config:
+        - subnet: 172.100.0.0/16
+  private:
+    ipam:
+      config:
+        - subnet: 172.200.0.0/16
