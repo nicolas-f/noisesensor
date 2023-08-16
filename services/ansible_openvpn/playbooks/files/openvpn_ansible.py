@@ -62,7 +62,7 @@ def send(s, command):
 
 def parse_openvpn_status(log_text):
     # Split the log text into lines
-    lines = log_text.strip().split('\n')
+    lines = [line.strip() for line in log_text.strip().split('\n')]
 
     # Find the start and end indexes for the client list section
     start_index = lines.index('ROUTING TABLE') + 2
