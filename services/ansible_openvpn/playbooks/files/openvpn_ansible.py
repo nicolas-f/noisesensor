@@ -135,6 +135,7 @@ def main():
             exit(-1)
         send(s, "status\n")
         log_text = receive(s, 1.0)
+        print(log_text)
 
     hosts = parse_openvpn_status(log_text)
 
