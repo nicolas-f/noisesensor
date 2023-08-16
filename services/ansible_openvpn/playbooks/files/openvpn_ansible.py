@@ -129,13 +129,13 @@ def main():
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
             send(s, os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
-            sout = receive(s, 0.5)
-        if not ">INFO:" not in sout:
+            sout = receive(s)
+        if ">INFO:" not in sout:
             print(sout, file=sys.stderr)
             print("INFO not found exiting", file=sys.stderr)
             exit(-1)
         send(s, "status\n")
-        log_text = receive(s, 1.0)
+        log_text = receive(s)
         print(log_text)
 
     hosts = parse_openvpn_status(log_text)
