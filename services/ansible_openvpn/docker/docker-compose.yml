@@ -15,6 +15,11 @@ services:
     restart: unless-stopped
     image: mysql:8.0
     hostname: mysql
+    networks:
+     public:
+       ipv4_address: 172.100.0.10
+     private:
+       ipv4_address: 172.200.0.10
     volumes:
       - semaphore-mysql:/var/lib/mysql
     environment:
