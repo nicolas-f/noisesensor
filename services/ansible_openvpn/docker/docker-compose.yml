@@ -29,6 +29,8 @@ services:
     image: kylemanna/openvpn
     container_name: openvpn
     hostname: openvpn
+    environment:
+      OVPN_NATDEVICE: eth+
     ports:
      - "1194:1194/udp"
     restart: always
