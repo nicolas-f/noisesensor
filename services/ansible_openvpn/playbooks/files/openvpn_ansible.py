@@ -132,6 +132,7 @@ def main():
             sout = receive(s, 0.5)
         if not ">INFO:" not in sout:
             print(sout, file=sys.stderr)
+            print("INFO not found exiting", file=sys.stderr)
             exit(-1)
         send(s, "status\n")
         log_text = receive(s, 1.0)
