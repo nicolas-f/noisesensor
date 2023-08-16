@@ -7,15 +7,15 @@
     args:
       executable: python3
     register: command_output
+  - name: Print output to file
+    ansible.builtin.copy:
+      content: "{{command_output.stdout}}"
+      dest: /home/semaphore/hosts.json
+    delegate_to: localhost
   - name: Create your local file on master node
     ansible.builtin.file:
       path: /home/semaphore/hosts.json
       owner: ansible
       group: 10001
       mode: '0644'
-    delegate_to: localhost
-  - name: Print output to file
-    ansible.builtin.copy:
-      content: "{{command_output.stdout}}"
-      dest: /home/semaphore/hosts.json
     delegate_to: localhost
