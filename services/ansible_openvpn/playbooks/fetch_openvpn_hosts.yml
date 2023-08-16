@@ -15,7 +15,7 @@
   - name: Create your local file on master node
     ansible.builtin.file:
       path: /home/semaphore/hosts.json
-      owner: semaphor
+      owner: semaphore
       group: 10001
       mode: '0644'
     delegate_to: localhost
