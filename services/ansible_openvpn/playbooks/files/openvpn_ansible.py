@@ -129,7 +129,7 @@ def main():
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
             send(s, os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
-            sout = receive(s)
+            sout = receive(s, 0.5)
         if not ">INFO:" not in sout:
             print(sout, file=sys.stderr)
             exit(-1)
