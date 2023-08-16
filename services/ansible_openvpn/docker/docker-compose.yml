@@ -36,6 +36,7 @@ services:
      - ./openvpn-data/conf:/etc/openvpn
   semaphore:
     restart: unless-stopped
+    hostname: semaphore
     ports:
       - 3000:3000
     image: semaphoreui/semaphore:latest
