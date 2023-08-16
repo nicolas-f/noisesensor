@@ -128,12 +128,12 @@ def main():
         s.connect(("openvpn", int(os.environ["MANAGEMENT_OPENVPN_PORT"])))
         sout = receive(s)
         if sout == 'ENTER PASSWORD:':
-            s.send(os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
+            send(s, os.environ["MANAGEMENT_OPENVPN_PASSWORD"] + "\n")
             sout = receive(s)
         if not ">INFO:" not in sout:
             print(sout, file=sys.stderr)
             exit(-1)
-        s.send("status\n")
+        send(s, "status\n")
         log_text = receive(s)
 
     hosts = parse_openvpn_status(log_text)
