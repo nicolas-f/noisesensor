@@ -24,6 +24,7 @@ services:
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
+      - semaphore-data:/home/semaphore/data/:z
   semaphore:
     restart: unless-stopped
     container_name: semaphore

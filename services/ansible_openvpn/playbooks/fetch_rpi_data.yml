@@ -1,0 +1,17 @@
+- name: synchronize module demo
+  hosts: all
+  become: false
+  vars:
+    source: '/home/pi/noisesensor/out/*.gz'
+    destination: '/home/semaphore/data/'
+  tasks:
+    - name: rsync installed
+      ansible.builtin.package:
+        name: rsync
+        state: present
+      become: true
+    - name: data synchronization
+      ansible.posix.synchronize:
+        src: '{{ source }}'
+        dest: '{{ destination }}'
+        args: '--remove-source-files'
