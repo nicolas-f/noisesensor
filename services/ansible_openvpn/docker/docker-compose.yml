@@ -15,7 +15,6 @@ services:
     restart: unless-stopped
     image: mysql:8.0
     container_name: semaphore-mysql
-    hostname: mysql
     volumes:
       - semaphore-mysql:/var/lib/mysql
     environment:
@@ -29,7 +28,6 @@ services:
      - NET_ADMIN
     image: kylemanna/openvpn
     container_name: openvpn
-    hostname: openvpn
     environment:
       OVPN_NATDEVICE: eth+
     ports:
@@ -65,7 +63,6 @@ services:
       - openvpn
   semaphore:
     restart: unless-stopped
-    hostname: semaphore
     container_name: semaphore
     ports:
       - 3000:3000
