@@ -44,6 +44,7 @@ services:
       - 3000:3000 # for semaphore web ui
     environment:
       TZ: 'EST5EDT'
+      VPN_FILES: 'client.ovpn'
     networks:
       - default
     # if using '-d' or 'DNS' you can't enable the `read_only: true` option
