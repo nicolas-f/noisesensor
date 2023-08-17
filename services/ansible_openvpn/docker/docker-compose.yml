@@ -32,41 +32,10 @@ services:
       OVPN_NATDEVICE: eth+
     ports:
      - "1194:1194/udp"
+     - 3000:3000 # for semaphore web ui
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
-  vpnclient:
-    image: dperson/openvpn-client
-    # cap_add, security_opt, and volume required for the image to function
-    cap_add:
-      - net_admin
-    ports:
-      - 3000:3000 # for semaphore web ui
-    dns:
-      - 8.8.4.4
-      - 8.8.8.8
-    environment:
-      TZ: 'EST5EDT'
-      VPN_FILES: 'client.ovpn'
-    networks:
-      - default
-    # if using '-d' or 'DNS' you can't enable the `read_only: true` option
-    read_only: true
-    tmpfs:
-      - /run
-      - /tmp
-    restart: unless-stopped
-    security_opt:
-      - label:disable
-    stdin_open: true
-    tty: true
-    volumes:
-      - /dev/net:/dev/net:z
-    # Put .ovpn configuration file in the /vpn directory (in "volumes:" above or
-    # launch using the command line arguments, IE pick one:
-      - ./openvpn-data/client:/vpn
-    depends_on:
-      - openvpn
   semaphore:
     restart: unless-stopped
     container_name: semaphore
@@ -95,10 +64,9 @@ services:
       ANSIBLE_HOST_KEY_CHECKING: False # We are using OpenVPN, so it is ok, additionally RPI IP address are dynamic
       MANAGEMENT_OPENVPN_PASSWORD: ${MANAGEMENT_OPENVPN_PASSWORD}
       MANAGEMENT_OPENVPN_PORT: 5555
-    network_mode: "service:vpnclient"
+    network_mode: "service:openvpn"
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn
-      - vpnclient
 volumes:
   semaphore-mysql: # to use postgres, switch to: semaphore-postgres
