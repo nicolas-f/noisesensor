@@ -72,12 +72,6 @@ docker compose run --rm openvpn ovpn_revokeclient $CLIENTNAME
 docker compose run --rm openvpn ovpn_revokeclient $CLIENTNAME remove
 ```
 
-## Make tun0 network interface available from/to ansible
-
-```shell
-sudo docker exec -ti openvpn iptables -A FORWARD -i tun+ -j ACCEPT
-```
-
 ## Debugging Tips
 
 * Create an environment variable with the name DEBUG and value of 1 to enable debug output (using "docker -e").
