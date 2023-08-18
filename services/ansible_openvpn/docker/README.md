@@ -25,8 +25,11 @@ sudo chown -R $(whoami): ./openvpn-data
 Edit the file `openvpn-data/conf/openvpn.conf`, add the following line
 
 ```ini
+duplicate-cn
 management 0.0.0.0 5555 telnetpwd
 ```
+
+duplicate-cn because RPI key files are cloned into the SD card, but you could also not add this and push one key for each RPI, so you could revoke a key if a raspberry-pi has been stolen.
 
 Push your own password for openvpn control management into the file
 
@@ -103,7 +106,7 @@ The following playbook will create a file in that will contain all RPI connected
 
 ```services/ansible_openvpn/playbooks/fetch_openvpn_hosts.yml```
 
-This playbook use the following environment variable:
+This playbook use the following environment variable to bet set in Environnement in semaphore web gui:
 
 ```
 { 
