@@ -63,18 +63,14 @@ def send(s, command):
 def parse_openvpn_status(log_text):
     # Split the log text into lines
     lines = [line.strip() for line in log_text.strip().split('\n')]
-
     # Find the start and end indexes for the client list section
     start_index = lines.index('ROUTING TABLE') + 2
     end_index = lines.index('GLOBAL STATS', start_index)
-
     # Extract the lines containing client information
     client_lines = lines[start_index:end_index]
-
     # Create a dictionary to store the hosts and their attributes
     hosts = []
     fields = lines[start_index-1].split(",")
-
     for line in client_lines:
         # Split the line by commas
         parts = line.split(',')
@@ -82,7 +78,6 @@ def parse_openvpn_status(log_text):
         for index, field_name in enumerate(fields):
             data[field_name] = parts[index]
         hosts.append(data)
-
     return hosts
 
 
@@ -140,17 +135,11 @@ def main():
     hosts = parse_openvpn_status(log_text)
 
     data = {
-        'all': {
-            'children': {
-                'ungrouped': {
-                    'hosts': {host["Common Name"]: {
-                        'ansible_host': host["Virtual Address"],
-                        'ansible_user': 'pi',
-                        'ansible_port': 22}
-                       for host in hosts if "rpi" in host["Common Name"]}
-                }
-            }
+        common_name: {
+            'hosts': [host["Virtual Address"] for host in hosts
+                      if common_name in host["Common Name"]]
         }
+        for common_name in set([host["Common Name"] for host in hosts])
     }
     if args.host:
         print(json.dumps({}))
