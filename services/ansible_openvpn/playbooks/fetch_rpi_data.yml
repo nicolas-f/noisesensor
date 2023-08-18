@@ -1,5 +1,5 @@
 - name: synchronize module demo
-  hosts: all
+  hosts: rpi
   become: false
   vars:
     source: '/home/pi/noisesensor/out/'
