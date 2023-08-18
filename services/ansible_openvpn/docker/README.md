@@ -50,7 +50,7 @@ docker compose logs -f
 * Generate a client certificate
 
 ```bash
-export CLIENTNAME="your_client_name"
+export CLIENTNAME="rpi"
 # with a passphrase (recommended)
 sudo docker compose run --rm openvpn easyrsa build-client-full $CLIENTNAME
 # without a passphrase (not recommended)
