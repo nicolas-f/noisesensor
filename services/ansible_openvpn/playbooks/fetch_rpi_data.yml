@@ -2,7 +2,7 @@
   hosts: all
   become: false
   vars:
-    source: '/home/pi/noisesensor/out/*.gz'
+    source: '/home/pi/noisesensor/out/'
     destination: '/home/semaphore/data/'
   tasks:
     - name: rsync installed
@@ -12,6 +12,9 @@
       become: true
     - name: data synchronization
       ansible.posix.synchronize:
+        mode: 'pull'
         src: '{{ source }}'
         dest: '{{ destination }}'
-        args: '--remove-source-files'
+      rsync_opts:
+        - "--remove-source-files"
+        - "--exclude='*.tmp'"
