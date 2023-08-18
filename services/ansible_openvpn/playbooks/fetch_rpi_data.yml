@@ -10,11 +10,14 @@
       name: rsync
       state: present
     become: true
+  - name: fetch RPI eth0 mac adress
+    ansible.builtin.command: ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'|sed 's/://g'
+    register: rpi_mac
   - name: data synchronization
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source }}'
-      dest: '{{ destination }}'
+      dest: "{{ destination }}{{ rpi_mac.stdout }}"
       rsync_opts:
         - "--remove-source-files"
         - "--exclude='*.tmp'"

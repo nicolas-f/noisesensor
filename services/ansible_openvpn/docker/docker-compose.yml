@@ -24,11 +24,12 @@ services:
     restart: always
     volumes:
      - ./openvpn-data/conf:/etc/openvpn
-      - semaphore-data:/home/semaphore/data/:z
   semaphore:
     restart: unless-stopped
     container_name: semaphore
-    image: semaphoreui/semaphore:latest
+    build:
+      context: .
+      dockerfile: semaphore/Dockerfile
     environment:
       SEMAPHORE_DB_USER: semaphore
       SEMAPHORE_DB_PASS: ${MYSQL_PASSWORD}
@@ -46,8 +47,11 @@ services:
       MANAGEMENT_OPENVPN_PASSWORD: ${MANAGEMENT_OPENVPN_PASSWORD}
       MANAGEMENT_OPENVPN_PORT: 5555
     network_mode: "service:openvpn"
+    volumes:
+      - semaphore-data:/home/semaphore/data/:z
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn
 volumes:
-  semaphore-mysql: # to use postgres, switch to: semaphore-postgres
+  semaphore-mysql:
+  semaphore-data: # storage of raw sensor data
