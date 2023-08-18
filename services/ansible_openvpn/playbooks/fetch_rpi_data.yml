@@ -11,7 +11,7 @@
       state: present
     become: true
   - name: fetch RPI eth0 mac adress
-    ansible.builtin.command: "/usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'|sed 's/://g'"
+    ansible.builtin.shell: /usr/sbin/ifconfig eth0 2>/dev/null|awk '/ether/ {print $2}'|sed 's/://g'
     register: rpi_mac
   - name: data synchronization
     ansible.posix.synchronize:
