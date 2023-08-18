@@ -136,8 +136,8 @@ def main():
 
     data = {
         common_name: {
-            'hosts': [host["Virtual Address"] for host in hosts
-                      if common_name in host["Common Name"]]
+            'hosts': {host["Virtual Address"]: None for host in hosts
+                      if common_name in host["Common Name"]}
         }
         for common_name in set([host["Common Name"] for host in hosts])
     }
