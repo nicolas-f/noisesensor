@@ -139,7 +139,8 @@ def main():
             'hosts': {host["Virtual Address"]: None for host in hosts
                       if common_name in host["Common Name"]}
         }
-        for common_name in set([host["Common Name"] for host in hosts])
+        for common_name in set([host["Common Name"].replace("-", "_")
+                                for host in hosts])
     }
     if args.host:
         print(json.dumps({}))
