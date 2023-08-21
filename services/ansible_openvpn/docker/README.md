@@ -83,7 +83,7 @@ docker compose run --rm openvpn ovpn_revokeclient $CLIENTNAME remove
 docker compose run -e DEBUG=1 -p 1194:1194/udp openvpn
 ```
 
-# Ansible Semaphore
+# Ansible Semaphore and Elastic Stack
 
 
 Create a file named .env in this folder with your own generated credentials for the docker compose:
@@ -92,6 +92,32 @@ Create a file named .env in this folder with your own generated credentials for 
 MYSQL_PASSWORD=DATABASE_PASSWORD
 SEMAPHORE_ADMIN_PASSWORD=YOUR_ADMIN_PASSWORD
 SEMAPHORE_ACCESS_KEY_ENCRYPTION="YOUR_RANDOM_KEY"
+# Password for the 'elastic' user (at least 6 characters)
+ELASTIC_PASSWORD=myElasticPassword
+
+# Password for the 'kibana_system' user (at least 6 characters)
+KIBANA_PASSWORD=myKibanaPassword
+
+# Version of Elastic products
+STACK_VERSION=8.6.2
+
+# Set the cluster name
+CLUSTER_NAME=docker-cluster
+
+# Set to 'basic' or 'trial' to automatically start the 30-day trial
+LICENSE=basic
+#LICENSE=trial
+
+# Port to expose Elasticsearch HTTP API to the host
+ES_PORT=9200
+#ES_PORT=127.0.0.1:9200
+
+# Port to expose Kibana to the host
+KIBANA_PORT=5601
+#KIBANA_PORT=80
+
+# Increase or decrease based on the available host memory (in bytes)
+MEM_LIMIT=28073741824
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 
@@ -106,7 +132,7 @@ The following playbook will create a file in that will contain all RPI connected
 
 ```services/ansible_openvpn/playbooks/fetch_openvpn_hosts.yml```
 
-This playbook use the following environment variable to bet set in Environnement in semaphore web gui:
+This playbook use the following environment variable to bet set in Environment in semaphore web gui:
 
 ```
 { 

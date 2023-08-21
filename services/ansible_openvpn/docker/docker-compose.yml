@@ -56,7 +56,7 @@ services:
       - certs:/usr/share/elasticsearch/config/certs
       - es_snapshots:/snapshot
     user: "0"
-    restart: unless-stopped
+    restart: on-failure:10
     command: >
       bash -c '
         if [ x${ELASTIC_PASSWORD} == x ]; then
@@ -163,6 +163,7 @@ services:
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+      - SERVER_PUBLICBASEURL=${KIBANA_URL}
     mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
