@@ -8,6 +8,7 @@
         single_branch: yes
         version: yamnet_trigger
     - name: Restart noisesensor services
+      sudo: yes
       ansible.builtin.systemd:
         name: "{{ item }}"
         state: restarted
