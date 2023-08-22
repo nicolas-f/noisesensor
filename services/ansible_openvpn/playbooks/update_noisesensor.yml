@@ -7,13 +7,11 @@
         dest: /home/pi/noisesensor/
         single_branch: yes
         version: yamnet_trigger
-    - name: Restart noisesensor services
+    - name: Stop noisesensor services
       become: true
       ansible.builtin.systemd:
         name: "{{ item }}"
-        daemon_reload: true
-        enabled: true
-        state: restarted
+        state: stopped
       with_items:
         - zeroble.service
         - zerogps.service
@@ -22,3 +20,18 @@
         - zerostorage.service
         - zerostorage_indicators.service
         - zerotrigger.service
+    - name: Start noisesensor services
+      become: true
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        daemon_reload: true
+        enabled: true
+        state: started
+      with_items:
+        - zerogps.service
+        - zerostorage.service
+        - zerostorage_indicators.service
+        - zerorecord.service
+        - zeroindicators.service
+        - zerotrigger.service
+        - zeroble.service

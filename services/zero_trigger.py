@@ -70,7 +70,7 @@ import datetime
 import tflite_runtime.interpreter as tflite
 import resampy
 from importlib.resources import files
-
+import struct
 
 class Params:
     """
@@ -168,6 +168,7 @@ class TriggerProcessor:
     """
 
     def __init__(self, config):
+        self.frame_time = 0
         self.config = config
         self.total_read = 0  # Total audio samples read
         self.sample_rate = self.config.sample_rate
@@ -251,16 +252,18 @@ class TriggerProcessor:
         if feed_cache:
             if self.samples_stack is None:
                 self.samples_stack = collections.deque()
-        audio_data_bytes = np.frombuffer(self.socket.recv(), dtype=np.single)
-        self.total_read += len(audio_data_bytes)
+        time_bytes, audio_data_bytes = self.socket.recv_multipart()
+        audio_data_samples = np.frombuffer(audio_data_bytes, dtype=np.single)
+        self.frame_time = struct.unpack("d", time_bytes)[0]
+        self.total_read += len(audio_data_samples)
         if feed_cache:
-            self.samples_stack.append(audio_data_bytes)
+            self.samples_stack.append(audio_data_samples)
             # will keep keep_only_samples samples, and drop older stack elements
             keep_only_samples = max(self.config.cached_length, self.yamnet_config.patch_window_seconds) * \
                                 self.config.sample_rate
-            while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_bytes):
+            while sum([len(s) for s in self.samples_stack]) > keep_only_samples + len(audio_data_samples):
                 self.samples_stack.popleft()
-        return audio_data_bytes
+        return audio_data_samples
 
     def run(self):
         reference_pressure = 1 / 10 ** (
@@ -271,7 +274,6 @@ class TriggerProcessor:
         document = {}
         processing_time = 0
         while True:
-            cur_time = time.time()
             if last_day_of_year != datetime.datetime.now().timetuple().tm_yday\
                     and "trigger_count" in self.config:
                 # reset trigger counter each day
@@ -300,7 +302,7 @@ class TriggerProcessor:
                 if self.yamnet_samples_index < len(self.yamnet_samples):
                     # window is not complete so wait for more samples
                     continue
-                self.yamnet_samples_index = 0 # reset index
+                self.yamnet_samples_index = 0  # reset index
                 sum_samples = np.sum(
                     np.power(waveform / reference_pressure, 2.0))
                 leq = 10 * math.log10(sum_samples / len(waveform))
@@ -367,7 +369,8 @@ class TriggerProcessor:
                                 "scores_perc": scores_percentage,
                                 "scores_time": threshold_time,
                                 "leq": round(leq, 2),
-                                "date": epoch_to_elasticsearch_date(cur_time)}
+                                "date": epoch_to_elasticsearch_date(
+                                    self.frame_time)}
                     if self.config.add_spectrogram:
                         document["spectrogram"] = base64.b64encode(
                                     spectrogram.astype(np.float16).

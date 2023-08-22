@@ -3,7 +3,7 @@
 import sys
 import zmq
 import argparse
-
+import struct
 
 def main():
     parser = argparse.ArgumentParser(description='This program read audio stream from zeromq and push to stdout',
@@ -24,7 +24,7 @@ def main():
     out_buffer = sys.stdout.buffer
 
     while True:
-        audio_data_bytes = socket.recv()
+        time_bytes, audio_data_bytes = socket.recv_multipart()
         out_buffer.write(audio_data_bytes)
 
 

@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import datetime
 import os.path
+import struct
 import time
 from noisesensor.spectrumchannel import SpectrumChannel, compute_leq
 import sys
@@ -76,7 +77,6 @@ class AcousticIndicatorsProcessor:
         self.config = config
         self.epoch = datetime.datetime.utcfromtimestamp(0)
         self.total_read = 0
-        self.current_stack_time = 0
         self.filter_config = json.load(open(self.config.configuration_file,
                                             "r"))
         self.channel = SpectrumChannel(self.filter_config, use_scipy=False,
@@ -112,22 +112,25 @@ class AcousticIndicatorsProcessor:
         current_window = np.zeros(shape=window_samples, dtype=np.single)
         cursor = 0
         while True:
-            audio_data_bytes = np.frombuffer(self.socket.recv(),
+            time_bytes, audio_data_bytes = self.socket.recv_multipart()
+            audio_data_samples = np.frombuffer(audio_data_bytes,
                                              dtype=np.single)
-            if self.current_stack_time == 0:
-                self.current_stack_time = time.time() - len(audio_data_bytes)\
-                          / self.filter_config["configuration"]["sample_rate"]
+            frame_time = struct.unpack("d", time_bytes)[0]
+            first_stack_time = frame_time
             buffer_cursor = 0
-            while buffer_cursor < len(audio_data_bytes):
+            while buffer_cursor < len(audio_data_samples):
                 # Process part of samples to fit configured windows
-                to_read = min(window_samples-cursor, len(audio_data_bytes)
+                to_read = min(window_samples-cursor, len(audio_data_samples)
                               - buffer_cursor)
                 current_window[cursor:cursor+to_read] = \
-                    audio_data_bytes[buffer_cursor:buffer_cursor+to_read]
+                    audio_data_samples[buffer_cursor:buffer_cursor+to_read]
                 cursor += to_read
                 buffer_cursor += to_read
                 self.total_read += to_read
                 if cursor == window_samples:
+                    window_time = frame_time + buffer_cursor / \
+                                  self.filter_config["configuration"][
+                                      "sample_rate"]
                     # analysis window filled
                     cursor = 0
                     lzeq = round(compute_leq(current_window) + db_delta, 2)
@@ -147,7 +150,7 @@ class AcousticIndicatorsProcessor:
                                 round(lzeq + db_delta, 2))
                     if self.config.output_time:
                         self.current_stack_dict["timestamps"].append(
-                            round(time.time() - window_samples/sample_rate, 3))
+                            round(window_time, 3))
                     self.stack_count += 1
                     if self.stack_count == self.config.output_stack:
                         # stack of noise indicator complete
@@ -155,12 +158,11 @@ class AcousticIndicatorsProcessor:
                         self.stack_count = 0
                         self.current_stack_dict[
                             "date_start"] = epoch_to_elasticsearch_date(
-                            self.current_stack_time)
+                            first_stack_time)
                         self.current_stack_dict[
                             "date_end"] = epoch_to_elasticsearch_date(
-                            time.time())
+                            window_time)
                         self.socket_out.send_json(self.current_stack_dict)
-                        self.current_stack_time = 0
                         fields, stack_dict = generate_stack_dict(
                             self.filter_config, self.config.output_time)
                         self.current_stack_dict = stack_dict

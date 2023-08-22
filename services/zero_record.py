@@ -42,6 +42,7 @@ import io
 import os
 import collections
 import threading
+import struct
 
 ALERT_STACK_BYTES = 960000
 ALERT_DELAY = 5.0
@@ -56,7 +57,7 @@ class ZeroMQThread(threading.Thread):
         self.last_warning = 0
 
     def push_bytes(self, samples_bytes):
-        self.samples_queue.append(samples_bytes)
+        self.samples_queue.append([time.time(), samples_bytes])
         sum_bytes = sum([len(element) for element in self.samples_queue])
         if sum_bytes > ALERT_STACK_BYTES and \
                 time.time() - self.last_warning > ALERT_DELAY:
@@ -75,8 +76,9 @@ class ZeroMQThread(threading.Thread):
         print(address)
         while self.args.running or len(self.samples_queue) > 0:
             while len(self.samples_queue) > 0:
-                audio_data_bytes = self.samples_queue.popleft()
-                socket.send(audio_data_bytes)
+                capture_time, audio_data_bytes = self.samples_queue.popleft()
+                socket.send_multipart([struct.pack("d", capture_time),
+                                       audio_data_bytes])
             time.sleep(0.05)
 
 
