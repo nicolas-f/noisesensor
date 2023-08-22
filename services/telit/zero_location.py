@@ -4,9 +4,9 @@ from gpsdclient import GPSDClient
 import argparse
 import serial
 import time
-import threading
 import zmq
 import subprocess  # For executing a shell command
+import datetime
 
 
 def ping(host):
