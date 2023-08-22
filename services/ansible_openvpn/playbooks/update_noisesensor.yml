@@ -8,15 +8,16 @@
         single_branch: yes
         version: yamnet_trigger
     - name: Restart noisesensor services
-      sudo: yes
       ansible.builtin.systemd:
         name: "{{ item }}"
+        daemon_reload: true
+        enable: true
         state: restarted
       with_items:
-        - zeroble
-        - zerogps
-        - zeroindicators
-        - zerorecord
-        - zerostorage
-        - zerostorage_indicators
-        - zerotrigger
+        - zeroble.service
+        - zerogps.service
+        - zeroindicators.service
+        - zerorecord.service
+        - zerostorage.service
+        - zerostorage_indicators.service
+        - zerotrigger.service
