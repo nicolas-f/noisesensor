@@ -11,13 +11,13 @@
         version: yamnet_trigger
     - name: Restart noisesensor services
       ansible.builtin.service:
-        name: {{ item }}
+        name: "{{ item }}"
         state: restarted
       with_items:
-        -zeroble
-        -zerogps
-        -zeroindicators
-        -zerorecord
-        -zerostorage
-        -zerostorage_indicators
-        -zerotrigger
+        - zeroble
+        - zerogps
+        - zeroindicators
+        - zerorecord
+        - zerostorage
+        - zerostorage_indicators
+        - zerotrigger
