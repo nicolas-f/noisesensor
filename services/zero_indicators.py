@@ -44,6 +44,16 @@ import numpy as np
 import json
 
 
+def epoch_to_elasticsearch_date(epoch):
+    """
+    strict_date_optional_time in elastic search format is
+    yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    @rtype: string
+    """
+    return datetime.datetime.utcfromtimestamp(epoch).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
 def generate_stack_dict(filter_config, push_time):
     stack_dict = {"LZeq": []}
     fields = []
@@ -144,7 +154,11 @@ class AcousticIndicatorsProcessor:
                         # send the full document
                         self.stack_count = 0
                         self.current_stack_dict[
-                            "timestamp"] = self.current_stack_time
+                            "date_start"] = epoch_to_elasticsearch_date(
+                            self.current_stack_time)
+                        self.current_stack_dict[
+                            "date_end"] = epoch_to_elasticsearch_date(
+                            time.time())
                         self.socket_out.send_json(self.current_stack_dict)
                         self.current_stack_time = 0
                         fields, stack_dict = generate_stack_dict(

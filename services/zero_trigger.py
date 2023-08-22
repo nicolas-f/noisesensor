@@ -152,6 +152,16 @@ def butter_highpass(cutoff, fs, order=4):
                          output='sos')
 
 
+def epoch_to_elasticsearch_date(epoch):
+    """
+    strict_date_optional_time in elastic search format is
+    yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    @rtype: string
+    """
+    return datetime.datetime.utcfromtimestamp(epoch).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
 class TriggerProcessor:
     """
     Service listening to zero_record and trigger sound recording according to pre-defined noise events
@@ -357,7 +367,7 @@ class TriggerProcessor:
                                 "scores_perc": scores_percentage,
                                 "scores_time": threshold_time,
                                 "leq": round(leq, 2),
-                                "epoch_millisecond": int(cur_time)}
+                                "date": epoch_to_elasticsearch_date(cur_time)}
                     if self.config.add_spectrogram:
                         document["spectrogram"] = base64.b64encode(
                                     spectrogram.astype(np.float16).

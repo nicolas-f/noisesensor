@@ -30,6 +30,17 @@ def send_command(ser, cmd, comment=""):
     return ser.read(64).decode("ascii").strip()
 
 
+def epoch_to_elasticsearch_date(epoch):
+    """
+    strict_date_optional_time in elastic search format is
+    yyyy-MM-dd'T'HH:mm:ss.SSSZ
+    @rtype: string
+    """
+    return datetime.datetime.utcfromtimestamp(epoch).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+
 def lte_config(args):
     ####################
     # LTE Configuration and initialisation
@@ -178,19 +189,25 @@ def main():
                     try:
                         if time.time() >= last_push + args.push_interval:
                             # Get gps position
-                            document = {}
-                            for result in gpsd_client.dict_stream(convert_datetime=False,
+                            document = {"date": epoch_to_elasticsearch_date(
+                                time.time())}
+                            for result in gpsd_client.dict_stream(
+                                    convert_datetime=False,
                                     filter=["TPV", "Sky", "GST", "Att", "Imu",
                                             "Toff", "PPS", "Osc"]):
-                                if result["class"] == "TPV" and "TPV" in document.keys():
+                                if result["class"] == "TPV" and "TPV" in \
+                                        document.keys():
                                     break
                                 document[result["class"]] = result
                             # Read stuff from telit
                             try:
-                                with serial.Serial('/dev/ttyUSB2', 115200, timeout=5) as ser:
+                                with serial.Serial('/dev/ttyUSB2', 115200,
+                                                   timeout=5) as ser:
                                     resp = send_command(ser, "AT#TEMPMON=1")
                                     if "TEMPMEAS" in resp and "," in resp:
-                                        document["temperature_module"] = clean_response(resp)
+                                        document[
+                                            "temperature_module"] = clean_response(
+                                            resp)
                                     resp = send_command(ser, "AT+CSQ")
                                     if "CSQ:" in resp:
                                         document["lte_strength"] = clean_response(resp)

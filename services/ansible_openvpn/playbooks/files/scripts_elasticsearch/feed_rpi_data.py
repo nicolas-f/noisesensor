@@ -37,9 +37,15 @@ import elasticsearch.helpers
 import gzip
 import json
 import datetime
+import calendar
 
 # This python script read json data fetched from RPI and feed it to an
 # elastic search node
+
+
+def epoch_to_elasticsearch_date(epoch):
+    return datetime.datetime.utcfromtimestamp(epoch).strftime(
+        "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
 def fetch_data(args):
@@ -60,6 +66,10 @@ def fetch_data(args):
                         elif "_source" in json_dict and "timestamp" in \
                                 json_dict["_source"]:
                             epoch = json_dict["_source"]["timestamp"]
+                        elif "date" in json_dict:
+                            epoch = calendar.timegm(datetime.datetime.strptime(
+                                json_dict["date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                                                    .timetuple())
                         dt = datetime.datetime.utcfromtimestamp(epoch)
                         stop_position = name.find("_")
                         if stop_position == -1:
