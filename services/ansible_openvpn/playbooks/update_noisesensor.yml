@@ -13,7 +13,7 @@
       ansible.builtin.service:
         name: {{ item }}
         state: restarted
-      with_item:
+      with_items:
         -zeroble
         -zerogps
         -zeroindicators
