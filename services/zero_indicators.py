@@ -87,9 +87,6 @@ class AcousticIndicatorsProcessor:
         self.socket_out = context.socket(zmq.PUB)
         self.socket_out.bind(self.config.output_address)
 
-    def unix_time(self):
-        return (datetime.datetime.utcnow() - self.epoch).total_seconds()
-
     def run(self):
         self.init_socket()
         sample_rate = self.filter_config["configuration"]["sample_rate"]
@@ -109,7 +106,7 @@ class AcousticIndicatorsProcessor:
                                              dtype=np.single)
             if self.current_stack_time == 0:
                 self.current_stack_time = time.time() - len(audio_data_bytes)\
-                          * self.filter_config["configuration"]["sample_rate"]
+                          / self.filter_config["configuration"]["sample_rate"]
             buffer_cursor = 0
             while buffer_cursor < len(audio_data_bytes):
                 # Process part of samples to fit configured windows

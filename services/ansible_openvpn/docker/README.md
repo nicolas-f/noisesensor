@@ -118,6 +118,9 @@ KIBANA_PORT=5601
 
 # Increase or decrease based on the available host memory (in bytes)
 MEM_LIMIT=28073741824
+
+# If you publish kibana on internet, you should declare it with this parameter
+KIBANA_URL=https://kibana.mydomain.org
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 
