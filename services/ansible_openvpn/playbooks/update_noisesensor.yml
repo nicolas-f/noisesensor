@@ -1,0 +1,15 @@
+- name: Update noisesensor git repository and restart associated services
+  hosts: rpi
+  gather_facts: no
+  connection: ssh
+  tasks:
+    - name: Example clone of a single branch
+      ansible.builtin.git:
+        repo: https://github.com/nicolas-f/noisesensor.git
+        dest: /home/pi/noisesensor/
+        single_branch: yes
+        version: yamnet_trigger
+    - name: Restart noisesensor services
+      ansible.builtin.service:
+        name: zero_*
+        state: restarted
