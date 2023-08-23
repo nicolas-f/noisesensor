@@ -3,7 +3,7 @@
   become: false
   vars:
     source: '/home/pi/noisesensor/out/'
-    destination: '/home/semaphore/data/'
+    destination: '/home/semaphore/data/to_process/'
   tasks:
   - name: rsync installed
     ansible.builtin.package:

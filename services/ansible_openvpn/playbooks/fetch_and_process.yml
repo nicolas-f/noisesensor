@@ -1,0 +1,6 @@
+# To execute each 15 minutes
+# 0/15 * * * *
+- name: Rsync data from distant RPI then process the imported files
+  tasks:
+  - import_tasks: fetch_rpi_data.yml
+  - import_tasks: parse_to_elasticsearch.yml
