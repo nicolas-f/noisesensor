@@ -7,7 +7,7 @@
   tasks:
   - name: Install specified python requirements
     ansible.builtin.pip:
-      requirements: scripts_elastic_search/requirements.txt
+      requirements: {{playbook_dir}}/scripts_elastic_search/requirements.txt
       extra_args: --user
   - name: Creates archive directory
     file:
