@@ -183,6 +183,7 @@ def main():
             if not ping(args.check_ip):
                 lte_config(args)
             gps_config(args)
+            next_tpv = None
             with GPSDClient(host="127.0.0.1") as gpsd_client:
                 while args.running:
                     try:
@@ -190,15 +191,24 @@ def main():
                             # Get gps position
                             document = {"date": epoch_to_elasticsearch_date(
                                 time.time())}
+                            if next_tpv:
+                                document["TPV"] = next_tpv
+                                next_tpv = None
                             for result in gpsd_client.dict_stream(
                                     convert_datetime=False,
                                     filter=["TPV", "Sky", "GST", "Att", "Imu",
                                             "Toff", "PPS", "Osc"]):
                                 if result["class"] == "TPV" and "TPV" in \
                                         document.keys():
+                                    next_tpv = result
                                     break
                                 document[result["class"]] = result
                             # Read stuff from telit
+                            if "TPV" in document.keys() and "lat" in document["TPV"].keys():
+                                # create special entry specifically for elastic search
+                                document["location"] = {"lat": document["TPV"]["lat"],
+                                                        "lon": document["TPV"]["lat"],
+                                                        "z": document["TPV"]["alt"]}
                             try:
                                 with serial.Serial('/dev/ttyUSB2', 115200,
                                                    timeout=5) as ser:
