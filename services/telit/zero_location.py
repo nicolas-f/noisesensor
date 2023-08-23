@@ -207,7 +207,7 @@ def main():
                             if "TPV" in document.keys() and "lat" in document["TPV"].keys():
                                 # create special entry specifically for elastic search
                                 document["location"] = {"lat": document["TPV"]["lat"],
-                                                        "lon": document["TPV"]["lat"],
+                                                        "lon": document["TPV"]["lon"],
                                                         "z": document["TPV"]["alt"]}
                             try:
                                 with serial.Serial('/dev/ttyUSB2', 115200,
