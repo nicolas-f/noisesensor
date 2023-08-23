@@ -113,7 +113,7 @@ def main():
     parser.add_argument("--host", help="API url of Elastic Search",
                         default="https://localhost:9200", type=str)
     parser.add_argument("-v", "--verbose", help="Verbose mode",
-                        default=False, type=bool)
+                        default=False, type=bool, action="store_true")
     parser.add_argument("-t", "--time_format",
                         help="Time format name for the index name if not"
                              " specified by the json document",
