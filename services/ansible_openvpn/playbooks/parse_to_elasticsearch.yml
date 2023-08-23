@@ -16,7 +16,7 @@
     delegate_to: localhost
   - name: Launch python script from playbook
     ansible.builtin.script:
-      cmd: scripts_elastic_search/openvpn_ansible.py --host https://es01:9200 --json_input_folder {{ source }}  --api_key {{ ELASTIC_SEARCH_API_KEY }} --api_key_id {{ ELASTIC_SEARCH_API_KEY_ID }} --json_archive_folder {{ destination }} -v
+      cmd: scripts_elastic_search/openvpn_ansible.py --host https://es01:9200 --json_input_folder '{{ source }}'  --api_key '{{ ELASTIC_SEARCH_API_KEY }}' --api_key_id '{{ ELASTIC_SEARCH_API_KEY_ID }}' --json_archive_folder '{{ destination }}' -v
     args:
       executable: python3
     register: result

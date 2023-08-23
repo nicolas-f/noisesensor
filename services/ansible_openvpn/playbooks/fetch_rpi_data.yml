@@ -15,7 +15,7 @@
     register: rpi_mac
   - name: Creates directory
     file:
-      path: {{ destination }}
+      path: '{{ destination }}'
       state: directory
     delegate_to: localhost
   - name: data synchronization
