@@ -1,14 +1,22 @@
 - name: Execute python script to parse data files and push it to the elastic search instance
   hosts: 127.0.0.1
   connection: local
+  vars:
+    source: '/home/semaphore/data/to_process/'
+    destination: '/home/semaphore/data/archive/'
   tasks:
   - name: Install specified python requirements
     ansible.builtin.pip:
       requirements: scripts_elastic_search/requirements.txt
       extra_args: --user
+  - name: Creates archive directory
+    file:
+      path: {{ destination }}
+      state: directory
+    delegate_to: localhost
   - name: Launch python script from playbook
     ansible.builtin.script:
-      cmd: scripts_elastic_search/openvpn_ansible.py --host https://es01:9200 --json_input_folder /home/semaphore/data/to_process/  --api_key {{ ELASTIC_SEARCH_API_KEY }} --api_key_id {{ ELASTIC_SEARCH_API_KEY_ID }} --json_archive_folder /home/semaphore/data/archive/ -v
+      cmd: scripts_elastic_search/openvpn_ansible.py --host https://es01:9200 --json_input_folder {{ source }}  --api_key {{ ELASTIC_SEARCH_API_KEY }} --api_key_id {{ ELASTIC_SEARCH_API_KEY_ID }} --json_archive_folder {{ destination }} -v
     args:
       executable: python3
     register: result
