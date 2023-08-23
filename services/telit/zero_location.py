@@ -8,7 +8,6 @@ import zmq
 import subprocess  # For executing a shell command
 import datetime
 
-
 def ping(host):
     """
     Returns True if host (str) responds to a ping request.

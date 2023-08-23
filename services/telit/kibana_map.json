@@ -1,0 +1,17 @@
+POST sensor_location_*/_update_by_query
+{
+  "script": {
+    "source": """
+    if(ctx._source.containsKey('TPV') && ctx._source.TPV.containsKey('lat')) {
+      ctx._source.location = [:];
+      ctx._source.location['lat']=ctx._source.TPV.lat;
+      ctx._source.location['lon']=ctx._source.TPV.lon;
+    }
+    """,
+    "lang": "painless"
+  },
+  "query": {
+    "match_all": {}
+  }
+}
+
