@@ -4,6 +4,8 @@
   vars:
     source: '/home/semaphore/data/to_process/'
     destination: '/home/semaphore/data/archive/'
+    api_key: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY') }}"
+    api_key_id: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY_ID') }}"
   tasks:
   - name: Install specified python requirements
     ansible.builtin.pip:
