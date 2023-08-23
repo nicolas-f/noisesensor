@@ -8,7 +8,7 @@
       extra_args: --user
   - name: Launch python script from playbook
     ansible.builtin.script:
-      cmd: scripts_elastic_search/openvpn_ansible.py --json_input_folder /home/semaphore/data/to_process/  --api_key {{ ELASTIC_SEARCH_API_KEY }} --api_key_id {{ ELASTIC_SEARCH_API_KEY_ID }} --json_archive_folder /home/semaphore/data/archive/ -v
+      cmd: scripts_elastic_search/openvpn_ansible.py --host https://es01:9200 --json_input_folder /home/semaphore/data/to_process/  --api_key {{ ELASTIC_SEARCH_API_KEY }} --api_key_id {{ ELASTIC_SEARCH_API_KEY_ID }} --json_archive_folder /home/semaphore/data/archive/ -v
     args:
       executable: python3
     register: result

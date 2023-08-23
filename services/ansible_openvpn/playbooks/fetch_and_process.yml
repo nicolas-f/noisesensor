@@ -1,6 +1,12 @@
 # To execute each 15 minutes
 # 0/15 * * * *
-- name: Rsync data from distant RPI then process the imported files
+- hosts: localhost
   tasks:
-  - import_tasks: fetch_rpi_data.yml
-  - import_tasks: parse_to_elasticsearch.yml
+    - ansible.builtin.debug:
+        msg: Fetch and process
+
+- name: Fetch RPI data using rsync
+  ansible.builtin.import_playbook: fetch_rpi_data.yml
+
+- name: Parse json and push to elastic search instance
+  ansible.builtin.import_playbook: parse_to_elasticsearch.yml
