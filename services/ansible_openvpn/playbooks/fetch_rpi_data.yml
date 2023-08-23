@@ -1,4 +1,4 @@
-- name: synchronize module demo
+- name: Launch rsync to fetch noisesensor data json files
   hosts: rpi
   become: false
   vars:
