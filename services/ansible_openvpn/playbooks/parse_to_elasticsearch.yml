@@ -11,7 +11,7 @@
       extra_args: --user
   - name: Creates archive directory
     file:
-      path: {{ destination }}
+      path: '{{ destination }}'
       state: directory
     delegate_to: localhost
   - name: Launch python script from playbook
