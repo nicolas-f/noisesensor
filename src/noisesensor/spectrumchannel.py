@@ -132,6 +132,14 @@ class SpectrumChannel:
             self.c_filter = DigitalFilter(self.c_numerator, self.c_denominator)
 
     def process_samples_weight_a(self, samples):
+        """
+         Apply A weighting filter
+         There is a slight difference with scipy as it is not continuous
+         between each call of this function. Without scipy there is a buffer
+         from the previous call, so you should get better results without scipy
+        @param samples:
+        @return:
+        """
         if "c_weighting" not in self.configuration:
             raise ValueError("Provided configuration does not contain "
                              "c weighting filters")
@@ -143,6 +151,14 @@ class SpectrumChannel:
             return compute_leq(samples)
 
     def process_samples_weight_c(self, samples):
+        """
+         Apply C weighting filter
+         There is a slight difference with scipy as it is not continuous
+         between each call of this function. Without scipy there is a buffer
+         from the previous call, so you should get better results without scipy
+        @param samples:
+        @return:
+        """
         if "c_weighting" not in self.configuration:
             raise ValueError("Provided configuration does not contain "
                              "c weighting filters")
