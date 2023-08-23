@@ -4,4 +4,5 @@ USER root
 
 RUN apk add rsync py3-pip
 
-USER 1001
+USER semaphore
+
