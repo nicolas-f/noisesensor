@@ -117,12 +117,14 @@ def main():
                         required=True, type=str)
     parser.add_argument("-t", "--time_format",
                         help="Time format name for the file,"
-                             " if the file already exists the json"
-                             " will be added as a new line",
+                             " if the file already exists a counter after "
+                             "the file name will be added",
                         default="%Y_%m_%d.%Hh%Mm%S.%f",
                         type=str)
     parser.add_argument("-r", "--row_count",
-                        help="Maximum row count for stacked json in one file",
+                        help="Maximum row count for stacked json in one file"
+                             ". The filename will end with .tmp if the row"
+                             " count is not reached",
                         default=1,  type=int)
     parser.add_argument("-c", "--compress",
                         help="Compress output files", default=False,
