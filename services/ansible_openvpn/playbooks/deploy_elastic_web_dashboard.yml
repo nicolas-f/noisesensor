@@ -1,0 +1,6 @@
+- name: Execute python script to parse data files and push it to the elastic search instance
+  hosts: webfrontend
+  connection: local
+  vars:
+    api_key: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY') }}"
+    api_key_id: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY_ID') }}"

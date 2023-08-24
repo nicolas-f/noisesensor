@@ -174,7 +174,12 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
-
+  dashboard:
+    build:
+     context: dashboard
+     target: builder
+    ports:
+      - '8000:8000'
 volumes:
   semaphore-mysql:
   semaphore-data: # storage of raw sensor data
