@@ -1,0 +1,28 @@
+POST _reindex
+{
+  "source": {
+    "index": "sensor_location_*"
+  },
+  "dest": {
+    "index": "tmploc_"
+  },
+  "script": {
+    "lang": "painless",
+    "source": "ctx._index = 'tmploc_' + (ctx._index.substring('sensor_location_'.length(), ctx._index.length()))"
+  }
+}
+
+POST _reindex
+{
+  "source": {
+    "index": "tmploc_*"
+  },
+  "dest": {
+    "index": "sensor_location_"
+  },
+  "script": {
+    "lang": "painless",
+    "source": "ctx._index = 'sensor_location_' + (ctx._index.substring('tmploc_'.length(), ctx._index.length()))"
+  }
+}
+
