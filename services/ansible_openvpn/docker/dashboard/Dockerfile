@@ -1,21 +1,16 @@
 # syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM python:3.10-alpine AS builder
+FROM --platform=$BUILDPLATFORM panubo/sshd AS builder
 
 WORKDIR /dashboard
 
-RUN apk add nano openssh-server
+RUN apk add --no-cache nano py3-pip
 
 COPY . /dashboard
 
-RUN --mount=type=cache,target=/root/.cache/pip \
+COPY flash_service.sh /etc/entrypoint.d/
+
+RUN chmod +x /etc/entrypoint.d/flash_service.sh \
+    --mount=type=cache,target=/root/.cache/pip \
     pip3 install -r requirements.txt
 
-ENTRYPOINT ["python3"]
-CMD ["app.py"]
 
-RUN <<EOF
-addgroup -S docker
-adduser -S --shell /bin/bash --ingroup docker vscode
-EOF
-
-USER vscode
