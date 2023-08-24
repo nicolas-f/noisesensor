@@ -27,27 +27,7 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from flask import Flask
-app = Flask(__name__)
-
-
-@app.route('/')
-def home():
-    return """
-<!doctype html>
-<html>
-  <head>
-    <title>NoiseSensor dashboard default page</title>
-  </head>
-  <body>
-    <p>Please run the Ansible playbook named deploy_elastic_web_dashboard.yml</p>
-  </body>
-</html>"""
-
+from scripts import serve
 
 if __name__ == "__main__":
-    from waitress import serve
-    import hupper
-    reloader = hupper.start_reloader('dashboard.scripts.serve.main')
-    reloader.watch_files(['app_git_hash.txt'])
-    serve(app, host="0.0.0.0", port=8000)
+    serve.main()
