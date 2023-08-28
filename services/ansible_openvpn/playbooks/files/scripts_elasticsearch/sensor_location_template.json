@@ -3,6 +3,14 @@ PUT _index_template/sensor_location_template
   "index_patterns": ["sensor_location_*"],
   "template": {
     "mappings": {
+       "runtime": {
+        "temperature_4g": {
+          "type": "double",
+          "script": {
+            "source": "emit(Double.parseDouble(doc['temperature_module.keyword'].value.substring(doc['temperature_module.keyword'].value.indexOf(\",\") + 1)))"
+          }
+        }
+      },
       "properties": {
         "SKY": {
           "properties": {
