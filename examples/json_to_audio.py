@@ -1,3 +1,6 @@
+import copy
+import os.path
+
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES
@@ -50,7 +53,15 @@ def main():
                         help="Path of the output ogg file",
                         default="audio.ogg", type=str)
     args = parser.parse_args()
-    get_sf(args)
+    if os.path.isdir(args.document_gz):
+        documents = [filepath for filepath in os.listdir(args.document_gz) if filepath.endswith(".json.gz")]
+        for document in documents:
+            args_cp = copy.copy(args)
+            args_cp.document_gz = os.path.join(args.document_gz, document)
+            args_cp.ogg_file = os.path.join(args.document_gz, document[:document.rfind(".json.gz")]+".ogg")
+            get_sf(args_cp)
+    else:
+        get_sf(args)
 
 
 if __name__ == "__main__":

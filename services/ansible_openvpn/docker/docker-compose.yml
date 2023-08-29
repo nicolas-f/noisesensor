@@ -47,6 +47,7 @@ services:
     network_mode: "service:openvpn"
     volumes:
       - semaphore-data:/home/semaphore/data/:z
+      - dashboard_pubkeys:/home/semaphore/authorized_keys:z
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn
@@ -178,10 +179,19 @@ services:
     build:
      context: dashboard
      target: builder
+    environment:
+      - SSH_USERS=dashboard:1001:1001
     ports:
       - '8000:8000'
+    volumes:
+      - dashboard_keys:/etc/ssh/keys
+      - dashboard_pubkeys:/etc/authorized_keys/dashboard
 volumes:
   semaphore-mysql:
+  dashboard_keys:
+    driver: local
+  dashboard_pubkeys:
+    driver: local
   semaphore-data: # storage of raw sensor data
   certs:
     driver: local
