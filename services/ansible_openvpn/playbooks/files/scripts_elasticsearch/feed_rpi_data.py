@@ -42,7 +42,8 @@ import calendar
 
 # This python script read json data fetched from RPI and feed it to an
 # elastic search node
-
+import hashlib
+import base64
 
 def epoch_to_elasticsearch_date(epoch):
     return datetime.datetime.utcfromtimestamp(epoch).strftime(
@@ -79,6 +80,11 @@ def fetch_data(args):
                             json_dict["_index"] = name[:stop_position] + "_" + dt.strftime(args.time_format)
                         json_dict["_index"] = args.index_prepend + json_dict[
                             "_index"]
+                        if "_id" not in json_dict:
+                            # avoid duplicate by hashing the document
+                            json_dict["_id"] = base64.b64encode(
+                                hashlib.sha256(line).digest()).decode(
+                                sys.getdefaultencoding())
                         yield json_dict
                 if not args.keep_file:
                     destination = os.path.join(

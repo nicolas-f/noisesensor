@@ -121,6 +121,8 @@ MEM_LIMIT=28073741824
 
 # If you publish kibana on internet, you should declare it with this parameter
 KIBANA_URL=https://kibana.mydomain.org
+
+OPENVPN_MANAGEMENT_PASSWORD=YOUR_OPENVPN_MANAGEMENT_CONSOLE_PASSWORD
 ```
 
 SEMAPHORE_ACCESS_KEY_ENCRYPTION value is generated with 

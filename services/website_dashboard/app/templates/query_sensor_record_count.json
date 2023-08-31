@@ -1,0 +1,48 @@
+{
+  "size": 0,
+      "query": {
+    "bool": {
+      "must": [
+        {
+          "match_all": {}
+        },
+        {
+          "range": {
+            "timestamp": {
+            "gte": {{ start_time }},
+            "lte": {{ end_time }},
+            "format": "epoch_millis"
+            }
+          }
+        }
+      ],
+      "filter": [],
+      "should": [],
+      "must_not": []
+    }
+  },
+    "aggs": {
+        "group": {
+            "terms": {
+                "field": "producerID",
+		"size" : 200
+            },
+            "aggs": {
+               "types_count" : { "value_count" : { "field" : "producerID" } },
+                "group_docs": {
+                    "top_hits": {
+                      "_source": ["timestamp"],
+                        "size": 1,
+                        "sort": [
+                            {
+                                "timestamp": {
+                                    "order": "desc"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,16 +1,15 @@
-# syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM panubo/sshd AS builder
+FROM python:3.9
 
-WORKDIR /dashboard
+RUN useradd -ms /bin/bash dashboard
 
-RUN apk add --no-cache nano py3-pip
+WORKDIR /home/dashboard
 
-COPY . /dashboard
+COPY ./requirements.txt /home/dashboard/requirements.txt
 
-COPY flask_service.sh /etc/entrypoint.d/
+RUN pip install --no-cache-dir --upgrade -r /home/dashboard/requirements.txt
 
-RUN chmod +x /etc/entrypoint.d/flask_service.sh
+COPY ./app /home/dashboard/app
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip3 install -r requirements.txt
+USER dashboard
 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]

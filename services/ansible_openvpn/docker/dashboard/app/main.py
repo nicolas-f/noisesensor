@@ -27,7 +27,23 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from scripts import serve
 
-if __name__ == "__main__":
-    serve.main()
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.get('/', response_class=HTMLResponse)
+async def home():
+    return """
+<!doctype html>
+<html>
+  <head>
+    <title>NoiseSensor dashboard default page</title>
+  </head>
+  <body>
+    <p>Please run the Ansible playbook named deploy_elastic_web_dashboard.yml</p>
+  </body>
+</html>"""
+

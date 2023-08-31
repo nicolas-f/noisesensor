@@ -4,3 +4,14 @@
   vars:
     api_key: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY') }}"
     api_key_id: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY_ID') }}"
+    destination: /home/semaphore/dashboard_website/
+  tasks:
+  - name: Create configuration file for website
+    copy:
+      content: "[ELASTIC_SEARCH]\nURL = es01\nAPI_ID = {{ api_key_id }}\nAPI_KEY =  {{ api_key }}\n"
+      dest: '{{ destination }}appconfig.ini'
+  - name: Website synchronization
+    ansible.posix.synchronize:
+      mode: 'pull'
+      src: '{{ playbook_dir }}../../website_dashboard'
+      dest: '{{ destination }}'
