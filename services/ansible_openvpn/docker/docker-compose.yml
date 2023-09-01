@@ -47,7 +47,7 @@ services:
     network_mode: "service:openvpn"
     volumes:
       - semaphore-data:/home/semaphore/data/:z
-      - dashboard_website:/home/semaphore/dashboard_website:z
+      - dashboard_website:/home/semaphore/dashboard_website:rw
     depends_on:
       - mysql # for postgres, change to: postgres
       - openvpn

@@ -13,5 +13,5 @@
   - name: Website synchronization
     ansible.posix.synchronize:
       mode: 'pull'
-      src: '{{ playbook_dir }}../docker/dashboard'
+      src: '{{ playbook_dir }}/../docker/dashboard'
       dest: '{{ destination }}'
