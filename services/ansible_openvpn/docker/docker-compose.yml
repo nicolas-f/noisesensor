@@ -180,6 +180,8 @@ services:
      context: dashboard
     ports:
       - '8000:80'
+    environment:
+      WATCHFILES_FORCE_POLLING: true
     volumes:
       - dashboard_website:/home/dashboard:ro
   autoconfig:

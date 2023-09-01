@@ -1,4 +1,5 @@
 {
+  "index": "sensor_location_*",
   "size": 0,
   "fields": [
     "TPV.lat",

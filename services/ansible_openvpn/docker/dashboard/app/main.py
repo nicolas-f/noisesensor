@@ -59,12 +59,23 @@ client = Elasticsearch(
 
 @app.get("/api/sensor_position")
 async def get_sensor_position(request: Request):
-    post_data = templates.get_template("query_sensor_list.json").render()
-    resp = client.search(index="sensor_location_*", query=post_data)
-    return resp
+    post_data = json.loads(
+        templates.get_template("query_sensor_list.json").render())
+    resp = client.search(**post_data)
+    # reformat elastic search result
+    return [{"hwa": hit["fields"]["hwa"][0], "date": hit["fields"]["date"][0],
+             "lat": hit["fields"]["TPV.lat"][0],
+             "lon": hit["fields"]["TPV.lon"][0]}
+            for bucket in resp["aggregations"]["group"]["buckets"] for hit in
+            bucket["group_docs"]["hits"]["hits"]]
+
 
 @app.get('/', response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("status.html",
                                       context={"request": request})
 
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
