@@ -31,3 +31,4 @@ examples/*.ogg
 .env
 # openvpn server configuration
 services/ansible_openvpn/docker/openvpn-data
+services/ansible_openvpn/docker/dashboard/config.json

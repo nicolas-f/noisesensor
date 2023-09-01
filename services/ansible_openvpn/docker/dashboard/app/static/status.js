@@ -77,19 +77,19 @@ var lmap = L.map('mapid').setView([47.7456, -3.3687], 16);
 var sensors = L.layerGroup();
 var routers = L.layerGroup();
 
-L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoibmljb2xhcy1mIiwiYSI6ImNsbTBhMTkxMTE3ODkzZHA2ZGM0NWVhb3EifQ.XLAxFMiFQD1VomPnHjcFAA', {
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
         '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
         'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-    id: 'mapbox.streets'
+    id: 'streets-v11'
 }).addTo(lmap);
 
 sensors.addTo(lmap);
 routers.addTo(lmap);
 
-getStations(lmap, sensors);
-getRouters(lmap, routers);
+//getStations(lmap, sensors);
+//getRouters(lmap, routers);
 
 var legend = L.control({position: 'bottomright'});
 

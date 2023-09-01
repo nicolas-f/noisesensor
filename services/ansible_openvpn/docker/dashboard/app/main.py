@@ -27,23 +27,44 @@
 #  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import json
+import os
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import streaming_bulk
+import elasticsearch.helpers
 
 app = FastAPI()
 
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+app.mount("/fonts", StaticFiles(directory="app/fonts"), name="fonts")
+
+templates = Jinja2Templates(directory="app/templates")
+
+if not os.path.exists("app/config.json"):
+    raise Exception("Configuration file not found " +
+                    os.path.abspath("app/config.json"))
+configuration = json.load(open("app/config.json", "r"))
+
+client = Elasticsearch(
+    configuration.get("url", "https://es01:9200"),
+    api_key=(configuration["id"], configuration["api_key"]),
+    verify_certs=configuration.get("verify_certs", True), timeout=60
+)
+
+
+@app.get("/api/sensor_position")
+async def get_sensor_position(request: Request):
+    post_data = templates.get_template("query_sensor_list.json").render()
+    resp = client.search(index="sensor_location_*", query=post_data)
+    return resp
 
 @app.get('/', response_class=HTMLResponse)
-async def home():
-    return """
-<!doctype html>
-<html>
-  <head>
-    <title>NoiseSensor dashboard default page</title>
-  </head>
-  <body>
-    <p>Please run the Ansible playbook named deploy_elastic_web_dashboard.yml</p>
-  </body>
-</html>"""
+async def home(request: Request):
+    return templates.TemplateResponse("status.html",
+                                      context={"request": request})
 

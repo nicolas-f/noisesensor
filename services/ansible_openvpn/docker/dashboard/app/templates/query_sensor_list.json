@@ -1,0 +1,39 @@
+{
+  "size": 0,
+  "fields": [
+    "TPV.lat",
+    "TPV.lon",
+    "hwa",
+    "date"
+  ],
+  "aggs": {
+    "group": {
+      "terms": {
+        "field": "hwa.keyword",
+        "size": 200
+      },
+      "aggs": {
+        "results_without_mb_id": {
+          "filter": {
+            "exists": {
+              "field": "TPV.lat"
+            }
+          }
+        },
+        "group_docs": {
+          "top_hits": {
+            "size": 1,
+            "_source": false,
+            "sort": [
+              {
+                "date": {
+                  "order": "desc"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

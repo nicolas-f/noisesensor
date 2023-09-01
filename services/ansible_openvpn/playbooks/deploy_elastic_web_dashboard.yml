@@ -8,10 +8,10 @@
   tasks:
   - name: Create configuration file for website
     copy:
-      content: "[ELASTIC_SEARCH]\nURL = es01\nAPI_ID = {{ api_key_id }}\nAPI_KEY =  {{ api_key }}\n"
+      content: "{\"id\":\"{{ api_key_id }}\",\"name\":\"python\",\"api_key\":\"Qk77qq1AR3WxkwbuQw_Jcw\",\"es_url\":\"https://es01\",\"verify_certs\":false}"
       dest: '{{ destination }}appconfig.ini'
   - name: Website synchronization
     ansible.posix.synchronize:
       mode: 'pull'
-      src: '{{ playbook_dir }}../../website_dashboard'
+      src: '{{ playbook_dir }}../docker/dashboard'
       dest: '{{ destination }}'
