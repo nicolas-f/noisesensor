@@ -146,7 +146,7 @@ def main():
     client = Elasticsearch(
         args.host,
         api_key=(args.api_key_id, args.api_key),
-        verify_certs=False, timeout=60
+        verify_certs=False, request_timeout=60
     )
     successes = 0
     try:

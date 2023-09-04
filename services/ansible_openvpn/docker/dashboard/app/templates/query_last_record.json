@@ -1,0 +1,17 @@
+{
+  "index": "sensor_indicators_*",
+  "_source": "date_start",
+  "size": 1,
+  "sort": [
+    {
+      "date_start": {
+        "order": "desc"
+      }
+    }
+  ],
+  "query": {
+    "match": {
+      "hwa": "{{ sensor_id }}"
+    }
+  }
+}

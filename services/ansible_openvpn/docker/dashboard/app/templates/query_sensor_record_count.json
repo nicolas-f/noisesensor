@@ -1,4 +1,5 @@
 {
+  "index": "sensor_indicators_*",
   "size": 0,
       "query": {
     "bool": {
@@ -8,10 +9,10 @@
         },
         {
           "range": {
-            "timestamp": {
-            "gte": {{ start_time }},
-            "lte": {{ end_time }},
-            "format": "epoch_millis"
+            "date_start": {
+              "gte": {{ start_time }},
+              "lte": {{ end_time }},
+              "format": "epoch_millis"
             }
           }
         }
@@ -24,18 +25,18 @@
     "aggs": {
         "group": {
             "terms": {
-                "field": "producerID",
+                "field": "hwa.keyword",
 		"size" : 200
             },
             "aggs": {
-               "types_count" : { "value_count" : { "field" : "producerID" } },
+               "types_count" : { "value_count" : { "field" : "hwa.keyword" } },
                 "group_docs": {
                     "top_hits": {
-                      "_source": ["timestamp"],
+                      "_source": ["date_start"],
                         "size": 1,
                         "sort": [
                             {
-                                "timestamp": {
+                                "date_start": {
                                     "order": "desc"
                                 }
                             }

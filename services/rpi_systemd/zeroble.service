@@ -1,6 +1,6 @@
 [Unit]
 Description=Alert Pixl.js box through ble that a train is currently crossing
-Requires=zerotrigger.service
+After=time-sync.target
 
 [Service]
 Type=simple

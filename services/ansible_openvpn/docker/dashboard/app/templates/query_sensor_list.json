@@ -1,40 +1,46 @@
 {
   "index": "sensor_location_*",
-  "size": 0,
-  "fields": [
-    "TPV.lat",
-    "TPV.lon",
-    "hwa",
-    "date"
-  ],
-  "aggs": {
-    "group": {
-      "terms": {
-        "field": "hwa.keyword",
-        "size": 200
-      },
-      "aggs": {
-        "results_without_mb_id": {
-          "filter": {
-            "exists": {
-              "field": "TPV.lat"
-            }
-          }
-        },
-        "group_docs": {
-          "top_hits": {
-            "size": 1,
-            "_source": false,
-            "sort": [
-              {
-                "date": {
-                  "order": "desc"
-                }
-              }
-            ]
+   "query": {
+    "bool": {
+      "must": [
+        {
+          "exists": {
+            "field": "TPV.lat"
           }
         }
+      ]
+    }
+  },
+  "_source": false,
+  "collapse": {
+    "field": "hwa.keyword",
+    "inner_hits": {
+      "name": "most_recent",
+      "fields": [
+        "TPV.lat",
+        "TPV.lon",
+        "hwa",
+        "date"
+      ],
+      "size": 1,
+      "sort": [
+        {
+          "date": "desc"
+        },
+        {
+          "TPV.lat": "desc"
+        }
+      ],
+      "_source": false
+    },
+    "max_concurrent_group_searches": 4
+  },
+  "sort": [
+    {
+      "date": {
+        "order": "desc"
       }
     }
-  }
+  ],
+  "from": 0
 }

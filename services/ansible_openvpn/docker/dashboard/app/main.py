@@ -53,8 +53,33 @@ configuration = json.load(open("app/config.json", "r"))
 client = Elasticsearch(
     configuration.get("url", "https://es01:9200"),
     api_key=(configuration["id"], configuration["api_key"]),
-    verify_certs=configuration.get("verify_certs", True), timeout=60
+    verify_certs=configuration.get("verify_certs", True), request_timeout=60
 )
+
+
+@app.get("/api/sensor_record_count/{start_epoch_millis}/{end_epoch_millis}")
+async def get_sensor_record_count(request: Request, start_epoch_millis: int,
+                                  end_epoch_millis: int):
+    post_data = json.loads(
+        templates.get_template("query_sensor_record_count.json").render(
+            start_time=start_epoch_millis, end_time=end_epoch_millis))
+    resp = client.search(**post_data)
+    # reformat elastic search result
+    return [{"hwa": bucket["key"], "count": bucket["doc_count"]}
+            for bucket in resp["aggregations"]["group"]["buckets"]]
+
+
+@app.get("/get-last-record/{sensor_id}")
+async def get_sensor_6_hours_count(request: Request):
+    post_data = json.loads(
+        templates.get_template("query_sensor_uptime.json").render())
+    resp = client.search(**post_data)
+    # reformat elastic search result
+    return [{"hwa": hit["fields"]["hwa"][0], "date": hit["fields"]["date"][0],
+             "lat": hit["fields"]["TPV.lat"][0],
+             "lon": hit["fields"]["TPV.lon"][0]}
+            for bucket in resp["aggregations"]["group"]["buckets"] for hit in
+            bucket["group_docs"]["hits"]["hits"] if "TPV.lat" in hit["fields"].keys()]
 
 
 @app.get("/api/sensor_position")
@@ -63,11 +88,13 @@ async def get_sensor_position(request: Request):
         templates.get_template("query_sensor_list.json").render())
     resp = client.search(**post_data)
     # reformat elastic search result
-    return [{"hwa": hit["fields"]["hwa"][0], "date": hit["fields"]["date"][0],
-             "lat": hit["fields"]["TPV.lat"][0],
-             "lon": hit["fields"]["TPV.lon"][0]}
-            for bucket in resp["aggregations"]["group"]["buckets"] for hit in
-            bucket["group_docs"]["hits"]["hits"]]
+    return [
+        {"hwa": sub_hit["fields"]["hwa"][0],
+         "lat": sub_hit["fields"]["TPV.lat"][0],
+         "lon": sub_hit["fields"]["TPV.lon"][0],
+         "date": sub_hit["fields"]["date"][0]}
+        for hit in resp["hits"]["hits"] for
+        sub_hit in hit["inner_hits"]["most_recent"]["hits"]["hits"]]
 
 
 @app.get('/', response_class=HTMLResponse)

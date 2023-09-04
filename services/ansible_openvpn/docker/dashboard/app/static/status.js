@@ -1,22 +1,49 @@
 
+function onMarkerClick(e) {
+    selectedSensor = e.target.options.data["hwa"];
+    // Fetch the last sensor record
+    $.getJSON( "/get-last-record/" + selectedSensor, function( data ) {
+       if ( $("#uptimectrl").length == 0 ) {
+        upTimeControl.addTo(lmap);
+        loadDateTime();
+        buildUpTime();
+       }
+       var pickerCtrl = $('input[name="datetimes"]').data('daterangepicker');
+       var start = pickerCtrl.startDate.clone();
+       var end = pickerCtrl.endDate.clone();
+       start = start.add(start.utcOffset(), 'm').valueOf();
+       end = end.add(end.utcOffset(), 'm').valueOf();
+       var sensorEpoch = data["hits"]["hits"][0]["_source"]["timestamp"];
+       // Always display the last month of selected sensor data
+       start = moment(sensorEpoch).utc().startOf('month').valueOf();
+       end = moment(sensorEpoch).utc().endOf('month').valueOf();
+       pickerCtrl.setStartDate(moment(start));
+       pickerCtrl.setEndDate(moment(end));
+       uptimeChart(selectedSensor, start, end);
+   });
+}
+
+
 function getStations(lmap, sensorsLayer) {
-    $.getJSON( "static/network.json", function( data ) {
+    $.getJSON( "/api/sensor_position", function( data ) {
       var minLat = 90;
       var maxLat = -90;
       var minLong = 180;
       var maxLong = -180;
       $.each( data, function( key, val ) {
         var lat = val.lat;
-        var lon = val.long;
-        var style = {data: val, title:"id: "+val.esid+"\nlocal ip: 192.168.1."+val.box_id_sensor+"\n4g id: "+val["4g_router_id"], icon: greyIcon};
-        sensorsLayer.addLayer(L.marker([lat, lon], style));
+        var lon = val.lon;
+        var style = {data: val, title:"id: "+val.hwa, icon: greyIcon};
+        var marker = L.marker([lat, lon], style);
+        marker.on('click', onMarkerClick);
+        sensorsLayer.addLayer(marker);
         minLat = Math.min(minLat, lat);
         minLong = Math.min(minLong, lon);
         maxLat = Math.max(maxLat, lat);
         maxLong = Math.max(maxLong, lon);
       });
       // Set extent to sensors
-      if(minLat < maxLat && minLong < maxLong) {
+      if(minLat < 90 && minLong < 180) {
         lmap.fitBounds([ [minLat, minLong], [maxLat, maxLong] ]);
       }
       // Update sensors status from database
@@ -24,45 +51,22 @@ function getStations(lmap, sensorsLayer) {
     });
   }
 
-function getRouters(lmap, routersLayer) {
-    var params = {cache: false, url: "generated/routers.json",dataType: "json", success: function( data ) {
-      $.each( data, function( key, val ) {
-        var lat = val.lat;
-        var lon = val.long;
-        var cabinetIcon = redCabinetIcon;
-        var title = "id: "+val.id+"\n4g id: "+val["4g_router_id"]+"\nmac: "+val["mac"];
-        if("online" in val) {
-            title+= "\nonline: "+new Date(val.online * 1000).toISOString()
-            if(moment().subtract(25, 'hours').valueOf() / 1000 < val.online) {
-                cabinetIcon = greenCabinetIcon;
-            }
-        }
-        if("clients" in val) {
-            title+="\nclients: \n"+val["clients"].join("\n");
-        }
-        var style = {data: val, title:title, icon: cabinetIcon};
-        routersLayer.addLayer(L.marker([lat, lon], style));
-      });
-    }};
-    $.ajax(params);
-  }
-
 function getStationsRecordCount(lmap, sensorsLayer) {
-    var start_time = moment().subtract(14, 'minutes').valueOf();
-    var end_time = moment().subtract(2, 'minutes').valueOf();
+    var start_time = moment().subtract(30, 'minutes').valueOf();
+    var end_time = moment().valueOf();
     var expected_records = Math.trunc((end_time - start_time) / 1000 / 10);
     var sensors = new Map();
-    $.getJSON( "sensors-record-count/" + start_time + "/" + end_time, function( data ) {
-      $.each( data.aggregations.group.buckets, function( key, val ) {
+    $.getJSON( "/api/sensor_record_count/" + start_time + "/" + end_time, function( data ) {
+      $.each( data, function( key, val ) {
             // Set sensor status
-            sensors.set(val.key, val.doc_count);
+            sensors.set(val.hwa, val.count);
       });
      // Loop over leaflet markers
      sensorsLayer.eachLayer(function(val) {
             var icon = val.options.icon;
-            if(!sensors.has(val.options.data.esid)) {
+            if(!sensors.has(val.options.data.hwa)) {
                 val.setIcon(redIcon);
-            } else if(sensors.get(val.options.data.esid) < expected_records - 1) {
+            } else if(sensors.get(val.options.data.hwa) < expected_records - 1) {
                 val.setIcon(yellowIcon);
             } else {
                 val.setIcon(greenIcon);
@@ -77,18 +81,15 @@ var lmap = L.map('mapid').setView([47.7456, -3.3687], 16);
 var sensors = L.layerGroup();
 var routers = L.layerGroup();
 
-L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoibmljb2xhcy1mIiwiYSI6ImNsbTBhMTkxMTE3ODkzZHA2ZGM0NWVhb3EifQ.XLAxFMiFQD1VomPnHjcFAA', {
-    maxZoom: 18,
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
-        '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
-        'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-    id: 'streets-v11'
-}).addTo(lmap);
+var osm = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+  maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'});
+
+osm.addTo(lmap);
 
 sensors.addTo(lmap);
 routers.addTo(lmap);
 
-//getStations(lmap, sensors);
+getStations(lmap, sensors);
 //getRouters(lmap, routers);
 
 var legend = L.control({position: 'bottomright'});
@@ -114,3 +115,14 @@ legend.onAdd = function (lmap) {
 legend.addTo(lmap);
 
 L.control.locate().addTo(lmap);
+
+
+var upTimeControl = L.control({position: 'bottomcenter', });
+
+
+upTimeControl.onAdd = function (lmap) {
+    var div = L.DomUtil.create('div', 'info uptime');
+    div.id = "uptimectrl";
+    div.innerHTML += "<div class=\"form-style-7\"> <input type=\"text\" name=\"datetimes\"/> </div> <div id=\"chart\"></div>";
+    return div;
+};

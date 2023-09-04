@@ -1,0 +1,32 @@
+{
+  "index": "sensor_indicators_*",
+  "aggs": {
+    "daily": {
+      "date_histogram": {
+        "field": "date_start",
+        "interval": "6h",
+        "format": "yyyy-MM-dd HH"
+      }
+    }
+  },
+  "size": 0,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "date_start": {
+              "gte": {{ start_time }},
+              "lte": {{ end_time }}
+            }
+          }
+        },
+        {
+          "match": {
+            "hwa.keyword": "{{ sensor_id }}"
+          }
+        }
+      ]
+    }
+  }
+}
