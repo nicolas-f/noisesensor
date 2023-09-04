@@ -8,7 +8,7 @@
   tasks:
   - name: Create configuration file for website
     copy:
-      content: "{\"id\":\"{{ api_key_id }}\",\"name\":\"python\",\"api_key\":\"Qk77qq1AR3WxkwbuQw_Jcw\",\"es_url\":\"https://es01:9200\",\"verify_certs\":false}"
+      content: "{\"id\":\"{{ api_key_id }}\",\"name\":\"python\",\"api_key\":\"{{ api_key }}\",\"es_url\":\"https://es01:9200\",\"verify_certs\":false}"
       dest: '{{ destination }}app/config.json'
   - name: Website synchronization
     ansible.posix.synchronize:
