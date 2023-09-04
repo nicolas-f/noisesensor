@@ -52,8 +52,8 @@ function getStations(lmap, sensorsLayer) {
   }
 
 function getStationsRecordCount(lmap, sensorsLayer) {
-    var start_time = moment().subtract(30, 'minutes').valueOf();
-    var end_time = moment().valueOf();
+    var start_time = moment().subtract(60, 'minutes').valueOf();
+    var end_time = moment().subtract(30, 'minutes').valueOf();
     var expected_records = Math.trunc((end_time - start_time) / 1000 / 10);
     var sensors = new Map();
     $.getJSON( "/api/sensor_record_count/" + start_time + "/" + end_time, function( data ) {
@@ -99,7 +99,7 @@ legend.onAdd = function (lmap) {
 
 
     // loop through our density intervals and generate a label with a colored square for each interval
-    div.innerHTML += "2 minutes delayed status map<br/>";
+    div.innerHTML += "30 minutes delayed status map<br/>";
     for (var i = 0; i < icons.length; i++) {
         div.innerHTML += '<i ><img style="max-height:100%;" src="'+icons[i].options.iconUrl+'"/></i>'+labels[i];
         if(i < icons.length - 1) {

@@ -106,7 +106,7 @@ function loadSensor(svg, jsonContent) {
             return "#000000";
         } else if (d < 2052) {
             return "#CC0000";
-        } else if (d < 2159) {
+        } else if (d < 2151) {
             return "#CCCC00";
         } else {
             return "#009900";
