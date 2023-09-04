@@ -13,5 +13,11 @@
     "match": {
       "hwa": "{{ sensor_id }}"
     }
-  }
+  },
+  "docvalue_fields": [
+    {
+      "field": "date_start",
+      "format": "epoch_millis"
+    }
+  ]
 }

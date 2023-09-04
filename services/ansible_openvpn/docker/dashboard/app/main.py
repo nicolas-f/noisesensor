@@ -57,6 +57,19 @@ client = Elasticsearch(
 )
 
 
+@app.get("/api/get-uptime/{sensor_id}/{start_epoch_millis}/{end_epoch_millis}")
+async def get_sensor_uptime(request: Request, sensor_id: str,
+                            start_epoch_millis: int, end_epoch_millis: int):
+    post_data = json.loads(
+        templates.get_template("query_sensor_uptime.json").render(
+            sensor_id=sensor_id, start_time=start_epoch_millis,
+            end_time=end_epoch_millis))
+    print(json.dumps(post_data))
+    resp = client.search(**post_data)
+    # reformat elastic search result
+    return resp
+
+
 @app.get("/api/sensor_record_count/{start_epoch_millis}/{end_epoch_millis}")
 async def get_sensor_record_count(request: Request, start_epoch_millis: int,
                                   end_epoch_millis: int):
@@ -69,17 +82,16 @@ async def get_sensor_record_count(request: Request, start_epoch_millis: int,
             for bucket in resp["aggregations"]["group"]["buckets"]]
 
 
-@app.get("/get-last-record/{sensor_id}")
-async def get_sensor_6_hours_count(request: Request):
+@app.get("/api/get-last-record/{sensor_id}")
+async def get_sensor_last_record(request: Request, sensor_id: str):
     post_data = json.loads(
-        templates.get_template("query_sensor_uptime.json").render())
+        templates.get_template("query_last_record.json").render(
+            sensor_id=sensor_id))
     resp = client.search(**post_data)
     # reformat elastic search result
-    return [{"hwa": hit["fields"]["hwa"][0], "date": hit["fields"]["date"][0],
-             "lat": hit["fields"]["TPV.lat"][0],
-             "lon": hit["fields"]["TPV.lon"][0]}
-            for bucket in resp["aggregations"]["group"]["buckets"] for hit in
-            bucket["group_docs"]["hits"]["hits"] if "TPV.lat" in hit["fields"].keys()]
+    result = resp["hits"]["hits"][0]
+    return {"date": result["_source"]["date_start"],
+            "timestamp": int(result["fields"]["date_start"][0])}
 
 
 @app.get("/api/sensor_position")

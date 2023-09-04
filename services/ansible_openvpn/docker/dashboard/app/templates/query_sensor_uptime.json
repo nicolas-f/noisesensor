@@ -4,7 +4,7 @@
     "daily": {
       "date_histogram": {
         "field": "date_start",
-        "interval": "6h",
+        "fixed_interval": "6h",
         "format": "yyyy-MM-dd HH"
       }
     }
@@ -17,7 +17,8 @@
           "range": {
             "date_start": {
               "gte": {{ start_time }},
-              "lte": {{ end_time }}
+              "lte": {{ end_time }},
+              "format": "epoch_millis"
             }
           }
         },

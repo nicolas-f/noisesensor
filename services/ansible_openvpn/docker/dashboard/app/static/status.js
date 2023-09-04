@@ -2,7 +2,7 @@
 function onMarkerClick(e) {
     selectedSensor = e.target.options.data["hwa"];
     // Fetch the last sensor record
-    $.getJSON( "/get-last-record/" + selectedSensor, function( data ) {
+    $.getJSON( "/api/get-last-record/" + selectedSensor, function( data ) {
        if ( $("#uptimectrl").length == 0 ) {
         upTimeControl.addTo(lmap);
         loadDateTime();
@@ -13,7 +13,7 @@ function onMarkerClick(e) {
        var end = pickerCtrl.endDate.clone();
        start = start.add(start.utcOffset(), 'm').valueOf();
        end = end.add(end.utcOffset(), 'm').valueOf();
-       var sensorEpoch = data["hits"]["hits"][0]["_source"]["timestamp"];
+       var sensorEpoch = data["timestamp"];
        // Always display the last month of selected sensor data
        start = moment(sensorEpoch).utc().startOf('month').valueOf();
        end = moment(sensorEpoch).utc().endOf('month').valueOf();
@@ -79,7 +79,7 @@ function getStationsRecordCount(lmap, sensorsLayer) {
 var lmap = L.map('mapid').setView([47.7456, -3.3687], 16);
 
 var sensors = L.layerGroup();
-var routers = L.layerGroup();
+
 
 var osm = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
   maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution">CARTO</a>'});
@@ -87,10 +87,8 @@ var osm = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_
 osm.addTo(lmap);
 
 sensors.addTo(lmap);
-routers.addTo(lmap);
 
 getStations(lmap, sensors);
-//getRouters(lmap, routers);
 
 var legend = L.control({position: 'bottomright'});
 
@@ -113,8 +111,6 @@ legend.onAdd = function (lmap) {
 };
 
 legend.addTo(lmap);
-
-L.control.locate().addTo(lmap);
 
 
 var upTimeControl = L.control({position: 'bottomcenter', });

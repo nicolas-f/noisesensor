@@ -26,9 +26,6 @@
       "sort": [
         {
           "date": "desc"
-        },
-        {
-          "TPV.lat": "desc"
         }
       ],
       "_source": false
