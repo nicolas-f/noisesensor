@@ -4,7 +4,7 @@
     "Speech"
   ],
   "configuration_file": "",
-  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon"],
+  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon","Aircraft","Aircraft engine","Jet engine", "Propeller, airscrew","Helicopter","Fixed-wing aircraft, airplane"],
   "min_leq": 0.0,
   "total_length": 20.0,
   "cached_length": 10.0,
