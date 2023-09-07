@@ -1,0 +1,178 @@
+{
+  "name": "sensor_indicators_template",
+  "index_patterns": [
+    "sensor_indicators_*"
+  ],
+  "mappings": {
+    "properties": {
+      "12": {
+        "properties": {
+          "5HZ": {
+            "type": "scaled_float",
+            "scaling_factor": 100
+          }
+        }
+      },
+      "31": {
+        "properties": {
+          "5HZ": {
+            "type": "scaled_float",
+            "scaling_factor": 100
+          }
+        }
+      },
+      "10000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "1000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "100HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "10HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "12500HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "1250HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "125HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "1600HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "160HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "16HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "2000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "200HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "20HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "2500HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "250HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "25HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "3150HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "315HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "4000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "400HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "40HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "5000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "500HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "50HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "6300HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "630HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "63HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "8000HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "800HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "80HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "8HZ": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "LAeq": {
+        "type": "scaled_float",
+        "scaling_factor": 100
+      },
+      "LCeq": {
+          "type": "scaled_float",
+          "scaling_factor": 100
+        },
+        "LZeq": {
+          "type": "scaled_float",
+          "scaling_factor": 100
+        },
+        "date_end": {
+          "type": "date"
+        },
+        "date_start": {
+          "type": "date"
+        },
+        "hwa": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+}
+

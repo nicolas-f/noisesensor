@@ -1,0 +1,16 @@
+{
+  "name": "sensor_yamnet_template",
+  "index_patterns": [
+    "sensor_yamnet_*"
+  ],
+  "mappings": {
+    "properties": {
+      "encrypted_audio": {
+        "type": "binary"
+      },
+      "spectrogram": {
+        "type": "binary"
+      }
+    }
+  }
+}

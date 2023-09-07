@@ -148,6 +148,19 @@ def main():
         api_key=(args.api_key_id, args.api_key),
         verify_certs=False, request_timeout=60
     )
+    # Check if templates are already pushed
+    # Templates are optional, but it will help
+    # to integrate well with kibana and reduce disk usage/increase performance
+    result = client.cat.templates(format="json")
+    templates = set([template["name"] for template in result])
+    templates_to_push = [filepath for filepath in
+                         os.listdir(os.path.dirname(__file__)) if
+                         filepath.endswith("template.json")]
+    for template in templates_to_push:
+        filename = os.path.basename(template)
+        if not filename[:filename.rfind(".json")] in templates:
+            print("Push index template " + filename)
+            client.indices.put_template(**json.load(open(template)))
     successes = 0
     try:
         for ok, action in streaming_bulk(client=client,

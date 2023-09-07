@@ -1,201 +1,199 @@
-PUT _index_template/sensor_location_template
 {
+  "name": "sensor_location_template",
   "index_patterns": ["sensor_location_*"],
-  "template": {
-    "mappings": {
-       "runtime": {
-        "temperature_4g": {
-          "type": "double",
-          "script": {
-            "source": "emit(Double.parseDouble(doc['temperature_module.keyword'].value.substring(doc['temperature_module.keyword'].value.indexOf(\",\") + 1)))"
+  "mappings": {
+     "runtime": {
+      "temperature_4g": {
+        "type": "double",
+        "script": {
+          "source": "emit(Double.parseDouble(doc['temperature_module.keyword'].value.substring(doc['temperature_module.keyword'].value.indexOf(\",\") + 1)))"
+        }
+      }
+    },
+    "properties": {
+      "SKY": {
+        "properties": {
+          "class": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "device": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "gdop": {
+            "type": "float"
+          },
+          "hdop": {
+            "type": "float"
+          },
+          "nSat": {
+            "type": "long"
+          },
+          "pdop": {
+            "type": "float"
+          },
+          "satellites": {
+            "properties": {
+              "PRN": {
+                "type": "long"
+              },
+              "az": {
+                "type": "float"
+              },
+              "el": {
+                "type": "float"
+              },
+              "gnssid": {
+                "type": "long"
+              },
+              "ss": {
+                "type": "float"
+              },
+              "svid": {
+                "type": "long"
+              },
+              "used": {
+                "type": "boolean"
+              }
+            }
+          },
+          "tdop": {
+            "type": "float"
+          },
+          "uSat": {
+            "type": "long"
+          },
+          "vdop": {
+            "type": "float"
+          },
+          "xdop": {
+            "type": "float"
+          },
+          "ydop": {
+            "type": "float"
           }
         }
       },
-      "properties": {
-        "SKY": {
-          "properties": {
-            "class": {
-              "type": "text",
-              "fields": {
-                "keyword": {
-                  "type": "keyword",
-                  "ignore_above": 256
-                }
+      "TPV": {
+        "properties": {
+          "alt": {
+            "type": "float"
+          },
+          "altHAE": {
+            "type": "float"
+          },
+          "altMSL": {
+            "type": "float"
+          },
+          "class": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
               }
-            },
-            "device": {
-              "type": "text",
-              "fields": {
-                "keyword": {
-                  "type": "keyword",
-                  "ignore_above": 256
-                }
-              }
-            },
-            "gdop": {
-              "type": "float"
-            },
-            "hdop": {
-              "type": "float"
-            },
-            "nSat": {
-              "type": "long"
-            },
-            "pdop": {
-              "type": "float"
-            },
-            "satellites": {
-              "properties": {
-                "PRN": {
-                  "type": "long"
-                },
-                "az": {
-                  "type": "float"
-                },
-                "el": {
-                  "type": "float"
-                },
-                "gnssid": {
-                  "type": "long"
-                },
-                "ss": {
-                  "type": "float"
-                },
-                "svid": {
-                  "type": "long"
-                },
-                "used": {
-                  "type": "boolean"
-                }
-              }
-            },
-            "tdop": {
-              "type": "float"
-            },
-            "uSat": {
-              "type": "long"
-            },
-            "vdop": {
-              "type": "float"
-            },
-            "xdop": {
-              "type": "float"
-            },
-            "ydop": {
-              "type": "float"
             }
+          },
+          "climb": {
+            "type": "float"
+          },
+          "device": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "epc": {
+            "type": "float"
+          },
+          "eph": {
+            "type": "float"
+          },
+          "eps": {
+            "type": "float"
+          },
+          "ept": {
+            "type": "float"
+          },
+          "epv": {
+            "type": "float"
+          },
+          "epx": {
+            "type": "float"
+          },
+          "epy": {
+            "type": "float"
+          },
+          "geoidSep": {
+            "type": "float"
+          },
+          "lat": {
+            "type": "float"
+          },
+          "lon": {
+            "type": "float"
+          },
+          "magvar": {
+            "type": "float"
+          },
+          "mode": {
+            "type": "long"
+          },
+          "sep": {
+            "type": "float"
+          },
+          "speed": {
+            "type": "float"
+          },
+          "time": {
+            "type": "date"
           }
-        },
-        "TPV": {
-          "properties": {
-            "alt": {
-              "type": "float"
-            },
-            "altHAE": {
-              "type": "float"
-            },
-            "altMSL": {
-              "type": "float"
-            },
-            "class": {
-              "type": "text",
-              "fields": {
-                "keyword": {
-                  "type": "keyword",
-                  "ignore_above": 256
-                }
-              }
-            },
-            "climb": {
-              "type": "float"
-            },
-            "device": {
-              "type": "text",
-              "fields": {
-                "keyword": {
-                  "type": "keyword",
-                  "ignore_above": 256
-                }
-              }
-            },
-            "epc": {
-              "type": "float"
-            },
-            "eph": {
-              "type": "float"
-            },
-            "eps": {
-              "type": "float"
-            },
-            "ept": {
-              "type": "float"
-            },
-            "epv": {
-              "type": "float"
-            },
-            "epx": {
-              "type": "float"
-            },
-            "epy": {
-              "type": "float"
-            },
-            "geoidSep": {
-              "type": "float"
-            },
-            "lat": {
-              "type": "float"
-            },
-            "lon": {
-              "type": "float"
-            },
-            "magvar": {
-              "type": "float"
-            },
-            "mode": {
-              "type": "long"
-            },
-            "sep": {
-              "type": "float"
-            },
-            "speed": {
-              "type": "float"
-            },
-            "time": {
-              "type": "date"
-            }
+        }
+      },
+      "date": {
+        "type": "date"
+      },
+      "hwa": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
           }
-        },
-        "date": {
-          "type": "date"
-        },
-        "hwa": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
+        }
+      },
+      "location": {
+        "type": "geo_point"
+      },
+      "lte_strength": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
           }
-        },
-        "location": {
-          "type": "geo_point"
-        },
-        "lte_strength": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "temperature_module": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
+        }
+      },
+      "temperature_module": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
           }
         }
       }
