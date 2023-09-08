@@ -57,6 +57,22 @@ client = Elasticsearch(
 )
 
 
+@app.get("/api/list-samples/{start_epoch_millis}/{end_epoch_millis}")
+async def get_list_samples(request: Request, start_epoch_millis: int,
+                           end_epoch_millis: int):
+    post_data = json.loads(
+        templates.get_template("trigger_list.json").render(
+            start_time=start_epoch_millis, end_time=end_epoch_millis))
+    resp = client.search(**post_data)
+    print(json.dumps(post_data))
+    hits = resp["hits"]["hits"]
+    # reformat elastic search result
+    return [{"hwa": hit["fields"]["hwa.keyword"],
+             "timestamp": hit["fields"]["date"],
+             "_id": hit["_id"]}
+            for hit in hits]
+
+
 @app.get("/api/get-uptime/{sensor_id}/{start_epoch_millis}/{end_epoch_millis}")
 async def get_sensor_uptime(request: Request, sensor_id: str,
                             start_epoch_millis: int, end_epoch_millis: int):
@@ -107,6 +123,12 @@ async def get_sensor_position(request: Request):
          "date": sub_hit["fields"]["date"][0]}
         for hit in resp["hits"]["hits"] for
         sub_hit in hit["inner_hits"]["most_recent"]["hits"]["hits"]]
+
+
+@app.get('/recordings', response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("recordings.html",
+                                      context={"request": request})
 
 
 @app.get('/', response_class=HTMLResponse)

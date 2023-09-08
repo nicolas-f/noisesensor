@@ -38,7 +38,7 @@ def get_sf(config):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='This program read audio from compresse json produced'
+        description='This program read audio from compressed json produced'
                     ' by zerotrigger.py',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--document_gz",
