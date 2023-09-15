@@ -171,9 +171,9 @@ class TestBiQuadFilter(unittest.TestCase):
             raise e
 
     def test_leq_speak_g2(self):
-        fd = FilterDesign(sample_rate=44100,
-                          first_frequency_band=100,
-                          last_frequency_band=16000)
+        fd = FilterDesign(sample_rate=32000,
+                          first_frequency_band=20,
+                          last_frequency_band=12500)
         expected_leqs = []
         fd.down_sampling = fd.G2
         fd.band_division = 3
@@ -182,14 +182,14 @@ class TestBiQuadFilter(unittest.TestCase):
                        configuration["bandpass"]]
         sc = SpectrumChannel(configuration)
         try:
-            with open("/home/fortin/github/NoiseCapture/sosfilter/src/test/resources/org/orbisgis/sos/speak_44100Hz_16bitsPCM_10s.raw","rb") as f:
+            with open(os.path.join(UNIT_TEST_PATH,
+                                   "speak_32000Hz_16bitsPCM_10s.raw"),
+                      "rb") as f:
                 if f is not None:
                     samples = numpy.frombuffer(f.read(), numpy.short)
                     samples = samples / 2**15
                     # process with acoustics library
-                    s = acoustics.Signal(samples, 44100)
-
-                    print(acoustics.standards.iso_tr_25417_2007.equivalent_sound_pressure_level(s.weigh(weighting='C'), 1.0))
+                    s = acoustics.Signal(samples, 32000)
                     frequencies, filtered_signals = s.third_octaves(
                         frequencies=center_frequency)
                     for freq, filtered_signal in list(
