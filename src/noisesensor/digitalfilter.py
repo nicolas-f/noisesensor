@@ -3,10 +3,7 @@ from numba.experimental import jitclass
 from numba import float64, int32     # import the types
 import math
 
-""" A digital biquad filter is a second order recursive linear filter,
- containing two poles and two zeros. "Biquad" is an abbreviation of "bi-quadratic",
-  which refers to the fact that in the Z domain, its transfer function is the ratio of two quadratic functions
-    
+"""
 BSD 3-Clause License
 
 Copyright (c) 2023, University Gustave Eiffel

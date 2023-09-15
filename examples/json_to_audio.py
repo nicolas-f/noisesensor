@@ -8,32 +8,60 @@ import base64
 import json
 import gzip
 import argparse
+import csv
+import sys
+
+
+def encoded_audio_to_ogg_file(config, encoded_audio, ogg_file_path):
+    encrypted_bytes = base64.b64decode(encoded_audio)
+    key = RSA.importKey(open(config.ssh_file).read(),
+                        passphrase=config.ssh_password)
+    cipher = PKCS1_OAEP.new(key)
+
+    decrypted_header = cipher.decrypt(
+        encrypted_bytes[:key.size_in_bytes()])
+
+    aes_key = decrypted_header[:AES.block_size]
+    iv = decrypted_header[AES.block_size:]
+
+    aes_cipher = AES.new(aes_key, AES.MODE_CBC,
+                         iv)
+    decrypted_audio = aes_cipher.decrypt(
+        encrypted_bytes[key.size_in_bytes():])
+    if "Ogg" == decrypted_audio[:3].decode():
+        print("Ogg decrypted")
+    else:
+        raise Exception("Audio not starting with Ogg")
+    with open(ogg_file_path, "wb") as out_fp:
+        out_fp.write(decrypted_audio)
 
 
 def get_sf(config):
     with gzip.open(config.document_gz, 'rt') as fp:
         document = json.load(fp)
-        encrypted_bytes = base64.b64decode(document["encrypted_audio"])
-        key = RSA.importKey(open(config.ssh_file).read(),
-                            passphrase=config.ssh_password)
-        cipher = PKCS1_OAEP.new(key)
+        encoded_audio_to_ogg_file(config, document["encrypted_audio"],
+                                  config.ogg_file)
 
-        decrypted_header = cipher.decrypt(
-            encrypted_bytes[:key.size_in_bytes()])
 
-        aes_key = decrypted_header[:AES.block_size]
-        iv = decrypted_header[AES.block_size:]
+def sanitize_file_name(s):
+    return "".join([c for c in s.replace(":", "_") if c.isalpha() or c.isdigit() or
+                    c in (' ', '_')]).rstrip()
 
-        aes_cipher = AES.new(aes_key, AES.MODE_CBC,
-                             iv)
-        decrypted_audio = aes_cipher.decrypt(
-            encrypted_bytes[key.size_in_bytes():])
-        if "Ogg" == decrypted_audio[:3].decode():
-            print("Ogg decrypted")
-        else:
-            raise Exception("Audio not starting with Ogg")
-        with open(config.ogg_file, "wb") as out_fp:
-            out_fp.write(decrypted_audio)
+
+def get_sf_from_csv(config, csv_file):
+    with open(csv_file, "r") as fp:
+        csv.field_size_limit(sys.maxsize)
+        reader = csv.reader(fp)
+        columns = next(reader)
+        date_column = columns.index("date")
+        encrypted_audio_column = columns.index("encrypted_audio")
+        for data_columns in reader:
+            encrypted_audio = data_columns[encrypted_audio_column]
+            if len(encrypted_audio) > 16:
+                ogg_path = os.path.join(os.path.dirname(csv_file),sanitize_file_name(
+                    data_columns[date_column]) + ".ogg")
+                config.ogg_file = ogg_path
+                encoded_audio_to_ogg_file(config, encrypted_audio, ogg_path)
 
 
 def main():
@@ -61,7 +89,11 @@ def main():
             args_cp.ogg_file = os.path.join(args.document_gz, document[:document.rfind(".json.gz")]+".ogg")
             get_sf(args_cp)
     else:
-        get_sf(args)
+        if args.document_gz.endswith(".json.gz"):
+            get_sf(args)
+        elif args.document_gz.endswith(".csv"):
+            # kibana share method
+            get_sf_from_csv(args, args.document_gz)
 
 
 if __name__ == "__main__":
