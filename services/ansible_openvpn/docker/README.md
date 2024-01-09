@@ -146,4 +146,11 @@ This playbook use the following environment variable to bet set in Environment i
 }
 ```
 
+# OpenVPN management
+
+You can run commands in the openVPN machine with this command
+
+```sh
+sudo docker exec -ti openvpn /bin/bash
+```
 
