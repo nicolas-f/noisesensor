@@ -39,6 +39,7 @@ import gzip
 import json
 import datetime
 import calendar
+import zlib
 
 # This python script read json data fetched from RPI and feed it to an
 # elastic search node
@@ -57,35 +58,38 @@ def fetch_data(args):
             if name.endswith(".json.gz"):
                 if args.verbose:
                     print("Processing " + file_path)
-                with gzip.open(file_path, 'rb') as f:
-                    for line in f:
-                        json_dict = json.loads(line)
-                        if "_index" not in json_dict:
-                            # must create index as it is not specified in the
-                            # document
-                            epoch = os.path.getmtime(file_path)
-                            if "timestamp" in json_dict:
-                                epoch = json_dict["timestamp"]
-                            elif "_source" in json_dict and "timestamp" in \
-                                    json_dict["_source"]:
-                                epoch = json_dict["_source"]["timestamp"]
-                            elif "date" in json_dict:
-                                epoch = calendar.timegm(datetime.datetime.strptime(
-                                    json_dict["date"], "%Y-%m-%dT%H:%M:%S.%fZ")
-                                                        .timetuple())
-                            dt = datetime.datetime.utcfromtimestamp(epoch)
-                            stop_position = name.find("_")
-                            if stop_position == -1:
-                                stop_position = name.find(".")
-                            json_dict["_index"] = name[:stop_position] + "_" + dt.strftime(args.time_format)
-                        json_dict["_index"] = args.index_prepend + json_dict[
-                            "_index"]
-                        if "_id" not in json_dict:
-                            # avoid duplicate by hashing the document
-                            json_dict["_id"] = base64.b64encode(
-                                hashlib.sha256(line).digest()).decode(
-                                sys.getdefaultencoding())
-                        yield json_dict
+                try:    
+                    with gzip.open(file_path, 'rb') as f:
+                        for line in f:
+                            json_dict = json.loads(line)
+                            if "_index" not in json_dict:
+                                # must create index as it is not specified in the
+                                # document
+                                epoch = os.path.getmtime(file_path)
+                                if "timestamp" in json_dict:
+                                    epoch = json_dict["timestamp"]
+                                elif "_source" in json_dict and "timestamp" in \
+                                        json_dict["_source"]:
+                                    epoch = json_dict["_source"]["timestamp"]
+                                elif "date" in json_dict:
+                                    epoch = calendar.timegm(datetime.datetime.strptime(
+                                        json_dict["date"], "%Y-%m-%dT%H:%M:%S.%fZ")
+                                                            .timetuple())
+                                dt = datetime.datetime.utcfromtimestamp(epoch)
+                                stop_position = name.find("_")
+                                if stop_position == -1:
+                                    stop_position = name.find(".")
+                                json_dict["_index"] = name[:stop_position] + "_" + dt.strftime(args.time_format)
+                            json_dict["_index"] = args.index_prepend + json_dict[
+                                "_index"]
+                            if "_id" not in json_dict:
+                                # avoid duplicate by hashing the document
+                                json_dict["_id"] = base64.b64encode(
+                                    hashlib.sha256(line).digest()).decode(
+                                    sys.getdefaultencoding())
+                            yield json_dict
+                except zlib.error as e:
+                    print("Issue with compressed file named "+file_path, e)
                 if not args.keep_file:
                     destination = os.path.join(
                         args.json_archive_folder,
