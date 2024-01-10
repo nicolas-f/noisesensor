@@ -90,7 +90,7 @@ def fetch_data(args):
                                         sys.getdefaultencoding())
                                 yield json_dict
                             except json.decoder.JSONDecodeError:
-                                print("Cannot parse json: "+line)
+                                print("Cannot parse json: "+line.decode("utf-8"))
                 except zlib.error as e:
                     print("Issue with compressed file named "+file_path, e)
                 if not args.keep_file:
