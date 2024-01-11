@@ -44,3 +44,5 @@ Install libs
 pip install -r requirements.txt
 ```
 
+You can see GPS status using the application `gpsmon`
+
