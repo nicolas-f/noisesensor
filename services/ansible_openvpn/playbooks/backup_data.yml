@@ -1,4 +1,6 @@
 - name: rsync data archive to an external ssh
+  hosts: all
+  become: false
   vars:
     source: '/home/semaphore/data/archive/'
     destination: '~/backup_noisesensor/'
