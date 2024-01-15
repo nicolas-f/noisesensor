@@ -1,0 +1,12 @@
+- name: rsync data archive to an external ssh
+  hosts: 127.0.0.1
+  connection: local
+  become: false
+  vars:
+    source: '/home/semaphore/data/archive/'
+    destination: 'backup_noisesensor/'
+  tasks:
+  - name: data synchronization
+    ansible.posix.synchronize:
+      src: '{{ source }}'
+      dest: '{{ destination }}'
