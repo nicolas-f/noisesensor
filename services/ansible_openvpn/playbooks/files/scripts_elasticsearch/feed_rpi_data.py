@@ -105,7 +105,7 @@ def fetch_data(args):
                         os.makedirs(parent_dir_destination)
                     os.rename(file_path, destination)
                     if args.verbose:
-                        print("Processed %d documents, now move %s to %s" %(processed_documents, file_path, destination)
+                        print("Processed %d documents, now move %s to %s" %(processed_documents, file_path, destination))
 
 
 def main():
