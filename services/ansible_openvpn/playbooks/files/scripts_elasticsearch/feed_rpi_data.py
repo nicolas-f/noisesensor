@@ -58,6 +58,7 @@ def fetch_data(args):
             if name.endswith(".json.gz"):
                 if args.verbose:
                     print("Processing " + file_path)
+                processed_documents = 0
                 try:    
                     with gzip.open(file_path, 'rb') as f:
                         for line in f:
@@ -89,6 +90,7 @@ def fetch_data(args):
                                         hashlib.sha256(line).digest()).decode(
                                         sys.getdefaultencoding())
                                 yield json_dict
+                                processed_documents += 1
                             except json.decoder.JSONDecodeError:
                                 print("Cannot parse json: "+line.decode("utf-8"))
                 except Exception as e:
@@ -103,7 +105,7 @@ def fetch_data(args):
                         os.makedirs(parent_dir_destination)
                     os.rename(file_path, destination)
                     if args.verbose:
-                        print("Move " + file_path + " to " + destination)
+                        print("Processed %d documents, now move %s to %s" %(processed_documents, file_path, destination)
 
 
 def main():
