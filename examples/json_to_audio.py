@@ -29,7 +29,7 @@ def encoded_audio_to_ogg_file(config, encoded_audio, ogg_file_path):
     decrypted_audio = aes_cipher.decrypt(
         encrypted_bytes[key.size_in_bytes():])
     if "Ogg" == decrypted_audio[:3].decode():
-        print("Ogg decrypted")
+        print("Ogg decrypted to %s" % ogg_file_path)
     else:
         raise Exception("Audio not starting with Ogg")
     with open(ogg_file_path, "wb") as out_fp:
@@ -87,7 +87,10 @@ def main():
             args_cp = copy.copy(args)
             args_cp.document_gz = os.path.join(args.document_gz, document)
             args_cp.ogg_file = os.path.join(args.document_gz, document[:document.rfind(".json.gz")]+".ogg")
-            get_sf(args_cp)
+            try:
+              get_sf(args_cp)
+            except KeyError as e:
+                print("Cannot read %s" % document)
     else:
         if args.document_gz.endswith(".json.gz"):
             get_sf(args)
