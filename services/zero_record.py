@@ -206,6 +206,11 @@ class BandwidthWatchThread(threading.Thread):
 
 
 def main():
+    # Get the last modified time in epoch format
+    last_modified_time = os.path.getmtime(os.path.realpath(__file__))
+    if time.time() < last_modified_time:
+        raise OSError("The current file modification time is after the current"
+                      " time, so there is an issue with the clock !")
     epilog = "example:\narecord --disable-softvol " \
              "-D plughw:CARD=U18dB,DEV=0 -r 48000 -f FLOAT_LE -c 1 -t raw" \
              " | python3 -u zero_record.py -p 10001 \n\n" \
