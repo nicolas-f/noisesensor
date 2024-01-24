@@ -29,6 +29,7 @@ yamnet.h5
 *.tflite
 examples/*.ogg
 .env
+*.kt
 # openvpn server configuration
 services/ansible_openvpn/docker/openvpn-data
 config.json
