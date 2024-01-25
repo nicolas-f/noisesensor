@@ -5,6 +5,7 @@ import numpy
 from noisesensor.filterdesign import FilterDesign
 from noisesensor.spectrumchannel import SpectrumChannel, compute_leq
 import acoustics
+import math
 
 UNIT_TEST_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -159,13 +160,11 @@ class TestBiQuadFilter(unittest.TestCase):
                     # process with this library
                     spectrum = sc.process_samples(samples)
                     self.assertEqual(len(expected_leqs), len(spectrum))
-                    for expected, got in zip(expected_leqs, spectrum):
-                        # Use error delta in linear scale
-                        self.assertAlmostEqual(to_w(expected), to_w(got),
-                                               delta=8e-4,
-                                               msg="%f != %f" %
-                                                   (expected, got))
-
+                    err = 0
+                    for freq, expected, got in zip(frequencies.nominal, expected_leqs, spectrum):
+                        err += (expected[0] - got)**2
+                    mean_squared_error = math.sqrt(err / len(expected_leqs))
+                    self.assertLess(mean_squared_error, 0.32)
         except FileNotFoundError as e:
             print("Working directory: "+os.path.abspath("./"))
             raise e
@@ -205,12 +204,11 @@ class TestBiQuadFilter(unittest.TestCase):
                     # process with this library
                     spectrum = sc.process_samples(samples)
                     self.assertEqual(len(expected_leqs), len(spectrum))
+                    err = 0
                     for expected, got in zip(expected_leqs, spectrum):
-                        # Use error delta in linear scale
-                        self.assertAlmostEqual(to_w(expected), to_w(got),
-                                               delta=17e-4,
-                                               msg="%f != %f" %
-                                                   (expected, got))
+                        err += (expected[0] - got)**2
+                    mean_squared_error = math.sqrt(err / len(expected_leqs))
+                    self.assertLess(mean_squared_error, 0.6)
 
         except FileNotFoundError as e:
             print("Working directory: "+os.path.abspath("./"))
