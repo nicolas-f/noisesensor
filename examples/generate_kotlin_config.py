@@ -85,21 +85,13 @@ data class SubsamplingFilter(
 )
 """
 
-f = FilterDesign(sample_rate=48000, first_frequency_band=50,
-                 last_frequency_band=16000, window_samples=48000*0.125)
-
-f.down_sampling = f.G2
-f.band_division = 3
-
-configuration = f.generate_configuration()
-
 
 def write_array(fw, array_in):
     for li, val in enumerate(array_in):
         if li > 0:
-            fw.write(",%f" % val)
+            fw.write(",%s" % val)
         else:
-            fw.write("%f" % val)
+            fw.write("%s" % val)
 
 
 def dump_sos(fw, sos):
@@ -117,27 +109,64 @@ def dump_sos(fw, sos):
 
 
 def main():
-    with open("config_%d.kt" % f.sample_rate, "w") as fw:
-        fw.write("fun get%dHZ() {\n" % f.sample_rate)
-        fw.write(
-            "  return SpectrumChannelConfiguration(\n    bandpass=listOf(")
-        for bi, bandpass in enumerate(configuration["bandpass"]):
-            if bi > 0:
-                fw.write(",\n      ")
-            else:
-                fw.write("\n      ")
-            fw.write("Bandpass({center_frequency},{max_frequency},"
-                     "{min_frequency},{nominal_frequency},{subsampling_depth},"
-                     .format(**bandpass))
-            dump_sos(fw, bandpass["sos"])
+    with open("ConfigSpectrumChannel.kt", "w") as fw:
+        fw.write(class_source)
+
+        for freq in [44100, 48000]:
+            f = FilterDesign(sample_rate=freq, first_frequency_band=50,
+                             last_frequency_band=16000,
+                             window_samples=freq * 0.125)
+
+            f.down_sampling = f.G2
+            f.band_division = 3
+
+            configuration = f.generate_configuration()
+            fw.write("\n\nfun get%dHZ() : SpectrumChannelConfiguration {\n" % f.sample_rate)
             fw.write(
-                ",subsamplingFilter=SubsamplingFilter({center_frequency}"
-                "{max_frequency},{min_frequency},{nominal_frequency},sos="
-                .format(**bandpass["subsampling_filter"]))
-            dump_sos(fw, bandpass["subsampling_filter"]["sos"])
-            fw.write("))")
-        fw.write("  ))\n")
-        fw.write("}\n")
+                "  return SpectrumChannelConfiguration(\n    bandpass=listOf(")
+            for bi, bandpass in enumerate(configuration["bandpass"]):
+                if bi > 0:
+                    fw.write(",\n      ")
+                else:
+                    fw.write("\n      ")
+                fw.write("Bandpass({center_frequency},{max_frequency},"
+                         "{min_frequency},{nominal_frequency},"
+                         "{subsampling_depth},"
+                         .format(**bandpass))
+                dump_sos(fw, bandpass["sos"])
+                fw.write(
+                    ",subsamplingFilter=SubsamplingFilter({center_frequency},"
+                    "{max_frequency},{min_frequency},{nominal_frequency}"
+                    ",sos=".format(**bandpass["subsampling_filter"]))
+                dump_sos(fw, bandpass["subsampling_filter"]["sos"])
+                fw.write("))")
+            fw.write("),\n    antiAliasing=")
+            fw.write("AntiAliasing(a1=doubleArrayOf(")
+            write_array(fw, configuration["anti_aliasing"]["a1"])
+            fw.write("), a2=doubleArrayOf(")
+            write_array(fw, configuration["anti_aliasing"]["a2"])
+            fw.write("), b0=doubleArrayOf(")
+            write_array(fw, configuration["anti_aliasing"]["b0"])
+            fw.write("), b1=doubleArrayOf(")
+            write_array(fw, configuration["anti_aliasing"]["b1"])
+            fw.write("), b2=doubleArrayOf(")
+            write_array(fw, configuration["anti_aliasing"]["b2"])
+            fw.write("),sampleRatio=%d" % configuration["anti_aliasing"]["sample_ratio"])
+            fw.write(")")
+            fw.write(",\n    aWeighting=DigitalFilterConfiguration(filterDenominator=doubleArrayOf(")
+            write_array(fw, configuration["a_weighting"]["filter_denominator"])
+            fw.write("), filterNumerator=doubleArrayOf(")
+            write_array(fw, configuration["a_weighting"]["filter_numerator"])
+            fw.write("))") # end DigitalFilterConfiguration
+            fw.write(",\n    cWeighting=DigitalFilterConfiguration(filterDenominator=doubleArrayOf(")
+            write_array(fw, configuration["c_weighting"]["filter_denominator"])
+            fw.write("), filterNumerator=doubleArrayOf(")
+            write_array(fw, configuration["c_weighting"]["filter_numerator"])
+            fw.write("))") # end DigitalFilterConfiguration
+            fw.write(",\n    configuration=GeneralConfiguration(sampleRate=%d)"
+                     % configuration["configuration"]["sample_rate"])
+            fw.write(")\n") # end SpectrumChannel
+            fw.write("}\n")
 
 
 main()
