@@ -3,7 +3,7 @@
   connection: local
   vars:
     source: '/home/semaphore/data/to_process/'
-    destination: '/home/semaphore/data/archive/'
+    destination: '/home/semaphore/data/archive/{% set year = ansible_date_time.year %}{{ year }}_{{ ansible_date_time.iso8601 | slice('W') | int }}/'
     api_key: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY') }}"
     api_key_id: "{{ lookup('ansible.builtin.env', 'ELASTIC_SEARCH_API_KEY_ID') }}"
   tasks:
