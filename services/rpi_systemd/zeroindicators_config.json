@@ -3266,7 +3266,8 @@
         "sample_ratio": 2
     },
     "configuration": {
-        "sample_rate": 48000
+        "sample_rate": 48000,
+        "sensitivity": -42.87
     },
     "a_weighting": {
         "filter_denominator": [
