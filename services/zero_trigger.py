@@ -429,8 +429,9 @@ class TriggerProcessor:
                                                        sample_rate), subtype=
                                                    'FLOAT')
                         channels = 1
-                        with sf.SoundFile(output, 'w', samplerate, channels,
-                                          format='OGG') as f:
+                        with sf.SoundFile(output, 'w', samplerate,
+                                          channels, format='FLAC',
+                                          subtype='PCM_24') as f:
                             f.write(data)
                             f.flush()
                         audio_data_encrypt = base64.b64encode(encrypt(

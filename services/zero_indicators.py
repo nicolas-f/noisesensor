@@ -44,6 +44,13 @@ import zmq
 import numpy as np
 import json
 
+# do not accept auto calibration if std is superior to this value
+AC_STANDARD_DEVIATION = 0.2
+# Wait for at least this time before accepting the calibration value
+AC_STABILISATION_TIME = 5.0
+# Ratio in power between 1000 Hz level and global LZeq
+AC_1000HZ_MINIMUM_RATIO = 0.9
+
 
 def epoch_to_elasticsearch_date(epoch):
     """
@@ -55,7 +62,7 @@ def epoch_to_elasticsearch_date(epoch):
         "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
-def generate_stack_dict(filter_config, push_time):
+def generate_stack_dict(filter_config, config):
     stack_dict = {"LZeq": []}
     fields = []
     if "bandpass" in filter_config:
@@ -67,8 +74,8 @@ def generate_stack_dict(filter_config, push_time):
         stack_dict["LCeq"] = []
     for field in fields:
         stack_dict[field] = []
-    if push_time:
-        stack_dict["timestamps"] = []
+    stack_dict["timestamps"] = []
+    stack_dict["sensitivity"] = config.sensitivity
     return fields, stack_dict
 
 
@@ -81,13 +88,19 @@ class AcousticIndicatorsProcessor:
                                             "r"))
         self.channel = SpectrumChannel(self.filter_config, use_scipy=False,
                                        use_cascade=True)
+        # load saved microphone sensitivity
+        if not self.config.sensitivity < 0 and "sensitivity" in self.filter_config["configuration"]:
+            self.config.sensitivity = self.filter_config["configuration"]["sensitivity"]
         fields, stack_dict = generate_stack_dict(self.filter_config,
-                                                 self.config.output_time)
+                                                 self.config)
         self.fields = fields
         self.current_stack_dict = stack_dict
         self.stack_count = 0
         self.socket = None
         self.socket_out = None
+        self.auto_calibration_stack = []
+        self.auto_calibration_time = []
+        self.auto_calibration_field_index = self.fields.index("1000HZ")
 
     def init_socket(self):
         context = zmq.Context()
@@ -97,12 +110,41 @@ class AcousticIndicatorsProcessor:
         self.socket_out = context.socket(zmq.PUB)
         self.socket_out.bind(self.config.output_address)
 
+    def auto_calibration_check(self, l1000_hz, l_db_fs, window_time):
+        # 1000 hz with a stabilisation of 5 seconds
+        power_ratio = (10 ** (l1000_hz / 10.0)) / (10 ** (l_db_fs / 10.0))
+        has_1000hz_signal = power_ratio >= AC_1000HZ_MINIMUM_RATIO
+        if len(self.auto_calibration_stack) > 0 and not has_1000hz_signal:
+            self.auto_calibration_stack = []
+            self.auto_calibration_time = []
+        if has_1000hz_signal:
+            if len(self.auto_calibration_time) == 0:
+                print("Got calibration signal %.2f dBFS" % l1000_hz)
+            self.auto_calibration_stack.append(l1000_hz)
+            self.auto_calibration_time.append(window_time)
+            if (len(self.auto_calibration_time) > 0 and
+                    window_time - self.auto_calibration_time[0] >= AC_STABILISATION_TIME):
+                print("stddev %.2f" % np.std(np.array(self.auto_calibration_stack)))
+                if np.std(np.array(self.auto_calibration_stack)) < AC_STANDARD_DEVIATION:
+                    # keep this calibration value
+                    self.config.sensitivity = round(np.average(
+                        np.array(self.auto_calibration_stack)), 2)
+                    print("Save new sensitivity value %.2f dB" % self.config.sensitivity)
+                    self.filter_config["configuration"][
+                        "sensitivity"] = self.config.sensitivity
+                    # save configuration file
+                    with open(self.config.configuration_file, "w") as f:
+                        json.dump(self.filter_config, f, sort_keys=False, indent=4)
+                    self.auto_calibration_stack = []
+                    self.auto_calibration_time = []
+                else:
+                    self.auto_calibration_stack.pop(0)
+                    self.auto_calibration_time.pop(0)
     def run(self):
         self.init_socket()
         sample_rate = self.filter_config["configuration"]["sample_rate"]
         # sensitivity of my Umik-1 is -28.34 dBFS @ 94 dB/1khz
         db_delta = 94 - self.config.sensitivity
-        ref_sound_pressure = 1 / 10 ** (db_delta / 20.)
         window_samples = int(
             self.config.window * self.filter_config["configuration"][
                 "sample_rate"])
@@ -116,7 +158,6 @@ class AcousticIndicatorsProcessor:
             audio_data_samples = np.frombuffer(audio_data_bytes,
                                              dtype=np.single)
             frame_time = struct.unpack("d", time_bytes)[0]
-            first_stack_time = frame_time
             buffer_cursor = 0
             while buffer_cursor < len(audio_data_samples):
                 # Process part of samples to fit configured windows
@@ -133,7 +174,10 @@ class AcousticIndicatorsProcessor:
                                       "sample_rate"]
                     # analysis window filled
                     cursor = 0
-                    lzeq = round(compute_leq(current_window) + db_delta, 2)
+                    ldbfs = compute_leq(current_window)
+                    lzeq = round(ldbfs + db_delta, 2)
+                    if self.config.verbose:
+                        print("LZeq: %.2f" % lzeq)
                     self.current_stack_dict["LZeq"].append(lzeq)
                     if "a_weighting" in self.filter_config:
                         laeq = round(self.channel.process_samples_weight_a(
@@ -145,12 +189,13 @@ class AcousticIndicatorsProcessor:
                         self.current_stack_dict["LCeq"].append(lceq)
                     if "bandpass" in self.filter_config:
                         spectrum = self.channel.process_samples(current_window)
+                        # auto-detection of noise calibrator
+                        self.auto_calibration_check(spectrum[self.auto_calibration_field_index],
+                                                    ldbfs, window_time)
                         for column, lzeq in zip(self.fields, spectrum):
                             self.current_stack_dict[column].append(
                                 round(lzeq + db_delta, 2))
-                    if self.config.output_time:
-                        self.current_stack_dict["timestamps"].append(
-                            round(window_time, 3))
+                    self.current_stack_dict["timestamps"].append(window_time)
                     self.stack_count += 1
                     if self.stack_count == self.config.output_stack:
                         # stack of noise indicator complete
@@ -158,13 +203,16 @@ class AcousticIndicatorsProcessor:
                         self.stack_count = 0
                         self.current_stack_dict[
                             "date_start"] = epoch_to_elasticsearch_date(
-                            first_stack_time)
+                            self.current_stack_dict["timestamps"][0])
                         self.current_stack_dict[
                             "date_end"] = epoch_to_elasticsearch_date(
-                            window_time)
+                            self.current_stack_dict["timestamps"][-1])
+                        if not self.config.output_time:
+                            del self.current_stack_dict["timestamps"]
                         self.socket_out.send_json(self.current_stack_dict)
                         fields, stack_dict = generate_stack_dict(
-                            self.filter_config, self.config.output_time)
+                            self.filter_config, self.config)
+                        db_delta = 94 - self.config.sensitivity
                         self.current_stack_dict = stack_dict
 
 
@@ -173,16 +221,28 @@ if __name__ == "__main__":
         description='This program read audio stream from zeromq and publish'
                     ' noise events', formatter_class=
         argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-c", "--configuration_file", help="Configuration file generated by filterdesign.py", required=True, type=str)
-    parser.add_argument("--sensitivity", help="Microphone sensitivity in dBFS at 94 dB 1 kHz", default=-28.34, type=float)
-    parser.add_argument("-w", "--window", help="Will produce one indicator per provided time frame in seconds", default=0.125, type=float)
-    parser.add_argument("-s", "--output_stack", help="Each output document will provide this number of indicators (related to window)", default=80, type=int)
+    parser.add_argument("-c", "--configuration_file",
+                        help="Configuration file generated by filterdesign.py", required=True,
+                        type=str)
+    parser.add_argument("--sensitivity",
+                        help="Override Microphone sensitivity in dBFS at 94 dB 1 kHz",
+                        default=0, type=float)
+    parser.add_argument("-w", "--window",
+                        help="Will produce one indicator per provided time frame in seconds",
+                        default=0.125, type=float)
+    parser.add_argument("-s", "--output_stack",
+                        help="Each output document will provide this number of indicators "
+                             "(related to window)", default=80, type=int)
     parser.add_argument("-t", "--output_time",
                         help="Output time for each time frame", default=False,
                         action="store_true")
-    parser.add_argument("--input_address", help="Address for zero_record samples", default="tcp://127.0.0.1:10001")
-    parser.add_argument("--output_address", help="Address for publishing JSON of noise indicators",
+    parser.add_argument("--input_address", help="Address for zero_record samples",
+                        default="tcp://127.0.0.1:10001")
+    parser.add_argument("--output_address", help="Address for publishing JSON of"
+                                                 " noise indicators",
                         default="tcp://127.0.0.1:10005")
+    parser.add_argument("-v", "--verbose", help="Print LZeq", default=False,
+                        action="store_true")
     args = parser.parse_args()
     print("Configuration: " + repr(args))
     if not os.path.exists(args.configuration_file):
