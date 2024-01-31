@@ -1,13 +1,13 @@
 {
-  "trigger_count": 10,
+  "trigger_count": 200,
   "trigger_ban": [
     "Speech"
   ],
   "configuration_file": "",
-  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon","Aircraft","Aircraft engine","Jet engine", "Propeller, airscrew","Helicopter","Fixed-wing aircraft, airplane"],
+  "trigger_tag": ["Train", "Rail transport", "Railroad car, train wagon"],
   "min_leq": 0.0,
-  "total_length": 20.0,
-  "cached_length": 10.0,
+  "total_length": 60.0,
+  "cached_length": 30.0,
   "sample_rate": 48000,
   "resample_method": "kaiser_fast",
   "sample_format": "FLOAT_LE",
@@ -21,5 +21,5 @@
   "yamnet_window_time": 5.0,
   "sensitivity": -28.34,
   "delay_print_samples": 300,
-  "add_spectrogram": true
+  "add_spectrogram": false
 }
