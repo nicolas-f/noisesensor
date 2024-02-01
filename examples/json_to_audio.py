@@ -12,7 +12,7 @@ import csv
 import sys
 
 
-def encoded_audio_to_ogg_file(config, encoded_audio, ogg_file_path):
+def encoded_audio_to_sound_file(config, encoded_audio, output_file_path):
     encrypted_bytes = base64.b64decode(encoded_audio)
     key = RSA.importKey(open(config.ssh_file).read(),
                         passphrase=config.ssh_password)
@@ -28,19 +28,20 @@ def encoded_audio_to_ogg_file(config, encoded_audio, ogg_file_path):
                          iv)
     decrypted_audio = aes_cipher.decrypt(
         encrypted_bytes[key.size_in_bytes():])
+    format = ".raw"
     if "Ogg" == decrypted_audio[:3].decode():
-        print("Ogg decrypted to %s" % ogg_file_path)
-    else:
-        raise Exception("Audio not starting with Ogg")
-    with open(ogg_file_path, "wb") as out_fp:
+        format = ".ogg"
+    elif "fLaC" == decrypted_audio[:4].decode():
+        format = ".flac"
+    with open(output_file_path+format, "wb") as out_fp:
         out_fp.write(decrypted_audio)
 
 
 def get_sf(config):
     with gzip.open(config.document_gz, 'rt') as fp:
         document = json.load(fp)
-        encoded_audio_to_ogg_file(config, document["encrypted_audio"],
-                                  config.ogg_file)
+        encoded_audio_to_sound_file(config, document["encrypted_audio"],
+                                    config.audio_file)
 
 
 def sanitize_file_name(s):
@@ -58,10 +59,10 @@ def get_sf_from_csv(config, csv_file):
         for data_columns in reader:
             encrypted_audio = data_columns[encrypted_audio_column]
             if len(encrypted_audio) > 16:
-                ogg_path = os.path.join(os.path.dirname(csv_file),sanitize_file_name(
-                    data_columns[date_column]) + ".ogg")
-                config.ogg_file = ogg_path
-                encoded_audio_to_ogg_file(config, encrypted_audio, ogg_path)
+                audio_path = os.path.join(os.path.dirname(csv_file), sanitize_file_name(
+                    data_columns[date_column]))
+                config.audio_file = audio_path
+                encoded_audio_to_sound_file(config, encrypted_audio, audio_path)
 
 
 def main():
@@ -77,18 +78,20 @@ def main():
                         required=True)
     parser.add_argument("--ssh_password",
                         help="password of private key", default=None, type=str)
-    parser.add_argument("--ogg_file",
-                        help="Path of the output ogg file",
-                        default="audio.ogg", type=str)
+    parser.add_argument("--audio_file",
+                        help="Path of the output audio file",
+                        default="audio", type=str)
     args = parser.parse_args()
     if os.path.isdir(args.document_gz):
-        documents = [filepath for filepath in os.listdir(args.document_gz) if filepath.endswith(".json.gz")]
+        documents = [filepath for filepath in os.listdir(args.document_gz) if
+                     filepath.endswith(".json.gz")]
         for document in documents:
             args_cp = copy.copy(args)
             args_cp.document_gz = os.path.join(args.document_gz, document)
-            args_cp.ogg_file = os.path.join(args.document_gz, document[:document.rfind(".json.gz")]+".ogg")
+            args_cp.audio_file = os.path.join(args.document_gz,
+                                              document[:document.rfind(".json.gz")])
             try:
-              get_sf(args_cp)
+                get_sf(args_cp)
             except KeyError as e:
                 print("Cannot read %s" % document)
     else:
