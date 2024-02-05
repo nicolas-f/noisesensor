@@ -34,8 +34,7 @@ from fastapi.templating import Jinja2Templates
 import json
 import os
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import streaming_bulk
-import elasticsearch.helpers
+import base64
 
 app = FastAPI()
 
@@ -134,13 +133,13 @@ async def recordings(request: Request):
 @app.get('/get-samples/{document_id}', response_class=HTMLResponse)
 async def get_samples(request: Request, document_id: str):
     post_data = json.loads(
-        templates.get_template("trigger_audio.json").render(id=document_id))
+        templates.get_template("trigger_audio.json").render(id=base64.b64decode(document_id).decode("utf-8")))
     resp = client.search(**post_data)
     # reformat elastic search result
     try:
         return resp["hits"]["hits"][0]["_source"]
     except IndexError as e:
-        raise Exception(e, "Error parsing document required by " + str(post_data))
+        raise Exception(e, "Error parsing document required by " + json.dumps(post_data))
 
 
 @app.get('/', response_class=HTMLResponse)
