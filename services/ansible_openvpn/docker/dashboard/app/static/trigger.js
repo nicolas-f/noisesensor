@@ -149,7 +149,7 @@ function fetch() {
             entry = {};
             entry["id"]="<a href=\"#\" onclick=\"decrypt_and_download('"+element["_id"]+"')\">Download</a>";
             entry["elementid"] = element["_id"];
-            var date = new Date(element["timestamp"][0]);
+            var date = new Date(parseInt(element["timestamp"][0]));
             entry["timestamp"]=date.toLocaleDateString()+" "+date.toLocaleTimeString();
             entry["hwa"]=element["hwa"];
             downloadedData.push(entry);
