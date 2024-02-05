@@ -92,35 +92,35 @@ async function do_decrypt(jsonContent) {
     let el = document.getElementById("error_panel");
     try {
       const pem = await $('input[name="privkey"]')[0].files[0].text();
+      var encrypted = atob(jsonContent.encrypted_audio);
+      // convert a Forge certificate from PEM
+      const pki = forge.pki;
+      var privateKey = pki.decryptRsaPrivateKey(pem, $('input[name="pwd"]')[0].value);
+      if(privateKey == null) {
+          el.style.visibility = "visible";
+          el.innerHTML = "Invalid decryption key or password";
+          return;
+      } else {
+          el.style.visibility = "hidden";
+          var decrypted = privateKey.decrypt(encrypted.substring(0, 512), 'RSA-OAEP');
+          var aes_key = decrypted.substring(0, 16);
+          var iv = decrypted.substring(16, 32);
+          console.log("aeskey " + btoa(aes_key));
+          console.log("iv " + btoa(iv));
+          var decipher = forge.cipher.createDecipher('AES-CBC', aes_key);
+          decipher.start({iv: iv});
+          decipher.update(forge.util.createBuffer(encrypted.substring(512)));
+          var result = decipher.finish(); // check 'result' for true/false
+          // outputs decrypted hex
+          // Create regex patterns for replacing unwanted characters in file name
+          const formattedDate = jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
+          const fname = jsonContent.hwa+"_"+formattedDate+".flac";
+          download(decipher.output.data, fname, "audio/flac");
+      }
     } catch (e) {
         el.style.visibility = "visible";
         el.innerHTML = "No private key file submitted "+e;
         return;
-    }
-    var encrypted = atob(jsonContent.encrypted_audio);
-    // convert a Forge certificate from PEM
-    const pki = forge.pki;
-    var privateKey = pki.decryptRsaPrivateKey(pem, $('input[name="pwd"]')[0].value);
-    if(privateKey == null) {
-        el.style.visibility = "visible";
-        el.innerHTML = "Invalid decryption key or password";
-        return;
-    } else {
-        el.style.visibility = "hidden";
-        var decrypted = privateKey.decrypt(encrypted.substring(0, 512), 'RSA-OAEP');
-        var aes_key = decrypted.substring(0, 16);
-        var iv = decrypted.substring(16, 32);
-        console.log("aeskey " + btoa(aes_key));
-        console.log("iv " + btoa(iv));
-        var decipher = forge.cipher.createDecipher('AES-CBC', aes_key);
-        decipher.start({iv: iv});
-        decipher.update(forge.util.createBuffer(encrypted.substring(512)));
-        var result = decipher.finish(); // check 'result' for true/false
-        // outputs decrypted hex
-        // Create regex patterns for replacing unwanted characters in file name
-        const formattedDate = jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
-        const fname = jsonContent.hwa+"_"+formattedDate+".flac";
-        download(decipher.output.data, fname, "audio/flac");
     }
 }
 
