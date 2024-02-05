@@ -140,7 +140,7 @@ async def get_samples(request: Request, document_id: str):
     try:
         return resp["hits"]["hits"][0]["_source"]
     except IndexError as e:
-        raise Exception(e, "Error parsing document required by " + post_data)
+        raise Exception(e, "Error parsing document required by " + str(post_data))
 
 
 @app.get('/', response_class=HTMLResponse)
