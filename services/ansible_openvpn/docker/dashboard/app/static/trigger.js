@@ -102,13 +102,13 @@ async function do_decrypt(jsonContent) {
           return;
       } else {
           el.style.visibility = "hidden";
-          const keyLength = privateKey.n.bitLength() / 8
-          const decrypted = privateKey.decrypt(encrypted.substring(0, privateKey.n.bitLength() / 8 ), 'RSA-OAEP');
+          const keyLength = privateKey.n.bitLength() / 8;
+          const decrypted = privateKey.decrypt(encrypted.substring(0, keyLength ), 'RSA-OAEP');
           const aes_key = decrypted.substring(0, 16);
           const iv = decrypted.substring(16, 32);
           const decipher = forge.cipher.createDecipher('AES-CBC', aes_key);
           decipher.start({iv: iv});
-          decipher.update(forge.util.createBuffer(encrypted.substring(privateKey.n.bitLength() / 8)));
+          decipher.update(forge.util.createBuffer(encrypted.substring(keyLength)));
           const result = decipher.finish(); // check 'result' for true/false
           // outputs decrypted hex
           // Create regex patterns for replacing unwanted characters in file name
