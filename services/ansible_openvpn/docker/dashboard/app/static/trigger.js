@@ -113,8 +113,15 @@ async function do_decrypt(jsonContent) {
           // outputs decrypted hex
           // Create regex patterns for replacing unwanted characters in file name
           const formattedDate = jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
-          const fname = jsonContent.hwa+"_"+formattedDate+".flac";
-          download(decipher.output.data, fname, "audio/flac");
+          let format = "raw";
+          // look for magic word in file header
+          if(decipher.output.data.substring(0,4) == "fLaC") {
+            format = "flac";
+          } else if(decipher.output.data.substring(0,3) == "Ogg") {
+            format = "ogg";
+          }
+          const fname = jsonContent.hwa+"_"+formattedDate+"."+format;
+          download(decipher.output.data, fname, "audio/"+format);
       }
     } catch (e) {
         el.style.visibility = "visible";
