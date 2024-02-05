@@ -89,17 +89,22 @@ function decryptDataWithPrivateKey(data, key) {
 
 
 async function do_decrypt(jsonContent) {
-    const pem = await $('input[name="privkey"]')[0].files[0].text();
-    var encrypted = atob(jsonContent.hits.hits[0]._source.samples);
-    var tstamp = jsonContent.hits.hits[0]._source.timestamp;
-    var date = new Date(tstamp);
+    let el = document.getElementById("error_panel");
+    try {
+      const pem = await $('input[name="privkey"]')[0].files[0].text();
+    } catch (e) {
+        el.style.visibility = "visible";
+        el.innerHTML = "No private key file submitted "+e;
+        return;
+    }
+    var encrypted = atob(jsonContent.encrypted_audio);
     // convert a Forge certificate from PEM
     const pki = forge.pki;
     var privateKey = pki.decryptRsaPrivateKey(pem, $('input[name="pwd"]')[0].value);
-    let el = document.getElementById("error_panel");
     if(privateKey == null) {
         el.style.visibility = "visible";
         el.innerHTML = "Invalid decryption key or password";
+        return;
     } else {
         el.style.visibility = "hidden";
         var decrypted = privateKey.decrypt(encrypted.substring(0, 512), 'RSA-OAEP');
@@ -107,14 +112,14 @@ async function do_decrypt(jsonContent) {
         var iv = decrypted.substring(16, 32);
         console.log("aeskey " + btoa(aes_key));
         console.log("iv " + btoa(iv));
-        //('aes_key :', 'wJyLYu1QrppXkVr4VkiN2g==')
-        //('iv :', 'PclNb35dRhvq90Bvc9JjvA==')
         var decipher = forge.cipher.createDecipher('AES-CBC', aes_key);
         decipher.start({iv: iv});
         decipher.update(forge.util.createBuffer(encrypted.substring(512)));
         var result = decipher.finish(); // check 'result' for true/false
         // outputs decrypted hex
-        const fname = date.toLocaleDateString()+"_"+date.toLocaleTimeString()+".flac";
+        // Create regex patterns for replacing unwanted characters in file name
+        const formattedDate = jsonContent.date.replace(new RegExp(`[-:]`, 'g'), "_");
+        const fname = jsonContent.hwa+"_"+formattedDate+".flac";
         download(decipher.output.data, fname, "audio/flac");
     }
 }
