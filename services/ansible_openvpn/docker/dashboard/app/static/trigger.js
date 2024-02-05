@@ -102,7 +102,7 @@ async function do_decrypt(jsonContent) {
           return;
       } else {
           el.style.visibility = "hidden";
-          var decrypted = privateKey.decrypt(encrypted.substring(0, 512), 'RSA-OAEP');
+          var decrypted = privateKey.decrypt(encrypted.substring(0, privateKey.n.bitLength() / 8 ), 'RSA-OAEP');
           var aes_key = decrypted.substring(0, 16);
           var iv = decrypted.substring(16, 32);
           console.log("aeskey " + btoa(aes_key));
