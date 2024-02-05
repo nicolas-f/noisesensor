@@ -130,7 +130,7 @@ async def recordings(request: Request):
                                       context={"request": request})
 
 
-@app.get('/get-samples/{document_id}', response_class=HTMLResponse)
+@app.get('/get-samples/{document_id}')
 async def get_samples(request: Request, document_id: str):
     post_data = json.loads(
         templates.get_template("trigger_audio.json").render(id=base64.b64decode(document_id).decode("utf-8")))
