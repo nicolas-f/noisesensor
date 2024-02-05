@@ -137,7 +137,10 @@ async def get_samples(request: Request, document_id: str):
         templates.get_template("trigger_audio.json").render(id=document_id))
     resp = client.search(**post_data)
     # reformat elastic search result
-    return resp["hits"]["hits"][0]["_source"]
+    try:
+        return resp["hits"]["hits"][0]["_source"]
+    except IndexError as e:
+        raise Exception(e, "Error parsing document required by " + post_data)
 
 
 @app.get('/', response_class=HTMLResponse)
