@@ -114,8 +114,8 @@ async function do_decrypt(jsonContent) {
         decipher.update(forge.util.createBuffer(encrypted.substring(512)));
         var result = decipher.finish(); // check 'result' for true/false
         // outputs decrypted hex
-        const fname = date.toLocaleDateString()+"_"+date.toLocaleTimeString()+".ogg";
-        download(decipher.output.data, fname, "audio/ogg");
+        const fname = date.toLocaleDateString()+"_"+date.toLocaleTimeString()+".flac";
+        download(decipher.output.data, fname, "audio/flac");
     }
 }
 

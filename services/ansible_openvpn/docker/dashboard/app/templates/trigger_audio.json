@@ -1,0 +1,10 @@
+{
+  "index": "sensor_yamnet_*",
+  "size" : 1,
+  "_source": true,
+  "query": {
+    "ids": {
+      "values": "{{ id }}"
+    }
+  }
+}

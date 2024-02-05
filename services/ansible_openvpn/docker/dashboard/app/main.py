@@ -126,9 +126,18 @@ async def get_sensor_position(request: Request):
 
 
 @app.get('/recordings', response_class=HTMLResponse)
-async def home(request: Request):
+async def recordings(request: Request):
     return templates.TemplateResponse("recordings.html",
                                       context={"request": request})
+
+
+@app.get('/get-samples/{document_id}', response_class=HTMLResponse)
+async def get_samples(request: Request, document_id: str):
+    post_data = json.loads(
+        templates.get_template("trigger_audio.json").render(id=document_id))
+    resp = client.search(**post_data)
+    # reformat elastic search result
+    return resp["hits"]["hits"][0]["_source"]
 
 
 @app.get('/', response_class=HTMLResponse)
