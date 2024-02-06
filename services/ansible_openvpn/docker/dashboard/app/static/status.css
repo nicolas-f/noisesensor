@@ -38,3 +38,19 @@ h1 {
   text-align: center;
   float: center;
 }
+
+.navbar {
+    position: relative;
+    z-index: 100; /* Make sure the menu stays over the map */
+    background-color: white;
+}
+
+.navbar-brand {
+    min-height: 60px;
+    padding: 0 20px 5px;
+    font-size: 16px;
+}
+
+.navbar-nav > li {
+    margin-left: 1em; /* Adjust this value according to your preference */
+}
