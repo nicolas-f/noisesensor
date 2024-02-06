@@ -39,18 +39,35 @@ h1 {
   float: center;
 }
 
-.navbar {
-    position: relative;
-    z-index: 100; /* Make sure the menu stays over the map */
-    background-color: white;
+.top_menu {
+  position: relative !important;
+  left: 0;
+  right: 0;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.navbar-brand {
-    min-height: 60px;
-    padding: 0 20px 5px;
-    font-size: 16px;
+.ul_top_menu {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-.navbar-nav > li {
-    margin-left: 1em; /* Adjust this value according to your preference */
+.li_top_menu {
+  float: left;
+}
+
+.li_top_menu a {
+  display: block;
+  color: #555;
+  text-align: center;
+  padding: 16px;
+  text-decoration: none;
+}
+
+.li_top_menu a:hover {
+  background-color: #eeeeee;
 }

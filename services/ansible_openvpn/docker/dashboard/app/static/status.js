@@ -113,6 +113,27 @@ legend.onAdd = function (lmap) {
 
 legend.addTo(lmap);
 
+var toplinkbar = L.control({position: 'topcenter'});
+
+
+toplinkbar.onAdd = function (lmap) {
+    var div = L.DomUtil.create('div', 'info');
+    const links = [
+      { text: "Map", url: "/", target : "_self"},
+      { text: "Audio records", url: "/recordings", target : "_self" },
+      { text: "Backup data", url: "https://nsraw.noise-planet.org" , target : "_blank"}
+    ];
+    var divhtml = "<ul class=\"ul_top_menu\">";
+    links.forEach((link) => {
+      divhtml += `<li class="li_top_menu"><a href="${link.url}" target="${link.target}">${link.text}</a></li>`;
+    });
+    divhtml += "</ul>";
+    div.innerHTML += divhtml;
+
+    return div;
+};
+
+toplinkbar.addTo(lmap);
 
 var upTimeControl = L.control({position: 'bottomcenter', });
 
