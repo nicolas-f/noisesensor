@@ -438,12 +438,12 @@ class TriggerProcessor:
                                                            self.yamnet_config.sample_rate,
                                                            filter=self.config.
                                                            resample_method)
-                            document, classification_tag = self.generate_yamnet_document(
+                            doc, classification_tag = self.generate_yamnet_document(
                                 samples, self.config.add_spectrogram)
                             del samples
                             if len(self.config.trigger_ban) > 0:
                                 for banned_tag in self.config.trigger_ban:
-                                    if banned_tag in document["scores"].keys():
+                                    if banned_tag in doc["scores"].keys():
                                         print("Do not keep audio because %s has"
                                               " been detected" % banned_tag)
                                         keep_audio = False
