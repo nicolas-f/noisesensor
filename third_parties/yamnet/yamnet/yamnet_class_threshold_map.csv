@@ -322,7 +322,7 @@ index,mid,display_name,threshold
 320,/m/04_sv,Motorcycle,0.20692268
 321,/m/0btp2,"Traffic noise, roadway noise",0.102626778
 322,/m/06d_3,Rail transport,0.487690419
-323,/m/07jdr,Train,0.543006361
+323,/m/07jdr,Train,0.05
 324,/m/04zmvq,Train whistle,0.324747264
 325,/m/0284vy3,Train horn,0.422004044
 326,/m/01g50p,"Railroad car, train wagon",0.467045546
