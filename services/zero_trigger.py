@@ -461,7 +461,6 @@ class TriggerProcessor:
                                               subtype='PCM_24') as f:
                                 f.write(data)
                                 f.flush()
-                            del data
                             audio_data_encrypt = base64.b64encode(encrypt(
                                 output.getvalue(), ssh_file)).decode("UTF-8")
                             print("raw %d array %d bytes b64 ogg: %d bytes"
@@ -470,6 +469,7 @@ class TriggerProcessor:
                                                         len(audio_data_encrypt),
                                                         time.time() -
                                                         audio_processing_start))
+                            del data
                             info = sf.info(io.BytesIO(output.getvalue()))
                             del output
                             print("Audio duration %.2f s, remaining triggers %d" % (

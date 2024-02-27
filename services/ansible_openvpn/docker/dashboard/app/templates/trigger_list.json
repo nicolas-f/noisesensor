@@ -30,6 +30,9 @@
     },
     {
       "field": "hwa.keyword"
+    },
+    {
+      "field": "scores_perc.*"
     }
   ]
 }
