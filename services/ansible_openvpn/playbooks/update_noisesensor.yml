@@ -3,10 +3,10 @@
   tasks:
     - name: Pull changes from noisesensor repository
       ansible.builtin.git:
-        repo: https://github.com/nicolas-f/noisesensor.git
+        repo: https://github.com/Universite-Gustave-Eiffel/Rail4Earth.git
         dest: /home/pi/noisesensor/
         single_branch: yes
-        version: yamnet_trigger
+        version: main
     - name: Stop noisesensor services
       become: true
       ansible.builtin.systemd:
