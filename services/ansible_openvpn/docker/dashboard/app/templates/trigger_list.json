@@ -19,13 +19,15 @@
               "format": "epoch_millis"
             }
           }
+        },
+        {
+          "range": {
+            "encrypted_audio_length" : {
+              "gte": 0
+            }
+          }
         }
-      ],
-      "must_not": {
-        "term": {
-          "encrypted_audio": ""
-        }
-      }
+      ]
     }
   },
   "docvalue_fields": [
