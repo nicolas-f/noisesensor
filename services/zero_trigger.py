@@ -336,7 +336,7 @@ class TriggerProcessor:
         self.processing_time = 0
         while True:
             if last_day_of_year != datetime.datetime.now().timetuple().tm_yday \
-                    and "trigger_count" in self.config:
+                    and "trigger_count" in vars(self.config):
                 # reset trigger counter each day
                 print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
