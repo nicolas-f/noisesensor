@@ -289,7 +289,7 @@ class TriggerProcessor:
         filter_pred = filter_pred.nonzero()[0]
         classes_threshold_index = list(map(int, filter_pred))
         if len(classes_threshold_index) == 0:
-            return {}
+            return {}, []
         classification_tag = [self.yamnet_classes[0][i]
                               for i in classes_threshold_index]
         print("%s tags:%s \n processed in %.3f seconds for "
