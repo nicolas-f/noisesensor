@@ -1,2 +1,0 @@
-arecord -D hw:0,0 -f S16_LE -r 44100 -c 2 -t wav | sox -t wav - -b 16 -t raw --rate 32000 --channels 1 - | python -u ../noisesensor_thdn.py -s 1000
-cat ~/data/cense/Tests/B8_27_EB_42_CA_B4-1000Hz.raw | python -u ../noisesensor_thdn.py -s 1000
