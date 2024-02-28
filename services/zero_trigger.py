@@ -313,9 +313,7 @@ class TriggerProcessor:
         # threshold_time is the score over the time
         # there is 2x more cells because there is 50% overlap
         threshold_time = {
-            self.yamnet_classes[0][i]: [self.yamnet_classes[1][i],
-                                        np.round(scores[:, i],
-                                                 3).tolist()]
+            self.yamnet_classes[0][i]: np.round(scores[:, i], 3).tolist()
             for i in classes_threshold_index}
         document = {"scores": document_scores,
                     "scores_perc": scores_percentage,
@@ -440,6 +438,8 @@ class TriggerProcessor:
                                                            resample_method)
                             doc, classification_tag = self.generate_yamnet_document(
                                 samples, self.config.add_spectrogram)
+                            # Copy score time in order to match with recording length
+                            document["scores_time"] = doc["scores_time"]
                             del samples
                             if len(self.config.trigger_ban) > 0:
                                 for banned_tag in self.config.trigger_ban:
