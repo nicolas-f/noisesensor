@@ -68,7 +68,7 @@ async def get_list_samples(request: Request, start_epoch_millis: int,
     # reformat elastic search result
     return [{"hwa": hit["fields"]["hwa.keyword"],
              "timestamp": hit["fields"]["date"],
-             "_id": hit["_id"]}
+             "_id": hit["_id"]} | hit["fields"]
             for hit in hits]
 
 

@@ -30,7 +30,7 @@
       ]
     }
   },
-  "docvalue_fields": [
+  "fields": [
     {
       "field": "date",
       "format": "epoch_millis"
@@ -39,7 +39,7 @@
       "field": "hwa.keyword"
     },
     {
-      "field": "scores_perc.*"
+      "field": "scores*"
     }
   ]
 }
