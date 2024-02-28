@@ -6,8 +6,8 @@ USER root
 RUN <<EOF
 apk add rsync py3-pip
 mkdir /home/semaphore/data
-mkdir /home/semaphore/authorized_keys
 chown -R semaphore:root /home/semaphore/
+chown -R semaphore:root /home/semaphore/dashboard_website
 EOF
 
 USER 1001
