@@ -101,9 +101,9 @@ class FilterDesign:
             else:
                 return 1/10 * self.get_nominal_frequency(x+10)
         else:
-            if -20 <= x < 14:
+            if -6 <= x < 5:
                 return OCTAVE_FREQUENCIES[x + 6]
-            elif x >= 14:
+            elif x >= 5:
                 return 2 * self.get_nominal_frequency(x-1)
             else:
                 return 1/2 * self.get_nominal_frequency(x+1)
