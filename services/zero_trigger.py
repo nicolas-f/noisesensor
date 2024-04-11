@@ -191,9 +191,11 @@ class TriggerProcessor:
         self.socket_out = None
         self.yamnet_config = Params()
         tflite_path = self.config.yamnet_weights
-        print("Init yamnet interpreter..")
+        if self.config.verbose:
+            print("Init yamnet interpreter..")
         self.yamnet_interpreter = tflite.Interpreter(model_path=tflite_path)
-        print("Init tensors..")
+        if self.config.verbose:
+            print("Init tensors..")
         self.tensors = Tensors()
         input_details = self.yamnet_interpreter.get_input_details()
         self.tensors.waveform_input_index = input_details[0]['index']
@@ -201,7 +203,8 @@ class TriggerProcessor:
         self.tensors.scores_output_index = output_details[0]['index']
         self.tensors.embeddings_output_index = output_details[1]['index']
         self.tensors.spectrogram_output_index = output_details[2]['index']
-        print("Init tensors done")
+        if self.config.verbose:
+            print("Init tensors done")
         self.yamnet_samples = np.zeros((int(config.yamnet_window_time *
                                             self.yamnet_config.sample_rate)),
                                        dtype=np.float32)
@@ -292,12 +295,13 @@ class TriggerProcessor:
             return {}, []
         classification_tag = [self.yamnet_classes[0][i]
                               for i in classes_threshold_index]
-        print("%s tags:%s \n processed in %.3f seconds for "
-              "%.1f seconds of audio." %
-              (time.strftime("%Y-%m-%d %H:%M:%S"),
-               ",".join(classification_tag), self.processing_time,
-               len(samples) /
-               self.yamnet_config.sample_rate))
+        if self.config.verbose:
+            print("%s tags:%s \n processed in %.3f seconds for "
+                  "%.1f seconds of audio." %
+                  (time.strftime("%Y-%m-%d %H:%M:%S"),
+                   ",".join(classification_tag), self.processing_time,
+                   len(samples) /
+                   self.yamnet_config.sample_rate))
         self.processing_time = 0
         # Sort by score
         classes_threshold_index = [classes_threshold_index[j] for j in
@@ -336,7 +340,8 @@ class TriggerProcessor:
             if last_day_of_year != datetime.datetime.now().timetuple().tm_yday \
                     and "trigger_count" in vars(self.config):
                 # reset trigger counter each day
-                print("Reset trigger counter")
+                if self.config.verbose:
+                    print("Reset trigger counter")
                 last_day_of_year = datetime.datetime.now().timetuple().tm_yday
                 self.remaining_triggers = self.config.trigger_count
             if self.config is not None and status == "wait_trigger":
@@ -366,8 +371,9 @@ class TriggerProcessor:
                     np.power(waveform / reference_pressure, 2.0))
                 leq = 10 * math.log10(sum_samples / len(waveform))
                 if leq >= self.config.min_leq:
-                    print("Leq: %.2f dB > %.2f dB, so now try to recognize"
-                          " sound source " % (leq, self.config.min_leq))
+                    if self.config.verbose:
+                        print("Leq: %.2f dB > %.2f dB, so now try to recognize"
+                              " sound source " % (leq, self.config.min_leq))
                     document, classification_tag = self.generate_yamnet_document(
                         self.yamnet_samples, self.config.add_spectrogram)
                     # If trigger_tag defined, we process only if one of the
@@ -380,15 +386,17 @@ class TriggerProcessor:
                                 break
                     if not keep_classification:
                         # classifier rejected all known classes
-                        print("No expected tag found, do not transmit"
-                              " document")
+                        if self.config.verbose:
+                            print("No expected tag found, do not transmit"
+                                  " document")
                         status = "wait_trigger"
                         continue
                     document["leq"] = round(leq, 2)
                     document["date"] = epoch_to_elasticsearch_date(self.frame_time)
                     if self.remaining_triggers >= 0:
-                        print(" Remaining triggers for today %d" %
-                              self.remaining_triggers)
+                        if self.config.verbose:
+                            print(" Remaining triggers for today %d" %
+                                  self.remaining_triggers)
                     if self.config.total_length > 0 and (
                             self.remaining_triggers > 0 or
                             self.remaining_triggers == -1):
@@ -444,8 +452,9 @@ class TriggerProcessor:
                             if len(self.config.trigger_ban) > 0:
                                 for banned_tag in self.config.trigger_ban:
                                     if banned_tag in doc["scores"].keys():
-                                        print("Do not keep audio because %s has"
-                                              " been detected" % banned_tag)
+                                        if self.config.verbose:
+                                            print("Do not keep audio because %s has been detected"
+                                                  % banned_tag)
                                         keep_audio = False
                                         break
                         if keep_audio:
@@ -464,15 +473,17 @@ class TriggerProcessor:
                             output.tell()
                             audio_data_encrypt = base64.b64encode(encrypt(
                                 output.getvalue(), ssh_file)).decode("UTF-8")
-                            print("raw %d array %d bytes b64 ogg: %d bytes"
-                                  " in %.3f seconds" % (samples_trigger.tell(),
-                                                        data.shape[0],
-                                                        len(audio_data_encrypt),
-                                                        time.time() -
-                                                        audio_processing_start))
+                            if self.config.verbose:
+                                print("raw %d array %d bytes b64 ogg: %d bytes"
+                                      " in %.3f seconds" % (samples_trigger.tell(),
+                                                            data.shape[0],
+                                                            len(audio_data_encrypt),
+                                                            time.time() -
+                                                            audio_processing_start))
                             del data
                             del output
-                            print("Remaining triggers %d" % self.remaining_triggers)
+                            if self.config.verbose:
+                                print("Remaining triggers %d" % self.remaining_triggers)
                         document["encrypted_audio"] = audio_data_encrypt
                         document["encrypted_audio_length"] = len(audio_data_encrypt)
                         del audio_data_encrypt
@@ -539,6 +550,8 @@ if __name__ == "__main__":
     parser.add_argument("--add_spectrogram",
                         help="Add spectrogram float16 array in base 64 in"
                              " json file", default=False, action="store_true")
+    parser.add_argument("-v", "--verbose",
+                        help="Print all messages", default=False, action="store_true")
     args = parser.parse_args()
     if not args.configuration_file:
         # no configuration file but configured with command line arguments
