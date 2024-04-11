@@ -3,6 +3,7 @@
   become: false
   vars:
     source: '/home/pi/noisesensor/out/'
+    source2: '/home/pi/noisesensor/outsd/'
     destination: '/home/semaphore/data/to_process/'
   tasks:
   - name: rsync installed
@@ -22,6 +23,14 @@
     ansible.posix.synchronize:
       mode: 'pull'
       src: '{{ source }}'
+      dest: '{{ destination }}{{ rpi_mac.stdout }}'
+      rsync_opts:
+        - "--remove-source-files"
+        - "--exclude='*.tmp'"
+  - name: data synchronization
+    ansible.posix.synchronize:
+      mode: 'pull'
+      src: '{{ source2 }}'
       dest: '{{ destination }}{{ rpi_mac.stdout }}'
       rsync_opts:
         - "--remove-source-files"
