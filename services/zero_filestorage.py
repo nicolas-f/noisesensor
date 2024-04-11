@@ -48,6 +48,7 @@ import socket
 import struct
 import signal
 
+
 def get_hw_address(interface_name):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     info = fcntl.ioctl(s.fileno(), 0x8927, struct.pack(
@@ -103,6 +104,15 @@ def rename_file(temporary_extension, file_path, extension):
         cpt += 1
     os.rename(temporary_extension, final_name)
 
+
+def get_folder_size(folder_path):
+    total = 0
+    for entry in os.scandir(folder_path):
+        if entry.is_file():
+            total += entry.stat().st_size
+    return total
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='This program read json documents on zeromq channels'
@@ -115,6 +125,13 @@ def main():
                         required=True, type=str)
     parser.add_argument("-o", "--output_folder", help="Json output folder",
                         required=True, type=str)
+    parser.add_argument("--overflow_folder", help="Output folder when the file usage"
+                                                  " of standard output folder exceed specified "
+                                                  "value in overflow_size parameter",
+                        type=str, default="")
+    parser.add_argument("--overflow_size", help="Size limit in megabytes of standard"
+                                                " output folder, 0 no limit.",
+                        type=int, default=0)
     parser.add_argument("-t", "--time_format",
                         help="Time format name for the file,"
                              " if the file already exists a counter after "
@@ -125,7 +142,7 @@ def main():
                         help="Maximum row count for stacked json in one file"
                              ". The filename will end with .tmp if the row"
                              " count is not reached",
-                        default=1,  type=int)
+                        default=1, type=int)
     parser.add_argument("-c", "--compress",
                         help="Compress output files", default=False,
                         action="store_true")
@@ -144,7 +161,7 @@ def main():
     try:
         for input_data in itertools.chain.from_iterable(args.input_address):
             t_sep = input_data.rfind("/")
-            t_name = input_data[t_sep+1:]
+            t_name = input_data[t_sep + 1:]
             t_address = input_data[:t_sep]
             t = ZeroMQThread(args, t_name, t_address)
             t.start()
@@ -156,10 +173,20 @@ def main():
         while args.running:
             while len(args.documents_stack) > 0:
                 document_name, document_json = args.documents_stack.popleft()
-                time_part = datetime.datetime.now().\
+                time_part = datetime.datetime.now(). \
                     strftime(args.time_format)
                 file_path = os.path.join(args.output_folder,
-                                         document_name+"_%s" % time_part)
+                                         document_name + "_%s" % time_part)
+                if args.overflow_size > 0 and len(args.overflow_folder) > 0 \
+                        and os.path.exists(args.output_folder):
+                    # check occupied size
+                    if get_folder_size(args.output_folder) > args.overflow_size * 1024 * 1024:
+                        if not os.path.exists(args.overflow_folder):
+                            print("Try to create parent folder " + args.overflow_folder)
+                            os.mkdir(args.overflow_folder)
+                        file_path = os.path.join(args.overflow_folder,
+                                                 document_name + "_%s" % time_part)
+
                 # append to document if it has been tracked
                 if document_name not in document_tracker:
                     document_tracker[document_name] = [1, file_path]
@@ -168,7 +195,7 @@ def main():
                     file_path = document_tracker[document_name][1]
                 # make tmp extension in order to not process this file
                 # until it has been fully saved
-                temporary_extension = file_path+extension+".tmp"
+                temporary_extension = file_path + extension + ".tmp"
                 exists = os.path.exists(temporary_extension)
                 if not os.path.exists(args.output_folder):
                     print("Try to create parent folder " + args.output_folder)
@@ -180,7 +207,7 @@ def main():
                 # rename to the final name if document file is complete
                 if args.row_count <= document_tracker[document_name][0]:
                     rename_file(temporary_extension, file_path, extension)
-                    del(document_tracker[document_name])
+                    del document_tracker[document_name]
             time.sleep(0.005)
         # close/rename remaining files
         for document_name, document_data in document_tracker.items():
