@@ -1,14 +1,4 @@
 # noisesensor
 
-[![NoiseSensor](https://github.com/nicolas-f/noisesensor/actions/workflows/build_noisesensor.yml/badge.svg)](https://github.com/nicolas-f/noisesensor/actions/workflows/build_noisesensor.yml)
+Project has updated and has been moved to https://github.com/Universite-Gustave-Eiffel/Rail4Earth
 
-Convert audio feed into noise indicators
-
-## Installation
-
-```shell
-python3 -m venv venv
-source venv/bin/activate
-pip install cython
-python3 setup.py install
-```
